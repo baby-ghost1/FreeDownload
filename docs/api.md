@@ -79,15 +79,50 @@ Cookies: `fd_session` (HttpOnly, `Secure`+`SameSite=None` in production,
 
 Planned: `POST /auth/resend-verification` · `GET /auth/session`.
 
-### Downloads
+### Downloads ✅ (Phase 3)
 
-| Method | Path                           | Notes                                           |
-| ------ | ------------------------------ | ----------------------------------------------- |
-| POST   | `/api/v1/downloads/analyze`    | `{ url }` → media info + formats, cached ≤5 min |
-| POST   | `/api/v1/downloads`            | creates a job; honors `Idempotency-Key`         |
-| GET    | `/api/v1/downloads/:id`        | job status + progress                           |
-| GET    | `/api/v1/downloads/:id/result` | fresh short-lived signed URL once `COMPLETED`   |
-| POST   | `/api/v1/downloads/:id/cancel` | only before `COMPLETED`                         |
+Identity: a session cookie **or** an `X-Anon-Key` header (client-generated,
+`[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs. Anonymous creation also
+carries `X-Turnstile-Token` once Turnstile is keyed.
+
+| Method | Path                           | Auth                 | Notes                                                                          |
+| ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
+| POST   | `/api/v1/downloads`            | session+CSRF \| anon | 201 + job; honors `Idempotency-Key` (replay → 201 + `Idempotent-Replay: true`) |
+| GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) — only the caller's jobs                          |
+| GET    | `/api/v1/downloads/:id`        | session \| anon      | status + progress; a foreign job answers `404`, never `403`                    |
+| POST   | `/api/v1/downloads/:id/cancel` | session+CSRF \| anon | only before `COMPLETED`; repeating it → `409`                                  |
+
+Request body: `{ "url": "https://…", "format"?: "mp4", "container"?: "mp4" }`.
+Only `http(s)` URLs are accepted; credentials in the URL are rejected and the
+stored URL is redacted (path kept, query/fragment dropped).
+
+Job payload — no raw URL, hash, IP or lease ever crosses the wire:
+
+```json
+{
+  "id": "01a0fc73-13a1-7d58-9974-48b3e537fd69",
+  "status": "queued",
+  "progress": 0,
+  "url": "https://example.com/watch",
+  "requestedFormat": null,
+  "targetContainer": null,
+  "errorCode": null,
+  "errorMessage": null,
+  "retryCount": 0,
+  "createdAt": "2026-10-02T11:41:03.512Z",
+  "updatedAt": "2026-10-02T11:41:03.540Z",
+  "expiresAt": "2026-10-03T11:41:03.512Z",
+  "completedAt": null
+}
+```
+
+`status` walks `created → validating → queued → analyzing → ready →
+processing → uploading → completed` (→ `expired` after retention), with
+`failed → retrying` loops and terminal `cancelled` / `dead_letter` /
+`policy_restricted`. The API never does media work itself: creation only
+enqueues (contract invariant 1).
+
+Planned: `POST /downloads/analyze` · `GET /downloads/:id/result` (Phase 4).
 
 ### Catalog
 
@@ -135,5 +170,6 @@ Separate auth guard + MFA + audit entry on every mutation:
 | `/health`, `/ready`       | ✅ Phase 1   |
 | auth + `/me`              | ✅ Phase 2   |
 | schema, Redis rate limits | ✅ Phase 2   |
-| downloads, catalog, queue | ⏳ Phase 3–4 |
+| downloads CRUD, queue     | ✅ Phase 3   |
+| analyze, result, catalog  | ⏳ Phase 4   |
 | billing, API keys, admin  | ⏳ Phase 6–7 |

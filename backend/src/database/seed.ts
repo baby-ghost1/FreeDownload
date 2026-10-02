@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { pathToFileURL } from 'node:url';
 
 import { closeDatabase, getDb } from './client.js';
 import { logger } from '../logging/logger.js';
@@ -99,7 +100,10 @@ export async function seed(): Promise<void> {
   logger.info('seed complete');
 }
 
-const isDirectRun = import.meta.url.endsWith('seed.ts') || import.meta.url.endsWith('seed.js');
+// True only when this file is the process entrypoint (tsx/node src/database/
+// seed.ts) — importing it from tests or the API must never seed or exit.
+const isDirectRun =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isDirectRun) {
   seed()

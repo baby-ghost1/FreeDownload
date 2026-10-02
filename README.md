@@ -132,6 +132,15 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phase 1 (foundation) complete: workspaces, strict TypeScript, lint/format,
-health endpoints, docker-compose, CI. Subsequent phases follow the roadmap in
-`docs/architecture.md`.
+Phases 1–3 complete:
+
+- **1 — foundation:** workspaces, strict TypeScript, lint/format, health
+  endpoints, docker-compose, CI.
+- **2 — core:** Drizzle schema + migrations + seed, auth (register/login/
+  sessions/CSRF/Turnstile), `/me`, Redis rate limits, docs.
+- **3 — queue:** BullMQ queues with pinned backoff (`1,4,16,64,256s`), job
+  state machine + idempotent create, lease-based stateless download/cleanup
+  workers, crash recovery + dead-letter, `POST/GET /downloads`,
+  `POST /downloads/:id/cancel`.
+
+Subsequent phases follow the roadmap in `docs/architecture.md`.

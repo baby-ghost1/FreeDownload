@@ -67,10 +67,21 @@ const EnvSchema = z.object({
   RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().min(1).default(60),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
+  DOWNLOAD_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(60),
 
   // --- abuse / Turnstile --------------------------------------------------
   TURNSTILE_SECRET_KEY: z.string().optional(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+
+  // --- queue / workers (Phase 3) ------------------------------------------
+  BULLMQ_PREFIX: z.string().min(1).default('fd'),
+  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
+  QUEUE_RETRY_LIMIT: z.coerce.number().int().min(0).max(10).default(3),
+  LEASE_TTL_MS: z.coerce.number().int().min(1_000).default(30_000),
+  JOB_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(300_000),
+  CLEANUP_INTERVAL_MIN: z.coerce.number().int().min(1).default(15),
+  SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(20_000),
+  IDEMPOTENCY_TTL_H: z.coerce.number().int().min(1).default(24),
 
   // --- email --------------------------------------------------------------
   SMTP_HOST: z.string().optional(),
@@ -167,12 +178,29 @@ export const config = {
     windowSec: env.RATE_LIMIT_WINDOW_SEC,
     max: env.RATE_LIMIT_MAX,
     authMax: env.AUTH_RATE_LIMIT_MAX,
+    downloadMax: env.DOWNLOAD_RATE_LIMIT_MAX,
   },
   turnstile: {
     secretKey: env.TURNSTILE_SECRET_KEY,
     siteKey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     // Verification is enforced in production; dev/test run without a key.
     required: env.NODE_ENV === 'production',
+  },
+  queue: {
+    prefix: env.BULLMQ_PREFIX,
+    workerConcurrency: env.WORKER_CONCURRENCY,
+    /** Extra attempts after the first (total attempts = this + 1). */
+    retryLimit: env.QUEUE_RETRY_LIMIT,
+    leaseTtlMs: env.LEASE_TTL_MS,
+    jobTimeoutMs: env.JOB_TIMEOUT_MS,
+    cleanupIntervalMin: env.CLEANUP_INTERVAL_MIN,
+    shutdownGraceMs: env.SHUTDOWN_GRACE_MS,
+    /** Backoff base: 1s, 4s, 16s, 64s, 256s … (contract §Job lifecycle). */
+    backoffBaseMs: 1_000,
+  },
+  idempotency: {
+    ttlHours: env.IDEMPOTENCY_TTL_H,
+    headerName: 'idempotency-key',
   },
   email: {
     transport: env.MAIL_TRANSPORT,

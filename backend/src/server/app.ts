@@ -19,6 +19,8 @@ import { readinessRegistry } from '../modules/health/readiness.js';
 import { registerInfrastructureChecks } from '../modules/health/checks.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { registerMeRoutes } from '../modules/me/routes.js';
+import { registerDownloadRoutes } from '../modules/downloads/routes.js';
+import { closeQueues } from '../queue/queues.js';
 import { assertCsrf } from '../security/csrf.js';
 import { loadSession, readSessionToken, touchSession } from '../modules/auth/session.js';
 import { getDb } from '../database/client.js';
@@ -74,6 +76,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       'Content-Type',
       'Authorization',
       'Idempotency-Key',
+      'X-Anon-Key',
       'X-CSRF-Token',
       'X-Request-Id',
       'X-Turnstile-Token',
@@ -109,6 +112,27 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   }
 
   // --- session context ---------------------------------------------------
+  // Body-less POSTs (cancel, logout) still arrive as `application/json` from
+  // many clients. Treat an empty payload as "no body" instead of failing at
+  // the parser; routes with a body schema keep rejecting it via validation.
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_req, body: string, done) => {
+      if (body.trim().length === 0) {
+        done(null, undefined);
+        return;
+      }
+      try {
+        done(null, JSON.parse(body) as unknown);
+      } catch {
+        const err = new Error('Invalid JSON payload.') as Error & { statusCode?: number };
+        err.statusCode = 400;
+        done(err, undefined);
+      }
+    },
+  );
+
   // Populated for every request; routes that need it call requireAuth().
   // Cookie-authenticated mutations also enforce double-submit CSRF here.
   app.decorateRequest('auth', null);
@@ -202,9 +226,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     async (scope: AppInstance) => {
       await registerAuthRoutes(scope);
       await registerMeRoutes(scope);
+      await registerDownloadRoutes(scope);
     },
     { prefix: '/api/v1' },
   );
+
+  app.addHook('onClose', async () => {
+    await closeQueues();
+  });
 
   return app;
 }

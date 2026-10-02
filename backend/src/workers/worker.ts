@@ -1,27 +1,35 @@
-/**
- * Worker entrypoint — Phase 1 placeholder.
- *
- * The real download/media/cleanup workers (BullMQ consumers, leases,
- * heartbeats) arrive in Phase 3. This process exists now so the `worker`
- * Docker target, healthcheck and deploy topology are exercised from day one.
- */
 import { logger } from '../logging/logger.js';
+import { closeQueues } from '../queue/queues.js';
+import { closeRedis } from '../redis/client.js';
+import { startWorkers, stopWorkers, type WorkerHandles } from './index.js';
 
-const log = logger.child({ component: 'worker' });
+/**
+ * Worker process entrypoint (`npm run start:worker -w @freedownload/backend`).
+ * Deliberately separate from the API process so the two scale independently.
+ */
+async function main(): Promise<void> {
+  const handles: WorkerHandles = await startWorkers();
 
-log.info('worker placeholder started — queues arrive in Phase 3');
+  let shuttingDown = false;
+  const shutdown = async (signal: string): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info({ signal }, 'worker shutting down');
 
-let ticks = 0;
-const heartbeat = setInterval(() => {
-  ticks += 1;
-  log.debug({ ticks }, 'heartbeat');
-}, 30_000);
+    await stopWorkers(handles);
+    await closeQueues();
+    await closeRedis();
+    process.exit(0);
+  };
 
-function shutdown(signal: string): void {
-  log.info({ signal }, 'worker placeholder shutting down');
-  clearInterval(heartbeat);
-  process.exit(0);
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('unhandledRejection', (reason) => {
+    logger.error({ reason }, 'unhandled rejection in worker process');
+  });
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+main().catch((err) => {
+  logger.error({ err }, 'worker failed to start');
+  process.exit(1);
+});
