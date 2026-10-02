@@ -15,9 +15,11 @@ export const TRANSITIONS: Readonly<Record<JobStatus, readonly JobStatus[]>> = {
   created: ['validating', 'cancelled'],
   validating: ['queued', 'policy_restricted', 'failed', 'cancelled'],
   queued: ['analyzing', 'failed', 'cancelled'],
-  analyzing: ['ready', 'failed', 'retrying', 'cancelled'],
-  ready: ['processing', 'failed', 'cancelled'],
-  processing: ['uploading', 'failed', 'cancelled'],
+  // A source can also be policy-blocked mid-flight (admin disabled it, the
+  // extractor resolved to a private address) — those must not retry.
+  analyzing: ['ready', 'failed', 'retrying', 'policy_restricted', 'cancelled'],
+  ready: ['processing', 'failed', 'policy_restricted', 'cancelled'],
+  processing: ['uploading', 'failed', 'policy_restricted', 'cancelled'],
   uploading: ['completed', 'failed', 'cancelled'],
   completed: ['expired'],
   failed: ['retrying', 'dead_letter', 'cancelled'],

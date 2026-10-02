@@ -1,4 +1,4 @@
-import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
+﻿import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import cookie from '@fastify/cookie';
@@ -20,6 +20,8 @@ import { registerInfrastructureChecks } from '../modules/health/checks.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { registerMeRoutes } from '../modules/me/routes.js';
 import { registerDownloadRoutes } from '../modules/downloads/routes.js';
+import { registerCatalogRoutes } from '../modules/catalog/routes.js';
+import { registerFilesRoutes } from '../modules/files/routes.js';
 import { closeQueues } from '../queue/queues.js';
 import { assertCsrf } from '../security/csrf.js';
 import { loadSession, readSessionToken, touchSession } from '../modules/auth/session.js';
@@ -49,7 +51,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     loggerInstance: logger,
     trustProxy: config.trustProxy,
     genReqId,
-    bodyLimit: 1_048_576, // 1 MiB — media never posts through the API (§9)
+    bodyLimit: 1_048_576, // 1 MiB â€” media never posts through the API (Â§9)
     ajv: { customOptions: { allErrors: true } },
   }).withTypeProvider<ZodTypeProvider>();
 
@@ -85,7 +87,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     maxAge: 600,
   });
 
-  // Signed when COOKIE_SECRET is configured — the token itself is
+  // Signed when COOKIE_SECRET is configured â€” the token itself is
   // high-entropy and stored hashed, signing only adds tamper detection.
   await app.register(cookie, {
     ...(config.session.secret ? { secret: config.session.secret } : {}),
@@ -97,7 +99,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       global: true,
       max: config.rateLimit.max,
       timeWindow: `${config.rateLimit.windowSec} seconds`,
-      // Redis store keeps limits correct across replicas (§25). If Redis is
+      // Redis store keeps limits correct across replicas (Â§25). If Redis is
       // unreachable we fail open rather than taking the API down.
       redis: getRedis(),
       skipOnError: true,
@@ -160,7 +162,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     return payload;
   });
 
-  // Uniform error envelope (contract §46) — never expose stack traces.
+  // Uniform error envelope (contract Â§46) â€” never expose stack traces.
   app.setErrorHandler((error: unknown, req: FastifyRequest, reply: FastifyReply) => {
     const requestId = String(req.id);
 
@@ -227,6 +229,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       await registerAuthRoutes(scope);
       await registerMeRoutes(scope);
       await registerDownloadRoutes(scope);
+      await registerCatalogRoutes(scope);
+      await registerFilesRoutes(scope);
     },
     { prefix: '/api/v1' },
   );

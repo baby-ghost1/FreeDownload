@@ -12,6 +12,11 @@ export default defineConfig({
       // Short lease so the crash-recovery test can watch it expire in
       // seconds instead of the production 30s.
       LEASE_TTL_MS: '3000',
+      // Tests keep the Phase 3 placeholder runner by default; Phase 4
+      // pipeline tests flip runnerControls.mode per test.
+      WORKER_RUNNER: 'placeholder',
+      // Pipeline tests hit a loopback fixture server (see ssrf.ts).
+      SSRF_ALLOW_PRIVATE: 'true',
     },
     // Integration tests need docker compose services; they skip locally when
     // the containers are down and always run in CI.

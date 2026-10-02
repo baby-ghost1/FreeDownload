@@ -34,9 +34,10 @@ COPY tsconfig.base.json ./
 COPY backend/tsconfig.json backend/tsconfig.build.json backend/
 COPY backend/src backend/src
 # tsc only emits JS — ship the reviewed SQL migrations with the runtime so a
-# deploy step can run `node dist/database/migrate.js` inside the image.
+# deploy step can run `node dist/database/migrate.js` inside the image. The
+# shell's cwd is the WORKDIR (/app), so paths stay workspace-qualified.
 RUN npm run build --workspace @freedownload/backend \
- && cp -r src/database/migrations dist/database/migrations \
+ && cp -r backend/src/database/migrations backend/dist/database/migrations \
  && npm prune --workspace @freedownload/backend --omit=dev
 
 # ---------------------------------------------------------------------------
@@ -56,9 +57,18 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 CMD ["node", "dist/server/server.js"]
 
 # ---------------------------------------------------------------------------
-# Worker entrypoint arrives in Phase 3; the target exists now so the image
-# pipeline and deploy topology are verified from day one.
+# Worker: same runtime plus the media engine binaries. yt-dlp is pip-
+# installed at build time because extractor fixes ship weekly; ffmpeg/ffprobe
+# come from Alpine's community repo.
 FROM runtime AS worker
+# The runtime user is unprivileged — binaries must be installed as root,
+# then the process drops back down for the actual work.
+USER root
+RUN apk add --no-cache ffmpeg python3 py3-pip \
+ && pip3 install --no-cache-dir --break-system-packages yt-dlp \
+ && yt-dlp --version
+USER app
+ENV WORKER_RUNNER=pipeline
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD pgrep -f "dist/workers/worker.js" > /dev/null || exit 1
 CMD ["node", "dist/workers/worker.js"]

@@ -35,3 +35,7 @@ Thumbs.db
 
 # turbo
 .turbo/
+
+# Local storage driver output (STORAGE_DRIVER=local)
+.storage/
+**/.storage/

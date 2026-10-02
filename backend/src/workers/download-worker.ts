@@ -1,20 +1,17 @@
 import { Worker, type Job as BullJob } from 'bullmq';
-import { eq, inArray, and, isNotNull, lte } from 'drizzle-orm';
+import { eq, inArray, and, isNotNull, isNull, lte } from 'drizzle-orm';
 
 import { config } from '../server/config.js';
 import { logger } from '../logging/logger.js';
 import { getDb, type Database } from '../database/client.js';
 import { downloadAttempts, downloadJobs } from '../database/schema/index.js';
 import { AppError } from '../errors/app-error.js';
+import { SourceError, SourcePolicyError } from '../downloader/errors.js';
 import { transitionJob, isTerminal, type JobStatus } from '../modules/downloads/state-machine.js';
 import { QUEUE_NAMES, backoffDelay, enqueueDeadLetter } from '../queue/queues.js';
 import { randomToken } from '../utils/crypto.js';
-import {
-  JobAbortedError,
-  SimulatedCrashError,
-  placeholderRunner,
-  type RunnerContext,
-} from './runner.js';
+import { activeRunner } from './pipeline.js';
+import { JobAbortedError, SimulatedCrashError, type RunnerContext } from './runner.js';
 
 export interface DownloadJobData {
   jobId: string;
@@ -171,6 +168,22 @@ async function acquireLease(db: Database, jobId: string, workerId: string): Prom
     if (reclaimed) return { kind: 'acquired', token: reclaimed };
   }
 
+  // Hand-off takeover: the API moved the job to `ready`/`processing`
+  // (POST /downloads/:id/start) without attaching a lease — take it over
+  // as-is; the pipeline picks up from whatever stage the status says.
+  const taken = await db
+    .update(downloadJobs)
+    .set({ ...patch, errorCode: null, errorMessage: null })
+    .where(
+      and(
+        eq(downloadJobs.id, jobId),
+        inArray(downloadJobs.status, ['ready', 'processing']),
+        isNull(downloadJobs.leaseToken),
+      ),
+    )
+    .returning({ id: downloadJobs.id });
+  if (taken.length > 0) return { kind: 'acquired', token };
+
   let current = await loadJob(db, jobId);
   if (!current || !LEASED.includes(current.status)) {
     return { kind: 'unavailable' }; // terminal, or already requeued elsewhere
@@ -258,6 +271,8 @@ async function finishAttempt(
 
 function errorCodeOf(err: unknown): string {
   if (err instanceof AppError) return err.code;
+  if (err instanceof SourceError) return err.code;
+  if (err instanceof SourcePolicyError) return err.code;
   if (err instanceof JobAbortedError) return 'JOB_ABORTED';
   return 'WORKER_ERROR';
 }
@@ -320,6 +335,31 @@ async function finishFailure(
   const attemptNo = bullJob.attemptsMade + 1;
 
   await finishAttempt(db, attemptId, timedOut ? 'timeout' : 'failed', code, durationMs);
+
+  // Policy/SSRF violations are user-actionable, not transient: park the job
+  // as `policy_restricted` immediately instead of burning retries.
+  if (err instanceof SourcePolicyError) {
+    const parked = await transitionJob(db, {
+      jobId,
+      from: LEASED,
+      to: 'policy_restricted',
+      patch: {
+        errorCode: code,
+        errorMessage: message,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        workerId: null,
+      },
+      leaseToken,
+      soft: true,
+    });
+    if (parked) {
+      logger.info({ jobId, message }, 'download job blocked by source policy');
+    } else {
+      logger.warn({ jobId, code }, 'job changed state during policy handling');
+    }
+    return;
+  }
 
   const current = await loadJob(db, jobId);
   const retryCount = Math.min(
@@ -425,6 +465,7 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
             progress,
             leaseExpiresAt: new Date(Date.now() + config.queue.leaseTtlMs),
             heartbeatAt: new Date(),
+            ...transition.patch,
           },
           leaseToken,
           soft: true,
@@ -439,7 +480,14 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
   };
 
   try {
-    await placeholderRunner.run(ctx);
+    const outcome = await activeRunner().run(ctx);
+    if (outcome === 'awaiting_format') {
+      // The attempt did its job: analysis is stored and the job parks in
+      // `ready` until the user starts it. Lease is released in `finally`.
+      await finishAttempt(db, attempt.id, 'succeeded', 'AWAITING_FORMAT', Date.now() - startedAt);
+      logger.info({ jobId }, 'download job awaiting format selection');
+      return;
+    }
     await finishSuccess(db, jobId, leaseToken, attempt.id, Date.now() - startedAt);
   } catch (err) {
     if (err instanceof SimulatedCrashError) {

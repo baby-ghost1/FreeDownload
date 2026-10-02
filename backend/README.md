@@ -38,8 +38,8 @@ src/
 │   ├── health/    liveness, readiness + registered dependency probes
 │   ├── auth/      register / login / logout / tokens + session management
 │   ├── me/        profile read/update
-│   ├── downloads/ create/list/get/cancel, state machine, idempotency
-│   │              ✅ Phase 3
+│   ├── downloads/ CRUD + analyze/start/result/cancel, state machine, idempotency
+│   │              ✅ Phases 3-4
 │   └── mailer/    Mailer interface (console transport in dev)
 ├── security/      passwords (Argon2id), tokens, CSRF, Turnstile
 ├── database/      Drizzle schema, migrations, seed, pg pool        ✅ Phase 2
@@ -49,10 +49,10 @@ src/
 ├── logging/       pino JSON logger with redaction list
 ├── queue/         BullMQ queues, enqueue, backoff, DLQ producer    ✅ Phase 3
 ├── workers/       download / cleanup workers, leases, attempts     ✅ Phase 3
-│                  runner.ts (placeholder pipeline + crash test hooks)
-├── downloader/    SourceAdapter, detectors, policies, executors (Phase 4)
-├── media/         FFmpeg runner, metadata, formats              (Phase 4)
-├── storage/       R2 client, signed URLs, lifecycle             (Phase 4)
+│                  runner.ts (placeholder + pipeline modes, crash test hooks)
+├── downloader/    SourceAdapter, detectors, policies, executors     ✅ Phase 4
+├── media/         FFmpeg runner, metadata, formats                  ✅ Phase 4
+├── storage/       R2 client, signed URLs, lifecycle                 ✅ Phase 4
 ├── observability/ metrics, tracing, Sentry                      (Phase 9)
 └── types/         AppInstance (Fastify + Zod type provider)
 

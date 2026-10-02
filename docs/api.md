@@ -79,22 +79,44 @@ Cookies: `fd_session` (HttpOnly, `Secure`+`SameSite=None` in production,
 
 Planned: `POST /auth/resend-verification` · `GET /auth/session`.
 
-### Downloads ✅ (Phase 3)
+### Downloads ✅ (Phases 3–4)
 
 Identity: a session cookie **or** an `X-Anon-Key` header (client-generated,
-`[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs. Anonymous creation also
-carries `X-Turnstile-Token` once Turnstile is keyed.
+`[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs. Anonymous creation/analyze
+also carries `X-Turnstile-Token` once Turnstile is keyed.
 
 | Method | Path                           | Auth                 | Notes                                                                          |
 | ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
 | POST   | `/api/v1/downloads`            | session+CSRF \| anon | 201 + job; honors `Idempotency-Key` (replay → 201 + `Idempotent-Replay: true`) |
-| GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) — only the caller's jobs                          |
+| POST   | `/api/v1/downloads/analyze`    | session+CSRF \| anon | synchronous metadata + format list, Redis-cached (`ANALYZE_CACHE_TTL_SEC`)     |
+| GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) - only the caller's jobs                          |
 | GET    | `/api/v1/downloads/:id`        | session \| anon      | status + progress; a foreign job answers `404`, never `403`                    |
+| POST   | `/api/v1/downloads/:id/start`  | session+CSRF \| anon | `ready` → `processing` with the chosen `format`/`container`; else `409`        |
+| GET    | `/api/v1/downloads/:id/result` | session \| anon      | signed URL once `completed` (409 before that, 404 if purged)                   |
 | POST   | `/api/v1/downloads/:id/cancel` | session+CSRF \| anon | only before `COMPLETED`; repeating it → `409`                                  |
 
-Request body: `{ "url": "https://…", "format"?: "mp4", "container"?: "mp4" }`.
-Only `http(s)` URLs are accepted; credentials in the URL are rejected and the
+Request body: `{ "url": "https://.", "format"?: "mp4", "container"?: "mp4" }`.
+`format` matches `^[A-Za-z0-9][A-Za-z0-9.#_-]{0,63}$`, `container`
+`^[a-z0-9]{2,5}$` — anything else is `400` before a job row exists. Only
+`http(s)` URLs are accepted; credentials in the URL are rejected and the
 stored URL is redacted (path kept, query/fragment dropped).
+
+**Analyze → start flow:** creating _without_ a format runs analysis and parks
+the job at `ready` (`errorCode: AWAITING_FORMAT` on the finished attempt).
+`POST /:id/start` then hands the picked format to the worker, which resumes
+without re-analyzing. Creating _with_ a format runs the whole pipeline in one
+go. The worker takes over `ready`/`processing` rows that hold no lease, so the
+start hand-off never depends on queue state.
+
+`analyze` enforces SSRF + source policy _before_ spawning yt-dlp and re-sweeps
+every URL the extractor reports (thumbnail, format URLs) before returning or
+caching anything. Private/internal targets answer `403 POLICY_RESTRICTED`;
+unreachable sources answer `503`.
+
+`result` returns `{ url, expiresAt, sizeBytes, container, mimeType }` where
+`url` is a short-lived signed link (R2 presigned GET in production, HMAC
+`GET /api/v1/files/...` for the local dev driver) — media bytes never travel
+through the API (contract invariant 5).
 
 Job payload — no raw URL, hash, IP or lease ever crosses the wire:
 
@@ -122,12 +144,17 @@ processing → uploading → completed` (→ `expired` after retention), with
 `policy_restricted`. The API never does media work itself: creation only
 enqueues (contract invariant 1).
 
-Planned: `POST /downloads/analyze` · `GET /downloads/:id/result` (Phase 4).
+### Catalog ✅ (Phase 4)
 
-### Catalog
+| Method | Path                    | Auth | Notes                                                                         |
+| ------ | ----------------------- | ---- | ----------------------------------------------------------------------------- |
+| GET    | `/api/v1/sources`       | none | enabled sources + health `mode` (`active`/`maintenance`/…)                    |
+| GET    | `/api/v1/formats`       | none | supported output formats for `body.format`                                    |
+| GET    | `/api/v1/config/public` | none | limits, flags, plans, Turnstile site key; `Cache-Control: public, max-age=60` |
 
-`GET /api/v1/sources` · `GET /api/v1/formats` · `GET /api/v1/config/public`
-(limits, flags, plans, Turnstile site key) — all cacheable with explicit TTLs.
+`GET /api/v1/files/*` serves bytes **only** when `STORAGE_DRIVER=local`
+(development) and requires the HMAC token minted with the signed URL — it 404s
+in production, where browsers stream straight from R2.
 
 ### Account
 

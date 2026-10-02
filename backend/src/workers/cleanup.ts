@@ -9,11 +9,13 @@ import {
   emailVerifications,
   files,
   idempotencyKeys,
+  mediaMetadata,
   passwordResets,
   sessions,
 } from '../database/schema/index.js';
 import type { JobStatus } from '../modules/downloads/state-machine.js';
 import { enqueueDeadLetter, enqueueDownloadJob } from '../queue/queues.js';
+import { getStorage } from '../storage/index.js';
 
 /** Statuses a live job can sit in while holding a lease. */
 const LEASED: JobStatus[] = ['analyzing', 'ready', 'processing', 'uploading'];
@@ -45,7 +47,11 @@ export interface SweepStats {
   idempotencyPurged: number;
   tokensPurged: number;
   filesPurged: number;
+  metadataTrimmed: number;
 }
+
+/** How long the extractor's raw JSON dump stays in `media_metadata`. */
+const METADATA_RAW_RETENTION_MS = 7 * 86_400_000;
 
 /**
  * One cleanup pass. Bulk updates are guarded by `WHERE status = <legal source>`
@@ -63,12 +69,15 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
     idempotencyPurged: 0,
     tokensPurged: 0,
     filesPurged: 0,
+    metadataTrimmed: 0,
   };
 
-  // 1. Finished jobs past their retention window become `expired`.
+  // 1. Finished jobs past their retention window become `expired`. The raw
+  //    URL is nullified here too (contract §51) — it has no purpose once the
+  //    download window closes.
   const expired = await db
     .update(downloadJobs)
-    .set({ status: 'expired' })
+    .set({ status: 'expired', url: null })
     .where(and(eq(downloadJobs.status, 'completed'), lte(downloadJobs.expiresAt, now)))
     .returning({ id: downloadJobs.id });
   stats.expiredCompleted = expired.length;
@@ -81,6 +90,7 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
       status: 'cancelled',
       errorCode: 'EXPIRED',
       errorMessage: 'The job expired before it completed.',
+      url: null,
       leaseToken: null,
       leaseExpiresAt: null,
       workerId: null,
@@ -185,14 +195,38 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
         .returning({ id: passwordResets.id })
     ).length;
 
-  // 5. Files past retention are marked purged (the object-store delete is
-  //    the storage worker's job in Phase 4; `purged_at` is the bookkeeping).
-  stats.filesPurged = (
-    await db
+  // 5. Files past retention are deleted from object storage first, then
+  //    marked purged — a failed delete leaves the row for the next sweep.
+  const expiringFiles = await db
+    .select({ id: files.id, objectKey: files.objectKey })
+    .from(files)
+    .where(and(isNull(files.purgedAt), lte(files.expiresAt, now)))
+    .limit(500);
+
+  for (const file of expiringFiles) {
+    try {
+      await getStorage().remove(file.objectKey);
+    } catch (err) {
+      logger.warn({ err, fileId: file.id }, 'storage purge failed; will retry next sweep');
+      continue;
+    }
+    const purged = await db
       .update(files)
       .set({ purgedAt: now })
-      .where(and(isNull(files.purgedAt), lte(files.expiresAt, now)))
-      .returning({ id: files.id })
+      .where(and(eq(files.id, file.id), isNull(files.purgedAt)))
+      .returning({ id: files.id });
+    stats.filesPurged += purged.length;
+  }
+
+  // 6. The extractor's raw JSON dump only matters while the job is young;
+  //    structured columns stay forever.
+  const rawCutoff = new Date(now.getTime() - METADATA_RAW_RETENTION_MS);
+  stats.metadataTrimmed = (
+    await db
+      .update(mediaMetadata)
+      .set({ raw: null })
+      .where(and(isNotNull(mediaMetadata.raw), lte(mediaMetadata.fetchedAt, rawCutoff)))
+      .returning({ id: mediaMetadata.id })
   ).length;
 
   return stats;

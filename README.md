@@ -132,7 +132,7 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phases 1–3 complete:
+Phases 1–4 complete:
 
 - **1 — foundation:** workspaces, strict TypeScript, lint/format, health
   endpoints, docker-compose, CI.
@@ -142,5 +142,14 @@ Phases 1–3 complete:
   state machine + idempotent create, lease-based stateless download/cleanup
   workers, crash recovery + dead-letter, `POST/GET /downloads`,
   `POST /downloads/:id/cancel`.
+- **4 — media engine:** yt-dlp SourceAdapter (argument-array exec, progress,
+  format selection), SSRF guards (DNS + private/metadata range checks, re-sweep
+  of extractor-reported URLs), FFmpeg remux/transcode + ffprobe verification,
+  local/R2 storage with signed URLs, real pipeline runner
+  (analyze → ready → processing → uploading → completed),
+  `POST /downloads/analyze`, `POST /downloads/:id/start`,
+  `GET /downloads/:id/result`, catalog endpoints (`sources`/`formats`/
+  `config/public`), and cleanup now purges storage objects, nulls raw URLs and
+  trims `media_metadata.raw`.
 
 Subsequent phases follow the roadmap in `docs/architecture.md`.

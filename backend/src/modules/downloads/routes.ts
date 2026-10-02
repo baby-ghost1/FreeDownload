@@ -8,10 +8,13 @@ import { verifyTurnstile } from '../../security/turnstile.js';
 import { errorResponses } from '../../http/error-schema.js';
 import type { DownloadJob } from '../../database/schema/index.js';
 import {
+  analyzeDownloadUrl,
   cancelDownload,
   createDownload,
+  getJobResult,
   getOwnedJob,
   listOwnJobs,
+  startDownload,
   type DownloadActor,
 } from './service.js';
 import { abortIdempotency, beginIdempotency, completeIdempotency } from './idempotency.js';
@@ -37,10 +40,56 @@ const JobSchema = z.object({
   completedAt: z.coerce.date().nullable(),
 });
 
+/** Format keys are ours (`1080p.mp4`); containers become exec arguments. */
+const FormatKey = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.#_-]{0,63}$/);
+const ContainerKey = z.string().regex(/^[a-z0-9]{2,5}$/);
+
 const CreateBody = z.object({
   url: z.string().min(4).max(4_096),
-  format: z.string().max(64).optional(),
-  container: z.string().max(32).optional(),
+  format: FormatKey.optional(),
+  container: ContainerKey.optional(),
+});
+
+const AnalyzeBody = z.object({ url: z.string().min(4).max(4_096) });
+
+const AnalyzeFormatSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  kind: z.enum(['video', 'audio', 'other']),
+  container: z.string(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  fps: z.number().nullable(),
+  filesizeBytes: z.number().nullable(),
+  isDefault: z.boolean(),
+});
+
+const AnalyzeResponse = z.object({
+  url: z.string(),
+  title: z.string().nullable(),
+  durationSec: z.number().nullable(),
+  thumbnailUrl: z.string().nullable(),
+  uploader: z.string().nullable(),
+  description: z.string().nullable(),
+  formats: z.array(AnalyzeFormatSchema),
+  cachedAt: z.string(),
+});
+
+const StartBody = z
+  .object({
+    format: FormatKey.optional(),
+    container: ContainerKey.optional(),
+  })
+  .refine((b) => b.format !== undefined || b.container !== undefined, {
+    message: 'Provide `format` and/or `container`.',
+  });
+
+const ResultResponse = z.object({
+  url: z.string(),
+  expiresAt: z.coerce.date(),
+  sizeBytes: z.number().nullable(),
+  container: z.string().nullable(),
+  mimeType: z.string().nullable(),
 });
 
 const ParamsId = z.object({ id: z.uuid() });
@@ -219,5 +268,66 @@ export async function registerDownloadRoutes(app: AppInstance): Promise<void> {
       const job = await cancelDownload(req.params.id, actorOf(req), getDb());
       return toJobResponse(job);
     },
+  );
+
+  app.post(
+    '/downloads/analyze',
+    {
+      config: createRateLimit,
+      schema: {
+        description:
+          'Synchronous metadata extraction (cached ≤ ANALYZE_CACHE_TTL_SEC). ' +
+          'SSRF + source policy are enforced before and after extraction.',
+        body: AnalyzeBody,
+        response: {
+          200: AnalyzeResponse,
+          ...errorResponses(400, 401, 403, 422, 429, 503),
+        },
+      },
+    },
+    async (req) => {
+      actorOf(req); // analyze is authenticated traffic too (session/anon key)
+
+      if (!req.auth) {
+        await verifyTurnstile(header(req, 'x-turnstile-token'), req.ip);
+      }
+      return analyzeDownloadUrl(req.body.url, getDb());
+    },
+  );
+
+  app.post(
+    '/downloads/:id/start',
+    {
+      schema: {
+        description:
+          'Start a parked (`ready`) job with a chosen format; the worker ' +
+          'resumes without re-analyzing.',
+        params: ParamsId,
+        body: StartBody,
+        response: { 200: JobSchema, ...errorResponses(400, 401, 403, 404, 409, 503) },
+      },
+    },
+    async (req) => {
+      const job = await startDownload(req.params.id, {
+        ...actorOf(req),
+        format: req.body.format,
+        container: req.body.container,
+      });
+      return toJobResponse(job);
+    },
+  );
+
+  app.get(
+    '/downloads/:id/result',
+    {
+      schema: {
+        description:
+          'Short-lived signed URL once the job is `completed`; media bytes ' +
+          'are fetched directly from storage (never through the API).',
+        params: ParamsId,
+        response: { 200: ResultResponse, ...errorResponses(401, 404, 409) },
+      },
+    },
+    async (req) => getJobResult(req.params.id, actorOf(req), getDb()),
   );
 }

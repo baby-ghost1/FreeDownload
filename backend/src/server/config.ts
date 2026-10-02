@@ -82,6 +82,31 @@ const EnvSchema = z.object({
   CLEANUP_INTERVAL_MIN: z.coerce.number().int().min(1).default(15),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(20_000),
   IDEMPOTENCY_TTL_H: z.coerce.number().int().min(1).default(24),
+  // Which JobRunner the download worker drives: the real pipeline, or the
+  // Phase 3 placeholder (tests default to placeholder; Phase 4 tests opt in).
+  WORKER_RUNNER: z.enum(['pipeline', 'placeholder']).default('pipeline'),
+
+  // --- download engine (Phase 4) ------------------------------------------
+  SOURCE_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(60_000),
+  ANALYZE_CACHE_TTL_SEC: z.coerce.number().int().min(0).default(300),
+  MAX_FILE_SIZE_MB: z.coerce.number().int().min(1).default(512),
+  YTDLP_PATH: z.string().min(1).default('yt-dlp'),
+  FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
+  FFPROBE_PATH: z.string().min(1).default('ffprobe'),
+  // Tests exercise the full pipeline against a loopback fixture server; this
+  // must stay false outside tests (contract security layer 3).
+  SSRF_ALLOW_PRIVATE: boolish.default(false),
+
+  // --- storage (Phase 4) ---------------------------------------------------
+  STORAGE_DRIVER: z.enum(['local', 'r2']).default('local'),
+  STORAGE_LOCAL_DIR: z.string().min(1).default('.storage'),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_ENDPOINT: z.string().optional(),
+  SIGNED_URL_TTL_SEC: z.coerce.number().int().min(30).default(300),
+  R2_RETENTION_DAYS: z.coerce.number().int().min(1).default(7),
 
   // --- email --------------------------------------------------------------
   SMTP_HOST: z.string().optional(),
@@ -118,6 +143,18 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     if (env.DATABASE_URL === localDb) missing.push('DATABASE_URL (dev default forbidden)');
     if (env.REDIS_URL === 'redis://localhost:6379')
       missing.push('REDIS_URL (dev default forbidden)');
+    if (env.STORAGE_DRIVER === 'r2') {
+      for (const key of [
+        'R2_ACCOUNT_ID',
+        'R2_ACCESS_KEY_ID',
+        'R2_SECRET_ACCESS_KEY',
+        'R2_BUCKET',
+      ] as const) {
+        if (!env[key]) missing.push(key);
+      }
+    }
+    if (env.SSRF_ALLOW_PRIVATE) missing.push('SSRF_ALLOW_PRIVATE (never in production)');
+    if (env.WORKER_RUNNER === 'placeholder') missing.push('WORKER_RUNNER (pipeline required)');
     if (missing.length > 0) {
       throw new Error(
         `Production configuration incomplete — missing or default: ${missing.join(', ')}`,
@@ -209,6 +246,33 @@ export const config = {
     port: env.SMTP_PORT,
     user: env.SMTP_USER,
     password: env.SMTP_PASSWORD,
+  },
+  /** Download engine (Phase 4) — yt-dlp/FFmpeg executors, source policy. */
+  source: {
+    timeoutMs: env.SOURCE_TIMEOUT_MS,
+    analyzeCacheTtlSec: env.ANALYZE_CACHE_TTL_SEC,
+    maxFileSizeMb: env.MAX_FILE_SIZE_MB,
+    ytdlpPath: env.YTDLP_PATH,
+    ffmpegPath: env.FFMPEG_PATH,
+    ffprobePath: env.FFPROBE_PATH,
+    /** Test-only escape hatch; production validation rejects it below. */
+    allowPrivate: env.SSRF_ALLOW_PRIVATE,
+  },
+  storage: {
+    driver: env.STORAGE_DRIVER,
+    localDir: env.STORAGE_LOCAL_DIR,
+    signedUrlTtlSec: env.SIGNED_URL_TTL_SEC,
+    retentionDays: env.R2_RETENTION_DAYS,
+    r2: {
+      accountId: env.R2_ACCOUNT_ID,
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+      bucket: env.R2_BUCKET,
+      endpoint: env.R2_ENDPOINT,
+    },
+  },
+  worker: {
+    runner: env.WORKER_RUNNER,
   },
 } as const;
 

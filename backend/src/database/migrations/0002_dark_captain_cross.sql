@@ -1,0 +1,1 @@
+ALTER TABLE "download_jobs" ADD COLUMN "url" text;

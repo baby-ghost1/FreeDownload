@@ -8,13 +8,32 @@ export interface RunnerContext {
   /**
    * Heartbeat + progress. When `transition` is given the job moves to the
    * next lifecycle stage atomically; a failed guard means someone else
-   * changed the job (cancel/expire) and the run must stop.
+   * changed the job (cancel/expire) and the run must stop. `patch` writes
+   * extra columns (e.g. `analyzedAt`) atomically with the status change.
    */
-  report(progress: number, transition?: { from: JobStatus[]; to: JobStatus }): Promise<void>;
+  report(
+    progress: number,
+    transition?: {
+      from: JobStatus[];
+      to: JobStatus;
+      patch?: Partial<{
+        analyzedAt: Date | null;
+        startedAt: Date | null;
+        requestedFormat: string | null;
+        targetContainer: string | null;
+      }>;
+    },
+  ): Promise<void>;
 }
 
+/**
+ * `awaiting_format` — analysis finished and the job parked in `ready`
+ * until the user picks a format (`POST /downloads/:id/start`).
+ */
+export type RunOutcome = 'completed' | 'awaiting_format';
+
 export interface JobRunner {
-  run(ctx: RunnerContext): Promise<void>;
+  run(ctx: RunnerContext): Promise<RunOutcome>;
 }
 
 /** Thrown when the job is no longer ours to work on. */
@@ -38,10 +57,14 @@ export class SimulatedCrashError extends Error {
 }
 
 /**
- * Test seam: the next N runs die as if the worker process crashed. Used by
- * the crash-recovery test to prove leases expire and work is redelivered.
+ * Test seam: the next N runs die as if the worker process crashed (used by
+ * the crash-recovery test), and `mode` selects the real pipeline vs the
+ * Phase 3 placeholder (tests default to placeholder via WORKER_RUNNER).
  */
-export const runnerControls = { failNext: 0 };
+export const runnerControls = {
+  failNext: 0,
+  mode: config.worker.runner as 'pipeline' | 'placeholder',
+};
 
 export function abortError(signal: AbortSignal): JobAbortedError {
   return new JobAbortedError(signal.reason === 'timeout' ? 'job timed out' : 'job aborted');
@@ -84,7 +107,7 @@ const STAGES: ReadonlyArray<{
  * with the SourceAdapter + FFmpeg + R2 pipeline behind the same interface.
  */
 export const placeholderRunner: JobRunner = {
-  async run(ctx: RunnerContext): Promise<void> {
+  async run(ctx: RunnerContext): Promise<RunOutcome> {
     if (runnerControls.failNext > 0) {
       runnerControls.failNext -= 1;
       throw new SimulatedCrashError();
@@ -98,5 +121,6 @@ export const placeholderRunner: JobRunner = {
       await sleep(stage.delayMs, ctx.signal);
       await ctx.report(stage.progress, { from: [stage.from], to: stage.to });
     }
+    return 'completed';
   },
 };

@@ -15,6 +15,13 @@
       "when": 1790936425311,
       "tag": "0001_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790948793642,
+      "tag": "0002_dark_captain_cross",
+      "breakpoints": true
     }
   ]
 }

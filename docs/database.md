@@ -46,17 +46,19 @@ Tokens are stored **hashed**; the plaintext exists only in the emailed link.
 
 ### Downloads
 
-| Table               | Key columns                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `download_sources`  | `id`, `slug unique`, `adapter_key`, `enabled`, `mode (active\|maintenance\|restricted\|disabled)`, `allowed_formats jsonb`, `max_file_size_mb`, `requires_auth`, `allowed_features jsonb`, `priority`, `health_status`, `last_health_at`, `policy_version`                                                                                                                    |
-| `download_jobs`     | `id`, `user_id?`, `anon_key?`, `source_id →`, `url_hash` (sha256), `url_redacted`, `status`, `priority smallint`, `requested_format`, `idempotency_key?`, `progress smallint`, `error_code`, `retry_count`, `max_retries`, `lease_token`, `lease_expires_at`, `heartbeat_at`, `worker_id`, `ip inet`, `analyzed_at`, `started_at`, `completed_at`, `expires_at`, `deleted_at` |
-| `download_attempts` | `id`, `job_id →`, `attempt_no`, `worker_id`, `status`, `error_code`, `started_at`, `finished_at`, `duration_ms`, `log_ref`                                                                                                                                                                                                                                                    |
-| `media_metadata`    | `id`, `job_id → unique`, `title`, `duration_sec`, `thumbnail_url`, `uploader`, `page_url`, `raw jsonb`, `fetched_at`                                                                                                                                                                                                                                                          |
-| `media_formats`     | `id`, `job_id →`, `label`, `container`, `width`, `height`, `fps`, `vcodec`, `acodec`, `bitrate_kbps`, `filesize_bytes`, `is_default`, `sort_order`, `ext_key`                                                                                                                                                                                                                 |
-| `files`             | `id`, `job_id →`, `object_key unique`, `kind`, `size_bytes`, `mime_type`, `checksum_sha256`, `container`, `expires_at`, `purged_at`                                                                                                                                                                                                                                           |
+| Table               | Key columns                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `download_sources`  | `id`, `slug unique`, `adapter_key`, `enabled`, `mode (active\|maintenance\|restricted\|disabled)`, `allowed_formats jsonb`, `max_file_size_mb`, `requires_auth`, `allowed_features jsonb`, `priority`, `health_status`, `last_health_at`, `policy_version`                                                                                                                                                            |
+| `download_jobs`     | `id`, `user_id?`, `anon_key?`, `source_id →`, `url_hash` (sha256), `url_redacted`, `url` (raw, nullable — migration 0002), `status`, `priority smallint`, `requested_format`, `idempotency_key?`, `progress smallint`, `error_code`, `retry_count`, `max_retries`, `lease_token`, `lease_expires_at`, `heartbeat_at`, `worker_id`, `ip inet`, `analyzed_at`, `started_at`, `completed_at`, `expires_at`, `deleted_at` |
+| `download_attempts` | `id`, `job_id →`, `attempt_no`, `worker_id`, `status`, `error_code`, `started_at`, `finished_at`, `duration_ms`, `log_ref`                                                                                                                                                                                                                                                                                            |
+| `media_metadata`    | `id`, `job_id → unique`, `title`, `duration_sec`, `thumbnail_url`, `uploader`, `page_url`, `raw jsonb`, `fetched_at`                                                                                                                                                                                                                                                                                                  |
+| `media_formats`     | `id`, `job_id →`, `label`, `container`, `width`, `height`, `fps`, `vcodec`, `acodec`, `bitrate_kbps`, `filesize_bytes`, `is_default`, `sort_order`, `ext_key`                                                                                                                                                                                                                                                         |
+| `files`             | `id`, `job_id →`, `object_key unique`, `kind`, `size_bytes`, `mime_type`, `checksum_sha256`, `container`, `expires_at`, `purged_at`                                                                                                                                                                                                                                                                                   |
 
-`download_jobs` stores a **hash plus a redacted copy** of the URL — the raw URL
-is dropped at expiry (privacy §51).
+`download_jobs` stores a **hash plus a redacted copy** of the URL, plus the raw
+URL in a nullable `url` column (added in migration `0002_dark_captain_cross`)
+— the worker needs it for extraction, so the cleanup sweep nulls it at job
+expiry together with the redacted copy (privacy §51).
 
 ### Billing
 
@@ -126,11 +128,11 @@ FKs with explicit `ON DELETE` · `unique (user_id, day)` on `usage_records`.
 
 ## Retention
 
-| Data                  | Policy                                                    |
-| --------------------- | --------------------------------------------------------- |
-| R2 objects            | `expires_at` → cleanup worker deletes, then rows redacted |
-| job URL hash/redacted | purged at job expiry                                      |
-| `media_metadata.raw`  | trimmed after 7 days                                      |
-| sessions / tokens     | TTL job                                                   |
-| logs                  | per `LOG_RETENTION_DAYS`, structured logs only            |
-| audit_logs            | retained (append-only, compliance)                        |
+| Data                  | Policy                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| R2 objects            | `expires_at` → cleanup deletes from storage, then rows marked purged |
+| job URL hash/redacted | purged at job expiry; raw `url` nulled by the same sweep             |
+| `media_metadata.raw`  | trimmed after 7 days                                                 |
+| sessions / tokens     | TTL job                                                              |
+| logs                  | per `LOG_RETENTION_DAYS`, structured logs only                       |
+| audit_logs            | retained (append-only, compliance)                                   |
