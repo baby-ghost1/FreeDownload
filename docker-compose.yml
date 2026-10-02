@@ -1,0 +1,89 @@
+# Local development environment (contract §58).
+#
+#   npm run docker:up      -> postgres + redis
+#   docker compose down    -> stop
+#
+# Credentials below are well-known LOCAL-ONLY defaults. Production uses real
+# secrets injected through the environment — never these values.
+
+name: freedownload
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-freedownload}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freedownload_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-freedownload}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # PG 18+ stores data in major-version subdirectories; mount the parent so
+      # pg_ctlcluster/pg_upgrade paths resolve (docker-library/postgres#1259).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    # noeviction: BullMQ requires that keys are never silently dropped.
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # Enabled from Phase 2 (backend) / Phase 5 (frontend) via:
+  #   docker compose --profile apps up -d
+  backend:
+    profiles: ['apps']
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: '4000'
+      DATABASE_URL: postgres://${POSTGRES_USER:-freedownload}:${POSTGRES_PASSWORD:-freedownload_dev}@postgres:5432/${POSTGRES_DB:-freedownload}
+      REDIS_URL: redis://redis:6379
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      API_URL: ${API_URL:-http://localhost:4000}
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    profiles: ['apps']
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: runner
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
