@@ -1,0 +1,31 @@
+{
+  "name": "freedownload",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-grade media download and processing platform",
+  "license": "UNLICENSED",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yml,yaml}\"",
+    "docker:up": "docker compose up -d postgres redis",
+    "docker:down": "docker compose down",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "turbo": "2.11.6"
+  }
+}
