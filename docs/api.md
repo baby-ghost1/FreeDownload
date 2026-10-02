@@ -1,7 +1,7 @@
 # API — `/api/v1`
 
-REST, JSON in/out. OpenAPI generation from the Zod route schemas lands in
-Phase 2 (`docs/openapi.json`), with a public reference site later.
+REST, JSON in/out. Every route declares a Zod schema (request + response);
+OpenAPI export of those schemas lands with the downloads API.
 
 ## Conventions
 
@@ -46,18 +46,38 @@ Stack traces, worker output and internal hostnames are never returned.
 | GET    | `/health` | none | liveness — process is up                            |
 | GET    | `/ready`  | none | readiness — dependency checks, `503` when not ready |
 
-### Auth
+### Auth ✅ (Phase 2)
 
-| Method | Path                               | Notes                                                |
-| ------ | ---------------------------------- | ---------------------------------------------------- |
-| POST   | `/api/v1/auth/register`            | Turnstile required                                   |
-| POST   | `/api/v1/auth/login`               | Turnstile after N failures, throttled per IP + email |
-| POST   | `/api/v1/auth/logout`              | revokes the session                                  |
-| POST   | `/api/v1/auth/verify-email`        | single-use, short-lived token                        |
-| POST   | `/api/v1/auth/resend-verification` | rate limited                                         |
-| POST   | `/api/v1/auth/forgot-password`     | Turnstile; never reveals account existence           |
-| POST   | `/api/v1/auth/reset-password`      | single-use token, invalidates sessions               |
-| GET    | `/api/v1/auth/session`             | current session payload                              |
+| Method | Path                           | Auth         | Notes                                                     |
+| ------ | ------------------------------ | ------------ | --------------------------------------------------------- |
+| POST   | `/api/v1/auth/register`        | none         | 201 + session cookies + `csrfToken`; Turnstile when keyed |
+| POST   | `/api/v1/auth/login`           | none         | 200 + rotated session; per-IP rate limit                  |
+| POST   | `/api/v1/auth/logout`          | session+CSRF | revokes the session, clears cookies                       |
+| POST   | `/api/v1/auth/verify-email`    | none         | single-use token → `status = active`                      |
+| POST   | `/api/v1/auth/forgot-password` | none         | always 200; Turnstile when keyed                          |
+| POST   | `/api/v1/auth/reset-password`  | none         | single-use token; revokes **every** session               |
+
+Session payload (`register`/`login`):
+
+```json
+{
+  "user": {
+    "id": "01a0fc19-903c-72fb-8d1c-96415edf73b3",
+    "email": "ada@example.com",
+    "displayName": "Ada",
+    "status": "pending",
+    "emailVerifiedAt": null,
+    "createdAt": "2026-10-02T10:12:08.933Z"
+  },
+  "csrfToken": "RkB8M5wRjSu70URoAZ0uTR6R1NLvk_mE"
+}
+```
+
+Cookies: `fd_session` (HttpOnly, `Secure`+`SameSite=None` in production,
+`Lax` in development, signed when `COOKIE_SECRET` is set) and `fd_csrf`
+(readable by the frontend, echoed back as `X-CSRF-Token` on mutations).
+
+Planned: `POST /auth/resend-verification` · `GET /auth/session`.
 
 ### Downloads
 
@@ -76,7 +96,10 @@ Stack traces, worker output and internal hostnames are never returned.
 
 ### Account
 
-`GET /me` · `PATCH /me` · `DELETE /me` · `GET /me/history` · `GET /me/usage` ·
+Implemented ✅: `GET /me` · `PATCH /me` · `POST /me/password` (CSRF + session;
+changing the password revokes every _other_ session).
+
+Planned: `DELETE /me` · `GET /me/history` · `GET /me/usage` ·
 `GET /me/sessions` · `DELETE /me/sessions/:id`
 
 ### Billing
@@ -107,7 +130,10 @@ Separate auth guard + MFA + audit entry on every mutation:
 
 ## Status
 
-| Group               | State              |
-| ------------------- | ------------------ |
-| `/health`, `/ready` | ✅ Phase 1         |
-| everything else     | planned Phases 2–7 |
+| Group                     | State        |
+| ------------------------- | ------------ |
+| `/health`, `/ready`       | ✅ Phase 1   |
+| auth + `/me`              | ✅ Phase 2   |
+| schema, Redis rate limits | ✅ Phase 2   |
+| downloads, catalog, queue | ⏳ Phase 3–4 |
+| billing, API keys, admin  | ⏳ Phase 6–7 |

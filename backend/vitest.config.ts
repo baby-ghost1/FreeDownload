@@ -5,8 +5,11 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
-    // Integration tests touching docker services are added in Phase 2 and
-    // gated by file naming so `npm test` stays green without infra.
+    // Read by config.ts at import time — keeps expected client-error logs out
+    // of the test output.
+    env: { LOG_LEVEL: 'silent' },
+    // Integration tests need docker compose services; they skip locally when
+    // the containers are down and always run in CI.
     testTimeout: 15_000,
   },
 });

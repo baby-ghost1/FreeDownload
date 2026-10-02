@@ -22,6 +22,9 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yml,yaml}\"",
     "docker:up": "docker compose up -d postgres redis",
     "docker:down": "docker compose down",
+    "db:generate": "npm run db:generate --workspace @freedownload/backend",
+    "db:migrate": "npm run db:migrate --workspace @freedownload/backend",
+    "db:seed": "npm run db:seed --workspace @freedownload/backend",
     "clean": "turbo run clean"
   },
   "devDependencies": {

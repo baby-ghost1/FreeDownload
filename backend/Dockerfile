@@ -33,7 +33,10 @@ FROM deps-build AS build
 COPY tsconfig.base.json ./
 COPY backend/tsconfig.json backend/tsconfig.build.json backend/
 COPY backend/src backend/src
+# tsc only emits JS — ship the reviewed SQL migrations with the runtime so a
+# deploy step can run `node dist/database/migrate.js` inside the image.
 RUN npm run build --workspace @freedownload/backend \
+ && cp -r src/database/migrations dist/database/migrations \
  && npm prune --workspace @freedownload/backend --omit=dev
 
 # ---------------------------------------------------------------------------

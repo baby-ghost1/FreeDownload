@@ -78,6 +78,9 @@ npm run dev              # turbo: frontend :3000, backend :4000
 | `npm test`                          | Vitest unit suites                   |
 | `npm run format` / `format:check`   | Prettier                             |
 | `npm run docker:up` / `docker:down` | local data services                  |
+| `npm run db:generate`               | emit SQL migration from schema       |
+| `npm run db:migrate`                | apply pending migrations             |
+| `npm run db:seed`                   | idempotent reference data            |
 
 ## Environment
 
@@ -88,9 +91,10 @@ secrets are injected by the platform, never committed.
 ## Testing
 
 ```bash
-npm test                 # unit
-npm run typecheck        # types
-# integration (Phase 2+): requires docker:up
+npm run docker:up      # Postgres 18 + Redis 8 (needed by db + integration)
+npm run db:migrate     # apply committed migrations
+npm test               # unit + integration
+npm run typecheck      # types
 # e2e (Phase 5+):         Playwright against staging
 # load (Phase 8):         k6 against staging only, mocked adapters
 ```

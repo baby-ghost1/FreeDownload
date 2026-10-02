@@ -18,6 +18,30 @@ jobs:
     name: lint · typecheck · test · build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      DATABASE_URL: postgres://freedownload:freedownload_dev@localhost:5432/freedownload
+      REDIS_URL: redis://localhost:6379
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: freedownload
+          POSTGRES_PASSWORD: freedownload_dev
+          POSTGRES_DB: freedownload
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U freedownload"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v5
 
@@ -38,7 +62,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
+      - name: Prepare database
+        run: npm run db:migrate -w @freedownload/backend
+
+      - name: Tests
         run: npm test
 
       - name: Build

@@ -12,7 +12,15 @@ npm run dev           # tsx watch → http://localhost:4000
 npm run build         # tsc → dist/
 npm run lint
 npm run typecheck
-npm test
+npm test              # unit + integration (integration needs docker:up)
+```
+
+Database (needs `npm run docker:up`):
+
+```bash
+npm run db:generate   # emit SQL migration from schema changes
+npm run db:migrate    # apply pending migrations
+npm run db:seed       # idempotent reference data (plans, generic source)
 ```
 
 Workspace-scoped: `npm run <script> --workspace @freedownload/backend`.
@@ -21,21 +29,33 @@ Workspace-scoped: `npm run <script> --workspace @freedownload/backend`.
 
 ```
 src/
-├── server/        app.ts (Fastify factory, error envelope, CORS, helmet)
+├── server/        app.ts (Fastify factory, error envelope, CORS, helmet,
+│                  session hook, Redis rate limit, /api/v1 registration)
 │                  config.ts (Zod env schema — boot fails on invalid config)
 │                  server.ts (entrypoint, graceful shutdown)
-├── modules/       route/service modules (health now; auth, downloads, admin…)
+├── modules/       route/service modules
+│   ├── health/    liveness, readiness + registered dependency probes
+│   ├── auth/      register / login / logout / tokens + session management
+│   ├── me/        profile read/update
+│   └── mailer/    Mailer interface (console transport in dev)
+├── security/      passwords (Argon2id), tokens, CSRF, Turnstile
+├── database/      Drizzle schema, migrations, seed, pg pool        ✅ Phase 2
+├── redis/         ioredis client + ping                            ✅ Phase 2
+├── http/          shared response schemas (error envelope)
+├── errors/        AppError + the §46 error code table
+├── logging/       pino JSON logger with redaction list
 ├── queue/         BullMQ queues, producers, consumers        (Phase 3)
 ├── workers/       download / media / cleanup workers         (Phase 3)
 ├── downloader/    SourceAdapter, detectors, policies, executors (Phase 4)
 ├── media/         FFmpeg runner, metadata, formats              (Phase 4)
 ├── storage/       R2 client, signed URLs, lifecycle             (Phase 4)
-├── database/      Drizzle schema, migrations, seeds             (Phase 2)
-├── security/      rate limit, SSRF, validation, sanitization    (Phase 2+)
-├── errors/        AppError + the §46 error code table
-├── logging/       pino JSON logger with redaction list
 ├── observability/ metrics, tracing, Sentry                      (Phase 9)
 └── types/         AppInstance (Fastify + Zod type provider)
+
+tests/
+├── unit/          hermetic tests (no infrastructure)
+└── integration/   PostgreSQL + Redis; skipped when docker:up hasn't run
+                   (always executed in CI, which provisions the services)
 ```
 
 ## API server vs workers
@@ -70,7 +90,8 @@ before the server binds a port.
 ## Health
 
 - `GET /health` — liveness, returns `{ status, service, uptimeSec }`.
-- `GET /ready` — readiness; infrastructure checks register themselves into
-  `src/modules/health/readiness.ts` as Postgres (Phase 2), Redis/queue
-  (Phase 3) and R2 (Phase 4) land. Neither endpoint exposes secrets or
-  infrastructure details.
+- `GET /ready` — readiness; probes register into
+  `src/modules/health/readiness.ts`. Postgres and Redis are registered
+  (Phase 2); queue (Phase 3) and storage (Phase 4) follow. Under Vitest the
+  probes report `skipped` unless `READINESS_LIVE=1`. Neither endpoint
+  exposes secrets or infrastructure details.

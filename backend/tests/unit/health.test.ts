@@ -29,13 +29,17 @@ describe('health endpoints', () => {
     expect(res.headers['x-request-id']).toBeDefined();
   });
 
-  it('GET /ready returns 200 with an empty check set before infra lands', async () => {
+  it('GET /ready reports every registered dependency probe', async () => {
     const res = await app.inject({ method: 'GET', url: '/ready' });
 
+    // Under Vitest the probes are hermetic (`skipped`); integration runs
+    // opt in with READINESS_LIVE=1 to hit the real containers.
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.status).toBe('ready');
-    expect(body.checks).toEqual({});
+    expect(Object.keys(body.checks).sort()).toEqual(['postgres', 'redis']);
+    expect(['pass', 'fail', 'skipped']).toContain(body.checks.postgres);
+    expect(['pass', 'fail', 'skipped']).toContain(body.checks.redis);
   });
 
   it('returns the §46 error envelope for unknown routes', async () => {

@@ -8,3 +8,6 @@ package-lock.json
 docs/openapi.json
 
 next-env.d.ts
+
+# drizzle-kit output — generated, keep byte-identical
+backend/src/database/migrations/

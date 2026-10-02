@@ -3,6 +3,34 @@
 Threat model focus: a hostile internet user submitting arbitrary URLs to a
 service that performs network requests on their behalf.
 
+## Implemented (Phases 1–2)
+
+- **Argon2id** password hashing (`memoryCost`/`timeCost` from config, produced
+  hashes asserted to be `$argon2id$`); weak or common passwords rejected
+  before hashing.
+- **Sessions**: random 32-byte token, only the SHA-256 digest is stored;
+  `fd_session` is `HttpOnly`, `Secure` + `SameSite=None` in production
+  (`Lax` in development), signed when `COOKIE_SECRET` is set. Sliding
+  `last_seen_at`, revocation on logout, password change and reset.
+- **CSRF**: double-submit — `fd_csrf` (readable by the frontend) is mirrored
+  into `X-CSRF-Token` on every cookie-authenticated mutation; bearer clients
+  are exempt because they carry no ambient credentials.
+- **Single-use tokens** (verify e-mail, reset password): stored hashed, short
+  TTL, consumed atomically; a password reset revokes every session.
+- **Enumeration**: login answers identically for unknown user and wrong
+  password (a dummy hash burns the same CPU); forgot-password always 200.
+- **Rate limits**: Redis-backed global limiter plus a tighter per-route limit
+  on auth endpoints (`RATE_LIMIT_*`, `AUTH_RATE_LIMIT_MAX`), failing open if
+  Redis is unreachable so an outage never locks everyone out.
+- **Turnstile**: server-side verification on registration and password
+  recovery — enforced in production, fail-closed when the key is configured
+  but verification cannot be completed, skipped in development.
+- **Configuration**: Zod-validated environment; production refuses to boot
+  without `SESSION_SECRET`/`COOKIE_SECRET` or with dev-default URLs.
+- **Errors**: uniform error envelope (§46); stack traces and internals are
+  never returned.
+- **Containers**: multi-stage build, non-root runtime user, healthchecks.
+
 ## Layer 1 — edge (Cloudflare)
 
 - DNS + TLS everywhere, HSTS in production.

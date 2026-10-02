@@ -1,6 +1,7 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
@@ -15,6 +16,13 @@ import { AppError, isAppError } from '../errors/app-error.js';
 import { logger } from '../logging/logger.js';
 import { registerHealthRoutes } from '../modules/health/routes.js';
 import { readinessRegistry } from '../modules/health/readiness.js';
+import { registerInfrastructureChecks } from '../modules/health/checks.js';
+import { registerAuthRoutes } from '../modules/auth/routes.js';
+import { registerMeRoutes } from '../modules/me/routes.js';
+import { assertCsrf } from '../security/csrf.js';
+import { loadSession, readSessionToken, touchSession } from '../modules/auth/session.js';
+import { getDb } from '../database/client.js';
+import { getRedis } from '../redis/client.js';
 import type { AppInstance } from '../types/app.js';
 
 export interface BuildAppOptions {
@@ -23,6 +31,7 @@ export interface BuildAppOptions {
 }
 
 const REQUEST_ID_HEADER = 'x-request-id';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /** Accept a caller-supplied request id only if it looks sane. */
 function genReqId(req: IncomingMessage): string {
@@ -73,13 +82,22 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     maxAge: 600,
   });
 
+  // Signed when COOKIE_SECRET is configured — the token itself is
+  // high-entropy and stored hashed, signing only adds tamper detection.
+  await app.register(cookie, {
+    ...(config.session.secret ? { secret: config.session.secret } : {}),
+    parseOptions: { path: '/' },
+  });
+
   if (options.rateLimit !== false) {
     await app.register(rateLimit, {
       global: true,
-      max: 300,
-      timeWindow: '1 minute',
-      // Phase 2 moves limits to Redis with per-plan buckets (§25).
-      keyGenerator: (req) => req.ip,
+      max: config.rateLimit.max,
+      timeWindow: `${config.rateLimit.windowSec} seconds`,
+      // Redis store keeps limits correct across replicas (§25). If Redis is
+      // unreachable we fail open rather than taking the API down.
+      redis: getRedis(),
+      skipOnError: true,
       errorResponseBuilder: (req, context) => ({
         error: {
           code: 'RATE_LIMITED',
@@ -89,6 +107,29 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       }),
     });
   }
+
+  // --- session context ---------------------------------------------------
+  // Populated for every request; routes that need it call requireAuth().
+  // Cookie-authenticated mutations also enforce double-submit CSRF here.
+  app.decorateRequest('auth', null);
+  app.addHook('preHandler', async (req: FastifyRequest) => {
+    const token = readSessionToken(req);
+    if (!token) {
+      req.auth = null;
+      return;
+    }
+
+    const db = getDb();
+    const context = await loadSession(db, token);
+    req.auth = context;
+
+    if (context) {
+      await touchSession(db, context.session);
+      if (!SAFE_METHODS.has(req.method)) {
+        assertCsrf(req);
+      }
+    }
+  });
 
   app.addHook('onSend', async (req, reply, payload) => {
     reply.header(REQUEST_ID_HEADER, req.id);
@@ -152,7 +193,18 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     });
   });
 
+  registerInfrastructureChecks();
+
   await app.register(registerHealthRoutes, { prefix: '' });
+  // Business endpoints live under /api/v1; health probes stay at the root so
+  // container orchestrators can reach them without knowing the API version.
+  await app.register(
+    async (scope: AppInstance) => {
+      await registerAuthRoutes(scope);
+      await registerMeRoutes(scope);
+    },
+    { prefix: '/api/v1' },
+  );
 
   return app;
 }
