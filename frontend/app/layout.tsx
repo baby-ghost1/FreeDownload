@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/constants/site';
+import { THEME_SCRIPT } from '@/lib/theme';
+import { Providers } from '@/components/providers';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -30,7 +34,19 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <head>
+        {/* Applied before first paint so the scheme never flashes. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body>
+        <Providers>
+          <div className="flex min-h-dvh flex-col">
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
+        </Providers>
+      </body>
     </html>
   );
 }

@@ -76,6 +76,7 @@ npm run dev              # turbo: frontend :3000, backend :4000
 | `npm run lint`                      | ESLint (zero warnings allowed)       |
 | `npm run typecheck`                 | strict TypeScript across workspaces  |
 | `npm test`                          | Vitest unit suites                   |
+| `npm run test:e2e`                  | Playwright e2e (desktop + mobile)    |
 | `npm run format` / `format:check`   | Prettier                             |
 | `npm run docker:up` / `docker:down` | local data services                  |
 | `npm run db:generate`               | emit SQL migration from schema       |
@@ -95,7 +96,8 @@ npm run docker:up      # Postgres 18 + Redis 8 (needed by db + integration)
 npm run db:migrate     # apply committed migrations
 npm test               # unit + integration
 npm run typecheck      # types
-# e2e (Phase 5+):         Playwright against staging
+npm run test:e2e       # Playwright happy path + mobile/dark (API route-mocked,
+                       # starts `next dev` itself — no backend needed)
 # load (Phase 8):         k6 against staging only, mocked adapters
 ```
 
@@ -132,7 +134,7 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phases 1–4 complete:
+Phases 1–5 complete:
 
 - **1 — foundation:** workspaces, strict TypeScript, lint/format, health
   endpoints, docker-compose, CI.
@@ -151,5 +153,11 @@ Phases 1–4 complete:
   `GET /downloads/:id/result`, catalog endpoints (`sources`/`formats`/
   `config/public`), and cleanup now purges storage objects, nulls raw URLs and
   trims `media_metadata.raw`.
+- **5 — frontend:** design tokens (light/dark), UI kit, site shell (header,
+  footer, pre-paint theme toggle), landing page with pricing, the
+  analyze → format → progress → signed-link download flow, history list, auth
+  UI (login/register/forgot/reset/verify), static legal pages, and Playwright
+  e2e — happy path + dark/mobile across desktop and Pixel 7 projects, API
+  fully route-mocked (`npm run test:e2e`, no backend required).
 
 Subsequent phases follow the roadmap in `docs/architecture.md`.
