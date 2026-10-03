@@ -26,6 +26,11 @@ export default defineConfig({
       FREE_DAILY_LIMIT: '1000',
       PRO_DAILY_LIMIT: '1000',
       USER_CONCURRENCY: '100',
+      // Phase 8: tiny buckets so the security suite can exhaust them in
+      // double-digit injects. Only the rate-limit-enabled test app reads
+      // these — every other integration file registers with rateLimit:false.
+      RATE_LIMIT_MAX: '10',
+      AUTH_RATE_LIMIT_MAX: '5',
     },
     // Integration tests need docker compose services; they skip locally when
     // the containers are down and always run in CI.
@@ -33,5 +38,16 @@ export default defineConfig({
     // Files share one Postgres/Redis and the download queue; a worker in one
     // file must not steal jobs another file is still asserting on.
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      // TypeScript only — migration .sql/.snap files are not code.
+      include: ['src/**/*.ts'],
+      thresholds: {
+        statements: 74,
+        branches: 65,
+        functions: 72,
+        lines: 76,
+      },
+    },
   },
 });

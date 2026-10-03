@@ -15,9 +15,9 @@ permissions:
 
 jobs:
   verify:
-    name: lint · typecheck · test · build
+    name: lint · typecheck · test · coverage · build · e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       DATABASE_URL: postgres://freedownload:freedownload_dev@localhost:5432/freedownload
       REDIS_URL: redis://localhost:6379
@@ -53,6 +53,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Production dependencies only — dev-only advisories are tracked in
+      # docs/security.md (the braces chain has no fixed release upstream).
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Format check
         run: npm run format:check
 
@@ -63,13 +68,26 @@ jobs:
         run: npm run typecheck
 
       - name: Prepare database
-        run: npm run db:migrate -w @freedownload/backend
+        run: |
+          npm run db:migrate -w @freedownload/backend
+          npm run db:seed
 
       - name: Tests
         run: npm test
 
+      - name: Coverage thresholds
+        run: npm run test:coverage
+
       - name: Build
         run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: npm run test:e2e
         env:
           NEXT_TELEMETRY_DISABLED: '1'
 

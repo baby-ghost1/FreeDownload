@@ -25,7 +25,7 @@ export function SiteHeader() {
           >
             F
           </span>
-          <span className="hidden sm:inline">FreeDownload</span>
+          <span className="sr-only sm:not-sr-only">FreeDownload</span>
         </Link>
 
         <nav className="ml-2 hidden items-center gap-5 text-sm text-muted-foreground md:flex">

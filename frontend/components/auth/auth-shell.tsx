@@ -32,7 +32,7 @@ export function AuthShell({
 
 export function AuthLink({ href, children }: { href: Route; children: React.ReactNode }) {
   return (
-    <Link href={href} className="text-sm text-primary hover:underline">
+    <Link href={href} className="text-sm text-primary underline underline-offset-2">
       {children}
     </Link>
   );

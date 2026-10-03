@@ -144,5 +144,16 @@ delivery via `src/storage/{local,r2}.ts` and the token-gated
 
 Unit tests cover the SSRF corpus (private ranges, IPv6, mapped addresses,
 metadata endpoints, rebinding), authz isolation, CSRF, cookie flags, API-key
-hashing and log redaction. Integration tests exercise the full auth lifecycle.
-E2E asserts that no stack trace reaches the DOM.
+hashing, log redaction and production-config hardening. Integration tests
+exercise the full auth lifecycle plus the security surface: helmet/CORS
+headers, cookie flags, API-key hashing at rest, file-upload token handling,
+rate-limit envelopes with correct typed 429s, and quota enforcement. E2E
+asserts that no stack trace reaches the DOM (`error-surface.spec.ts`) and
+runs axe-core WCAG 2.1 A/AA audits on public, signed-in and admin routes
+(`a11y.spec.ts`). CI gates `npm audit --omit=dev` (zero production
+vulnerabilities) alongside CodeQL and Dependabot. The only known advisories
+are four dev-only `braces`/`micromatch`/`fast-glob` findings pulled in by
+`@next/eslint-plugin-next`'s glob chain — the advisory range is `*`, no fixed
+release exists upstream, and none of it ships to production; the separate
+`esbuild` chain is pinned with a root `overrides` entry
+(`@esbuild-kit/core-utils` → `esbuild ^0.25`).

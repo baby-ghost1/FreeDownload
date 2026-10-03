@@ -155,7 +155,7 @@ priority. Per-user, per-IP and per-source semaphores prevent hoarding.
 | 8 Quality           | full unit/integration/security suites, E2E, k6, a11y audit                             | no open P1/P2 findings                        |
 | 9 Production        | Cloudflare, R2 lifecycle, monitoring, backups, runbooks                                | DoD checklist fully checked                   |
 
-Phases 1–7 are complete (details in the root README's Status section).
+Phases 1–8 are complete (details in the root README's Status section).
 
 ## Failure behaviour
 

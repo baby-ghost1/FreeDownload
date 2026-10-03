@@ -76,7 +76,9 @@ npm run dev              # turbo: frontend :3000, backend :4000
 | `npm run lint`                      | ESLint (zero warnings allowed)       |
 | `npm run typecheck`                 | strict TypeScript across workspaces  |
 | `npm test`                          | Vitest unit suites                   |
+| `npm run test:coverage`             | same suites with coverage thresholds |
 | `npm run test:e2e`                  | Playwright e2e (desktop + mobile)    |
+| `npm run load`                      | k6 load smoke against `:4000`        |
 | `npm run format` / `format:check`   | Prettier                             |
 | `npm run docker:up` / `docker:down` | local data services                  |
 | `npm run db:generate`               | emit SQL migration from schema       |
@@ -92,14 +94,41 @@ secrets are injected by the platform, never committed.
 ## Testing
 
 ```bash
-npm run docker:up      # Postgres 18 + Redis 8 (needed by db + integration)
-npm run db:migrate     # apply committed migrations
-npm test               # unit + integration
-npm run typecheck      # types
-npm run test:e2e       # Playwright happy path + mobile/dark (API route-mocked,
-                       # starts `next dev` itself — no backend needed)
-# load (Phase 8):         k6 against staging only, mocked adapters
+npm run docker:up        # Postgres 18 + Redis 8 (needed by db + integration)
+npm run db:migrate       # apply committed migrations
+npm test                 # unit + integration
+npm run test:coverage    # same suites, enforced coverage thresholds
+npm run typecheck        # types
+npm run test:e2e         # Playwright: happy path, axe a11y (WCAG 2.1 A/AA),
+                         # error/stack-trace surfaces (API route-mocked,
+                         # starts `next dev` itself — no backend needed)
+npm run load             # k6 smoke: catalog, auth, jobs, API-key quota
+                         # against a running stack on :4000 (needs k6)
 ```
+
+### Load testing (k6)
+
+`npm run load` runs the four scenarios in [`load/`](load/) at smoke scale
+(1 VU, paced under the default rate limits) against `BASE_URL`
+(default `http://localhost:4000`). Every script fails its thresholds on 5xx,
+check regressions or unexpected 429s.
+
+Full runs target **staging only** and need the per-IP limits raised first,
+otherwise the scripts measure the limiter instead of the app:
+
+| Setting                         | Default | Staging load run |
+| ------------------------------- | ------- | ---------------- |
+| `RATE_LIMIT_MAX`                | 300/min | `100000`         |
+| `AUTH_RATE_LIMIT_MAX`           | 10/min  | `10000`          |
+| `DOWNLOAD_RATE_LIMIT_MAX`       | 60/min  | `10000`          |
+| free plan `apiPerHour` (DB row) | 60/h    | raise for soaks  |
+
+```bash
+k6 run --vus 25 --duration 2m -e BASE_URL=https://api.staging.example load/catalog.js
+```
+
+`POST /downloads/analyze` is deliberately not scripted (each call performs a
+real yt-dlp extraction against the target site).
 
 ## Docker
 
@@ -134,7 +163,7 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phases 1–7 complete:
+Phases 1–8 complete:
 
 - **1 — foundation:** workspaces, strict TypeScript, lint/format, health
   endpoints, docker-compose, CI.
@@ -174,5 +203,13 @@ Phases 1–7 complete:
   keys (`fd_live_…` shown once, SHA-256 stored, Bearer auth, `api_usage`
   hourly buckets), hashed-rollout feature flags evaluated per subject, a
   flag-gated ad slot, and the `/account` Plan & billing + API keys UI.
+- **8 — quality:** coverage-gated suites (`npm run test:coverage`, thresholds
+  enforced in both workspaces), a security integration suite (headers, CORS
+  allowlist, cookie flags, rate-limit envelopes, production-config hardening,
+  log redaction), axe-core WCAG 2.1 A/AA e2e audits across public,
+  signed-in and admin routes (with the contrast/semantics fixes they
+  surfaced), a stack-trace-leak e2e, k6 load scenarios (`npm run load`), a
+  production `npm audit` gate (root `overrides` pins the transitive
+  `esbuild`), and GitHub Actions workflows (CI, Dependabot, CodeQL).
 
 Subsequent phases follow the roadmap in `docs/architecture.md`.

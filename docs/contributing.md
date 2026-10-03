@@ -11,10 +11,14 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
+npm run test:coverage
 npm run build
+npm run test:e2e
 ```
 
-4. CI runs exactly the same sequence — a red pipeline blocks merge.
+4. CI runs exactly the same sequence against Postgres 18 + Redis 8 service
+   containers — a red pipeline blocks merge. `npm run load` (k6 smoke) is
+   optional locally; it needs k6 installed and a running stack on `:4000`.
 
 ## Quality rules (contract §81–82)
 

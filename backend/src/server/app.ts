@@ -113,19 +113,25 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   if (options.rateLimit !== false) {
     await app.register(rateLimit, {
       global: true,
+      // Emits `Ratelimit-*` (RFC draft) — the names the CORS expose list
+      // below already publishes to browsers.
+      enableDraftSpec: true,
       max: config.rateLimit.max,
       timeWindow: `${config.rateLimit.windowSec} seconds`,
-      // Redis store keeps limits correct across replicas (Â§25). If Redis is
+      // Redis store keeps limits correct across replicas (§25). If Redis is
       // unreachable we fail open rather than taking the API down.
       redis: getRedis(),
       skipOnError: true,
-      errorResponseBuilder: (req, context) => ({
-        error: {
-          code: 'RATE_LIMITED',
-          message: `Too many requests. Try again in ${context.after}.`,
-          requestId: req.id,
-        },
-      }),
+      // The plugin *throws* this value (index.js), so it must arrive as a
+      // real 429 error — a bare envelope object would fall through the
+      // generic handler below and become a 500.
+      errorResponseBuilder: (_req, context) => {
+        const err = new Error(`Too many requests. Try again in ${context.after}.`) as Error & {
+          statusCode?: number;
+        };
+        err.statusCode = 429;
+        return err;
+      },
     });
   }
 
@@ -243,7 +249,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
           code: fastifyError.statusCode === 429 ? 'RATE_LIMITED' : 'VALIDATION_ERROR',
           message:
             fastifyError.statusCode === 429
-              ? 'Too many requests. Please slow down.'
+              ? // The limiter builds a safe, actionable message ("retry in Ns").
+                fastifyError.message || 'Too many requests. Please slow down.'
               : 'The request could not be processed.',
           requestId,
         },

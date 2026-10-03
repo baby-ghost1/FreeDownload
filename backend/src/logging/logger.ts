@@ -49,10 +49,13 @@ const devTransport =
         },
       };
 
+/** Single source of truth so tests can assert the exact production redaction. */
+export const REDACT_OPTIONS = { paths: REDACT_PATHS, censor: '[REDACTED]' } as const;
+
 export const logger: Logger = pino({
   level: config.logLevel,
   base: { service: config.serviceName, env: config.env },
-  redact: { paths: REDACT_PATHS, censor: '[REDACTED]' },
+  redact: REDACT_OPTIONS,
   timestamp: pino.stdTimeFunctions.isoTime,
   ...(devTransport ? { transport: devTransport } : {}),
 });

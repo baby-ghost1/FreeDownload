@@ -176,7 +176,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           )}
 
           <div className="flex items-center justify-between gap-3 pt-1">
-            <Link href="/download" className="text-sm text-primary hover:underline">
+            <Link href="/download" className="text-sm text-primary underline underline-offset-2">
               New download
             </Link>
             {active && (
