@@ -22,12 +22,15 @@ export const TRANSITIONS: Readonly<Record<JobStatus, readonly JobStatus[]>> = {
   processing: ['uploading', 'failed', 'policy_restricted', 'cancelled'],
   uploading: ['completed', 'failed', 'cancelled'],
   completed: ['expired'],
-  failed: ['retrying', 'dead_letter', 'cancelled'],
+  // `queued` exits below are admin-only requeues (Phase 6): a dead-lettered
+  // job is revived, or a policy-restricted job resumes after the source is
+  // re-enabled. Workers never issue these transitions themselves.
+  failed: ['retrying', 'dead_letter', 'cancelled', 'queued'],
   retrying: ['queued', 'analyzing', 'dead_letter', 'cancelled'],
-  policy_restricted: ['cancelled'],
+  policy_restricted: ['cancelled', 'queued'],
   cancelled: [],
   expired: [],
-  dead_letter: [],
+  dead_letter: ['queued'],
 };
 
 export const JOB_STATUSES = Object.keys(TRANSITIONS) as JobStatus[];

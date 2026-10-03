@@ -158,11 +158,13 @@ in production, where browsers stream straight from R2.
 
 ### Account
 
-Implemented ✅: `GET /me` · `PATCH /me` · `POST /me/password` (CSRF + session;
-changing the password revokes every _other_ session).
+Implemented: `GET /me` · `PATCH /me` · `POST /me/password` (CSRF + session;
+changing the password revokes every _other_ session) · `GET /me/usage?days=N`
+(daily job counts, 1–90 days) · `GET /me/sessions` (active sessions, flags the
+current one) · `DELETE /me/sessions/:id` (own sessions only; revoking the
+current one also clears the cookies).
 
-Planned: `DELETE /me` · `GET /me/history` · `GET /me/usage` ·
-`GET /me/sessions` · `DELETE /me/sessions/:id`
+Planned: `DELETE /me` · `GET /me/history`
 
 ### Billing
 
@@ -177,14 +179,30 @@ Planned: `DELETE /me` · `GET /me/history` · `GET /me/usage` ·
 
 ### Admin
 
-Separate auth guard + MFA + audit entry on every mutation:
+Separate `fd_admin` cookie + TOTP MFA + audit entry on every mutation.
+Everything except `login` / `mfa/setup` / `mfa/complete` / `logout` / `me`
+requires an MFA-verified session (403 `details.mfaRequired` otherwise); any
+mutation additionally requires role `owner` or `admin` (403 for
+`support`/`viewer`) and the double-submit CSRF header. Reads are
+cursor-paginated (`?cursor=&limit=`). Every mutation appends an immutable
+`audit_logs` row (a migration trigger rejects UPDATE/DELETE).
 
-`POST /admin/auth/login` · `GET /admin/overview` · `GET /admin/jobs` ·
-`POST /admin/jobs/:id/retry|cancel` · `GET /admin/workers` ·
-`GET|PATCH /admin/sources/:id` · `GET /admin/users` ·
-`PATCH /admin/users/:id` · `GET|PATCH /admin/settings` ·
-`GET|PATCH /admin/flags` · `GET /admin/revenue` ·
-`GET|PATCH /admin/copyright/:id` · `GET /admin/audit-logs`
+Implemented: `POST /admin/auth/login` (rate-limited; optional `code`) ·
+`POST /admin/auth/logout` · `GET /admin/auth/me` ·
+`POST /admin/auth/mfa/setup` · `POST /admin/auth/mfa/complete` ·
+`GET /admin/overview` · `GET /admin/jobs` · `GET /admin/jobs/:id` ·
+`POST /admin/jobs/:id/retry|cancel` (retry requeues
+`failed|dead_letter|policy_restricted|retrying`) ·
+`GET /admin/sources` · `GET /admin/sources/:id` ·
+`PATCH /admin/sources/:id` (enabled/mode/formats — invalidates the policy
+cache, so the change is live without a redeploy) ·
+`GET /admin/users` · `PATCH /admin/users/:id` (suspend kills the user's
+sessions on their next request) · `GET /admin/audit-logs` ·
+`GET /admin/flags` · `PATCH /admin/flags/:key` ·
+`GET /admin/settings` · `PATCH /admin/settings/:key`
+
+Planned: `GET /admin/workers` · `GET /admin/revenue` ·
+`GET|PATCH /admin/copyright/:id`
 
 ### Misc
 
@@ -192,11 +210,12 @@ Separate auth guard + MFA + audit entry on every mutation:
 
 ## Status
 
-| Group                     | State        |
-| ------------------------- | ------------ |
-| `/health`, `/ready`       | ✅ Phase 1   |
-| auth + `/me`              | ✅ Phase 2   |
-| schema, Redis rate limits | ✅ Phase 2   |
-| downloads CRUD, queue     | ✅ Phase 3   |
-| analyze, result, catalog  | ⏳ Phase 4   |
-| billing, API keys, admin  | ⏳ Phase 6–7 |
+| Group                     | State      |
+| ------------------------- | ---------- |
+| `/health`, `/ready`       | ✅ Phase 1 |
+| auth + `/me`              | ✅ Phase 2 |
+| schema, Redis rate limits | ✅ Phase 2 |
+| downloads CRUD, queue     | ✅ Phase 3 |
+| analyze, result, catalog  | ✅ Phase 4 |
+| account + admin console   | ✅ Phase 6 |
+| billing, API keys         | ⏳ Phase 7 |

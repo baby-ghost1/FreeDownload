@@ -134,7 +134,7 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phases 1–5 complete:
+Phases 1–6 complete:
 
 - **1 — foundation:** workspaces, strict TypeScript, lint/format, health
   endpoints, docker-compose, CI.
@@ -159,5 +159,12 @@ Phases 1–5 complete:
   UI (login/register/forgot/reset/verify), static legal pages, and Playwright
   e2e — happy path + dark/mobile across desktop and Pixel 7 projects, API
   fully route-mocked (`npm run test:e2e`, no backend required).
+- **6 — dashboard + admin:** `/account` (profile, 30-day usage, session list
+  with revoke), `/admin` console (TOTP MFA gate, overview, jobs cancel/retry,
+  source enable/disable, user suspend/activate, audit log, feature flags),
+  admin auth with separate `fd_admin` cookie + role gate (owner/admin mutate),
+  cursor-paginated admin reads, and append-only `audit_logs` (migration
+  trigger). Source toggles invalidate the policy cache — disabling a source
+  takes effect immediately, no redeploy.
 
 Subsequent phases follow the roadmap in `docs/architecture.md`.

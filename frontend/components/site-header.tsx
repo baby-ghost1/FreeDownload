@@ -38,6 +38,9 @@ export function SiteHeader() {
           <Link href="/downloads" className="transition-colors hover:text-foreground">
             My downloads
           </Link>
+          <Link href="/account" className="transition-colors hover:text-foreground">
+            Account
+          </Link>
         </nav>
 
         <div className="ml-auto flex items-center gap-2">

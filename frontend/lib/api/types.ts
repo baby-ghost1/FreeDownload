@@ -116,6 +116,140 @@ export interface SessionPayload {
   csrfToken: string;
 }
 
+// --- account (Phase 6) -------------------------------------------------------
+
+export interface UsageDay {
+  day: string;
+  count: number;
+  completed: number;
+  failed: number;
+}
+
+export interface Usage {
+  days: number;
+  total: number;
+  completed: number;
+  failed: number;
+  byDay: UsageDay[];
+}
+
+export interface UserSession {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  current: boolean;
+  lastSeenAt: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+// --- admin (Phase 6) ---------------------------------------------------------
+
+export type AdminRole = 'owner' | 'admin' | 'support' | 'viewer';
+
+export interface Admin {
+  id: string;
+  email: string;
+  role: AdminRole;
+  active: boolean;
+}
+
+export interface AdminLoginResult {
+  admin: Admin;
+  csrfToken: string;
+  mfaEnrolled: boolean;
+  mfaOk: boolean;
+}
+
+export interface AdminOverview {
+  jobs: { total: number; last24h: number; byStatus: Record<string, number> };
+  users: { total: number; active: number; suspended: number };
+  sources: { total: number; enabled: number };
+  auditsLast24h: number;
+}
+
+export interface AdminJob {
+  id: string;
+  status: JobStatus;
+  progress: number;
+  url: string;
+  requestedFormat: string | null;
+  targetContainer: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  retryCount: number;
+  userId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string | null;
+  completedAt: string | null;
+}
+
+export interface AdminSource {
+  id: string;
+  slug: string;
+  name: string;
+  adapterKey: string;
+  enabled: boolean;
+  mode: 'active' | 'maintenance' | 'restricted' | 'disabled';
+  allowedFormats: unknown;
+  maxFileSizeMb: number | null;
+  requiresAuth: boolean;
+  priority: number;
+  healthStatus: 'unknown' | 'healthy' | 'degraded' | 'down';
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSourcePatch {
+  enabled?: boolean;
+  mode?: AdminSource['mode'];
+  allowedFormats?: string[];
+  maxFileSizeMb?: number | null;
+  requiresAuth?: boolean;
+  notes?: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string | null;
+  status: 'pending' | 'active' | 'suspended' | 'deleted';
+  emailVerifiedAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  adminId: string | null;
+  action: string;
+  resource: string | null;
+  resourceId: string | null;
+  ip: string | null;
+  metadata: unknown;
+  createdAt: string;
+}
+
+export interface FeatureFlag {
+  key: string;
+  enabled: boolean;
+  rollout: number;
+  updatedAt: string | null;
+}
+
+export interface SystemSetting {
+  key: string;
+  value: unknown;
+  updatedAt: string | null;
+}
+
+export interface Page<T> {
+  data: T[];
+  nextCursor: string | null;
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;

@@ -62,6 +62,8 @@ const EnvSchema = z.object({
   // localhost is treated as trustworthy by browsers, so dev stays Lax.
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).optional(),
   COOKIE_SECURE: boolish.optional(),
+  // Admin sessions are deliberately short-lived (§75).
+  ADMIN_SESSION_TTL_MIN: z.coerce.number().int().min(5).default(480),
 
   // --- rate limits (config-driven, contract §25) ---------------------------
   RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().min(1).default(60),
@@ -205,6 +207,12 @@ export const config = {
   tokens: {
     verifyTtlHours: env.VERIFY_TOKEN_TTL_H,
     resetTtlMinutes: env.RESET_TOKEN_TTL_MIN,
+  },
+  /** Admin panel (Phase 6) — separate cookie + short TTL (§75). */
+  admin: {
+    cookieName: 'fd_admin',
+    ttlMinutes: env.ADMIN_SESSION_TTL_MIN,
+    ttlSeconds: env.ADMIN_SESSION_TTL_MIN * 60,
   },
   argon2: {
     memoryKib: env.ARGON2_MEMORY_KIB,

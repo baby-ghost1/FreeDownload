@@ -22,9 +22,15 @@ import { registerMeRoutes } from '../modules/me/routes.js';
 import { registerDownloadRoutes } from '../modules/downloads/routes.js';
 import { registerCatalogRoutes } from '../modules/catalog/routes.js';
 import { registerFilesRoutes } from '../modules/files/routes.js';
+import { registerAdminRoutes } from '../modules/admin/routes.js';
 import { closeQueues } from '../queue/queues.js';
 import { assertCsrf } from '../security/csrf.js';
 import { loadSession, readSessionToken, touchSession } from '../modules/auth/session.js';
+import {
+  loadAdminSession,
+  readAdminSessionToken,
+  touchAdminSession,
+} from '../modules/admin/session.js';
 import { getDb } from '../database/client.js';
 import { getRedis } from '../redis/client.js';
 import type { AppInstance } from '../types/app.js';
@@ -138,22 +144,23 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   // Populated for every request; routes that need it call requireAuth().
   // Cookie-authenticated mutations also enforce double-submit CSRF here.
   app.decorateRequest('auth', null);
+  app.decorateRequest('adminAuth', null);
   app.addHook('preHandler', async (req: FastifyRequest) => {
-    const token = readSessionToken(req);
-    if (!token) {
-      req.auth = null;
-      return;
-    }
-
     const db = getDb();
-    const context = await loadSession(db, token);
-    req.auth = context;
 
-    if (context) {
-      await touchSession(db, context.session);
-      if (!SAFE_METHODS.has(req.method)) {
-        assertCsrf(req);
-      }
+    const token = readSessionToken(req);
+    const context = token ? await loadSession(db, token) : null;
+    req.auth = context;
+    if (context) await touchSession(db, context.session);
+
+    const adminToken = readAdminSessionToken(req);
+    const adminContext = adminToken ? await loadAdminSession(db, adminToken, req.ip) : null;
+    req.adminAuth = adminContext;
+    if (adminContext) await touchAdminSession(db, adminContext.session);
+
+    // Either ambient credential (user or admin cookie) demands double-submit.
+    if (!SAFE_METHODS.has(req.method) && (context || adminContext)) {
+      assertCsrf(req);
     }
   });
 
@@ -231,6 +238,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       await registerDownloadRoutes(scope);
       await registerCatalogRoutes(scope);
       await registerFilesRoutes(scope);
+      await registerAdminRoutes(scope);
     },
     { prefix: '/api/v1' },
   );

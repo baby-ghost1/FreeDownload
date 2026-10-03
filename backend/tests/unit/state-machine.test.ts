@@ -44,7 +44,7 @@ describe('job state machine', () => {
   });
 
   it('locks finished states shut', () => {
-    for (const status of ['cancelled', 'expired', 'dead_letter'] as const) {
+    for (const status of ['cancelled', 'expired'] as const) {
       expect(isTerminal(status)).toBe(true);
       expect(TRANSITIONS[status]).toHaveLength(0);
       for (const target of JOB_STATUSES) {
@@ -59,10 +59,18 @@ describe('job state machine', () => {
     expect(canTransition('completed', 'cancelled')).toBe(false);
     expect(canTransition('completed', 'queued')).toBe(false);
 
-    // Restricted sources can only be dismissed, never revived.
+    // Dead-lettered jobs stay terminal for workers, but an admin may requeue
+    // them after investigation (the only legal way out).
+    expect(isTerminal('dead_letter')).toBe(true);
+    expect(TRANSITIONS.dead_letter).toEqual(['queued']);
+    expect(canTransition('dead_letter', 'cancelled')).toBe(false);
+    expect(canTransition('dead_letter', 'completed')).toBe(false);
+
+    // Policy-restricted jobs can be dismissed — or revived once the admin
+    // re-enables the source (Phase 6).
     expect(isTerminal('policy_restricted')).toBe(true);
-    expect(TRANSITIONS.policy_restricted).toEqual(['cancelled']);
-    expect(canTransition('policy_restricted', 'queued')).toBe(false);
+    expect(TRANSITIONS.policy_restricted).toEqual(['cancelled', 'queued']);
+    expect(canTransition('policy_restricted', 'completed')).toBe(false);
   });
 
   it('rejects illegal transitions before touching the database', async () => {

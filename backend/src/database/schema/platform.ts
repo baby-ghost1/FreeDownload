@@ -149,6 +149,34 @@ export const adminUsers = pgTable(
 );
 
 /**
+ * Admin sessions live apart from user sessions (§75): separate cookie, short
+ * TTL and `mfa_ok` gating — MFA is verified at login before this flips true.
+ */
+export const adminSessions = pgTable(
+  'admin_sessions',
+  {
+    id: id(),
+    adminId: uuid('admin_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    csrfToken: text('csrf_token').notNull(),
+    mfaOk: boolean('mfa_ok').notNull().default(false),
+    ip: inet('ip'),
+    userAgent: text('user_agent'),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('admin_sessions_token_hash_unique').on(t.tokenHash),
+    index('admin_sessions_admin_id_idx').on(t.adminId),
+    index('admin_sessions_expires_at_idx').on(t.expiresAt),
+  ],
+);
+
+/**
  * Append-only audit trail. The runtime database role has no UPDATE/DELETE
  * grant on this table (see migrations).
  */
@@ -203,3 +231,5 @@ export const idempotencyKeys = pgTable(
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type AdminSession = typeof adminSessions.$inferSelect;

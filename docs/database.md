@@ -74,18 +74,19 @@ logic (contract §25, §71).
 
 ### API, trust, admin, system
 
-| Table                | Key columns                                                                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api_keys`           | `id`, `user_id →`, `name`, `prefix`, `key_hash unique`, `scopes jsonb`, `rate_tier`, `expires_at`, `revoked_at`, `last_used_at`                         |
-| `api_usage`          | `id`, `api_key_id →`, `bucket_start`, `requests`, `errors`, `bytes`                                                                                     |
-| `reports`            | `id`, `type`, `reporter_email?`, `target_url`, `detail`, `status`, `assigned_admin_id`, `resolution`                                                    |
-| `copyright_requests` | `id`, `kind (notice\|counter)`, `claimant`, `contact`, `work_url`, `evidence jsonb`, `status`, `actions jsonb`, `resolved_at`                           |
-| `abuse_events`       | `id`, `subject_type`, `subject_id?`, `ip inet`, `signal`, `score smallint`, `action (log\|throttle\|challenge\|review\|blocked)`, `reviewed_by`         |
-| `admin_users`        | `id`, `email unique`, `role (owner\|admin\|support\|viewer)`, `totp_secret_enc`, `ip_allowlist jsonb`, `active`, `last_login_at`                        |
-| `audit_logs`         | `id`, `admin_id`, `action`, `resource`, `resource_id`, `ip`, `metadata jsonb`, `created_at` — **append-only** (no UPDATE/DELETE grant for the app role) |
-| `system_settings`    | `key` (PK), `value jsonb`, `updated_by`, `updated_at`                                                                                                   |
-| `feature_flags`      | `key` (PK), `enabled`, `rollout smallint`, `updated_at`                                                                                                 |
-| `idempotency_keys`   | `key` (PK), `scope`, `request_hash`, `status`, `response jsonb`, `job_id?`, `expires_at`                                                                |
+| Table                | Key columns                                                                                                                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_keys`           | `id`, `user_id →`, `name`, `prefix`, `key_hash unique`, `scopes jsonb`, `rate_tier`, `expires_at`, `revoked_at`, `last_used_at`                                                                                                         |
+| `api_usage`          | `id`, `api_key_id →`, `bucket_start`, `requests`, `errors`, `bytes`                                                                                                                                                                     |
+| `reports`            | `id`, `type`, `reporter_email?`, `target_url`, `detail`, `status`, `assigned_admin_id`, `resolution`                                                                                                                                    |
+| `copyright_requests` | `id`, `kind (notice\|counter)`, `claimant`, `contact`, `work_url`, `evidence jsonb`, `status`, `actions jsonb`, `resolved_at`                                                                                                           |
+| `abuse_events`       | `id`, `subject_type`, `subject_id?`, `ip inet`, `signal`, `score smallint`, `action (log\|throttle\|challenge\|review\|blocked)`, `reviewed_by`                                                                                         |
+| `admin_users`        | `id`, `email unique`, `password_hash`, `role (owner\|admin\|support\|viewer)`, `totp_secret_enc`, `ip_allowlist jsonb`, `active`, `last_login_at`                                                                                       |
+| `admin_sessions`     | `id`, `admin_id →`, `token_hash unique`, `csrf_token`, `mfa_ok`, `ip`, `user_agent`, `revoked_at`, `expires_at` (short TTL)                                                                                                             |
+| `audit_logs`         | `id`, `admin_id`, `action`, `resource`, `resource_id`, `ip`, `metadata jsonb`, `created_at` — **append-only** (a `BEFORE UPDATE OR DELETE` trigger in migration `0003` raises, so even a compromised connection cannot rewrite history) |
+| `system_settings`    | `key` (PK), `value jsonb`, `updated_by`, `updated_at`                                                                                                                                                                                   |
+| `feature_flags`      | `key` (PK), `enabled`, `rollout smallint`, `updated_at`                                                                                                                                                                                 |
+| `idempotency_keys`   | `key` (PK), `scope`, `request_hash`, `status`, `response jsonb`, `job_id?`, `expires_at`                                                                                                                                                |
 
 ## Indexes (query-pattern driven)
 
