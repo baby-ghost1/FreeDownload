@@ -17,6 +17,15 @@ export default defineConfig({
       WORKER_RUNNER: 'placeholder',
       // Pipeline tests hit a loopback fixture server (see ssrf.ts).
       SSRF_ALLOW_PRIVATE: 'true',
+      // Phase 7: lets billing tests sign and verify webhook payloads.
+      PAYMENT_WEBHOOK_SECRET: 'fd-test-webhook-secret',
+      // Quota defaults are generous so Phase 1–6 tests that create many jobs
+      // per actor keep passing; billing tests tighten limits via plan rows.
+      ANONYMOUS_DAILY_LIMIT: '1000',
+      ANON_CONCURRENCY: '100',
+      FREE_DAILY_LIMIT: '1000',
+      PRO_DAILY_LIMIT: '1000',
+      USER_CONCURRENCY: '100',
     },
     // Integration tests need docker compose services; they skip locally when
     // the containers are down and always run in CI.

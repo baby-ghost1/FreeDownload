@@ -2,15 +2,23 @@ import type { Page, Route } from '@playwright/test';
 
 import {
   analyzeResult,
+  apiKey,
+  apiKeyUsage,
+  createdApiKey,
+  freeSubscription,
   jobFixture,
   jobResult,
   notFound,
+  planList,
   publicConfig,
   session,
+  sessionsFixture,
   targetFormats,
   unauthorized,
+  usageFixture,
   user,
 } from './fixtures';
+import type { ApiKeyInfo, Subscription } from '@/lib/api/types';
 
 const PNG_1PX = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -20,20 +28,29 @@ const PNG_1PX = Buffer.from(
 export interface ApiMockOptions {
   /** Respond to `/me` with the fixture user instead of 401. */
   signedIn?: boolean;
+  /** Subscription returned by `/subscriptions/*` (defaults to free). */
+  subscription?: Subscription;
+  /** Overrides for the public config feature flags. */
+  flags?: Record<string, boolean>;
 }
 
 /**
  * Intercepts every backend call for one page. The job endpoint walks
- * queued → processing → completed across polls so the UI's progress flow
- * is exercised exactly like production.
+ * queued → processing → completed across polls so the UI's progress flow is
+ * exercised exactly like production. Billing endpoints keep in-memory state so
+ * downgrade/cancel flows can be asserted.
  */
 export class ApiMock {
   private jobPolls = 0;
+  private subscription: Subscription;
+  private keys: ApiKeyInfo[] = [apiKey];
 
   constructor(
     private readonly page: Page,
     private readonly opts: ApiMockOptions = {},
-  ) {}
+  ) {
+    this.subscription = opts.subscription ?? freeSubscription;
+  }
 
   async install(): Promise<void> {
     await this.page.route('http://localhost:4000/**', (route) => this.handle(route));
@@ -76,8 +93,62 @@ export class ApiMock {
       });
     }
     if (path === '/auth/logout' && method === 'POST') return this.json(route, { ok: true });
-    if (path === '/config/public') return this.json(route, publicConfig);
+    if (path === '/config/public') {
+      return this.json(route, {
+        ...publicConfig,
+        flags: this.opts.flags ?? publicConfig.flags,
+      });
+    }
     if (path === '/formats') return this.json(route, { data: targetFormats });
+    if (path === '/me/usage') return this.json(route, usageFixture);
+    if (path === '/me/sessions') return this.json(route, { data: sessionsFixture });
+
+    // --- billing + API keys (Phase 7) ---------------------------------------
+    if (path === '/plans') return this.json(route, { data: planList });
+    if (path === '/subscriptions/current') return this.json(route, this.subscription);
+    if (path === '/subscriptions' && method === 'POST') {
+      this.subscription = freeSubscription;
+      return this.json(route, this.subscription);
+    }
+    if (path === '/subscriptions/cancel' && method === 'POST') {
+      // Mirrors the API: a canceled subscription resolves to the free plan.
+      this.subscription = {
+        ...freeSubscription,
+        status: 'canceled',
+        canceledAt: user.createdAt,
+        provider: this.subscription.provider,
+      };
+      return this.json(route, this.subscription);
+    }
+    if (path === '/payments/checkout' && method === 'POST') {
+      return this.json(
+        route,
+        {
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Billing is not configured.',
+            requestId: 'e2e',
+          },
+        },
+        503,
+      );
+    }
+    if (path === '/api-keys' && method === 'GET') {
+      return this.json(route, { data: this.keys });
+    }
+    if (path === '/api-keys' && method === 'POST') {
+      const fresh = { ...createdApiKey, id: 'key-2' };
+      this.keys = [...this.keys, fresh];
+      return this.json(route, fresh, 201);
+    }
+    if (path.startsWith('/api-keys/') && path.endsWith('/usage')) {
+      return this.json(route, apiKeyUsage);
+    }
+    if (path.startsWith('/api-keys/') && method === 'DELETE') {
+      const id = path.slice('/api-keys/'.length);
+      this.keys = this.keys.map((k) => (k.id === id ? { ...k, revokedAt: user.createdAt } : k));
+      return this.json(route, { id, revokedAt: user.createdAt });
+    }
     if (path === '/downloads/analyze' && method === 'POST') return this.json(route, analyzeResult);
     if (path === '/downloads' && method === 'POST') return this.json(route, jobFixture());
     if (path === '/downloads' && method === 'GET') {

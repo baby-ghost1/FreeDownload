@@ -4,7 +4,8 @@ import { asc, eq } from 'drizzle-orm';
 import { config } from '../../server/config.js';
 import { getDb } from '../../database/client.js';
 import type { AppInstance } from '../../types/app.js';
-import { downloadSources, featureFlags, plans } from '../../database/schema/index.js';
+import { downloadSources, plans } from '../../database/schema/index.js';
+import { evaluateFlags } from '../../flags/flags.js';
 
 const SourceSchema = z.object({
   slug: z.string(),
@@ -113,15 +114,18 @@ export async function registerCatalogRoutes(app: AppInstance): Promise<void> {
         response: { 200: PublicConfigSchema },
       },
     },
-    async (_req, reply) => {
+    async (req, reply) => {
       const db = getDb();
-      const [flagRows, planRows] = await Promise.all([
-        db.select().from(featureFlags),
+      // Rollout is subject-stable: signed-in users bucket by id, anonymous
+      // callers by their X-Anon-Key when present.
+      const anonHeader = req.headers['x-anon-key'];
+      const anonKey = typeof anonHeader === 'string' ? anonHeader : undefined;
+      const subject = req.auth?.user.id ?? anonKey;
+
+      const [flags, planRows] = await Promise.all([
+        evaluateFlags(db, subject),
         db.select().from(plans).where(eq(plans.active, true)).orderBy(asc(plans.sortOrder)),
       ]);
-
-      const flags: Record<string, boolean> = {};
-      for (const flag of flagRows) flags[flag.key] = flag.enabled;
 
       reply.header('cache-control', 'public, max-age=60');
       return {

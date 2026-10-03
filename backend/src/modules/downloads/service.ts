@@ -8,12 +8,19 @@ import {
   downloadJobs,
   downloadSources,
   files,
+  mediaFormats,
   type DownloadJob,
 } from '../../database/schema/index.js';
 import { sha256 } from '../../utils/crypto.js';
 import { enqueueDownloadJob } from '../../queue/queues.js';
 import { getRedis } from '../../redis/client.js';
 import { assertSafeAnalysisUrls, assertSafeUrl } from '../../security/ssrf.js';
+import {
+  assertApiHourly,
+  assertQuota,
+  recordJobCreated,
+  resolveQuota,
+} from '../../limits/engine.js';
 import { getAdapterForUrl } from '../../downloader/detector.js';
 import { SourceError, SourcePolicyError } from '../../downloader/errors.js';
 import { assertSourceUsable, findSourceBySlug, loadSourcePolicy } from '../../downloader/policy.js';
@@ -30,6 +37,8 @@ export interface CreateDownloadInput extends DownloadActor {
   requestedFormat?: string | undefined;
   targetContainer?: string | undefined;
   ip?: string | undefined;
+  /** Present when the caller authenticated with an API key (Bearer). */
+  apiKeyId?: string | undefined;
 }
 
 /** Statuses the user may cancel (everything before COMPLETED). */
@@ -110,6 +119,14 @@ export async function createDownload(
   db: Database = getDb(),
 ): Promise<DownloadJob> {
   const parsed = parsePublicUrl(input.url);
+
+  // Plan quotas (Phase 7): daily + concurrency gate before anything is
+  // written. Idempotent replays return before this function, so a replay is
+  // never blocked by a limit the original request already satisfied.
+  const quota = await resolveQuota(db, input);
+  await assertQuota(db, quota, input);
+  if (input.apiKeyId) await assertApiHourly(db, input.apiKeyId, quota);
+
   const sourceId = await resolveSource(db);
   const urlHash = sha256(parsed.toString());
   const urlRedacted = redactUrl(parsed);
@@ -125,9 +142,9 @@ export async function createDownload(
       urlRedacted,
       requestedFormat: input.requestedFormat ?? null,
       targetContainer: input.targetContainer ?? null,
-      // Fairness: authenticated jobs outrank anonymous ones; plan tiers
-      // refine this in Phase 7 (clients never set priority).
-      priority: input.userId ? 50 : 60,
+      // Fairness: plan tier drives queue priority (60 anon / 50 free / 30 pro
+      // / 10 business); clients never set it.
+      priority: quota.priority,
       ip: input.ip ?? null,
       status: 'created',
       expiresAt: new Date(Date.now() + 24 * 3_600_000),
@@ -135,6 +152,13 @@ export async function createDownload(
     .returning();
 
   const job = inserted[0]!;
+
+  // Usage rollup feeds /me/usage; never fail a creation over reporting.
+  if (input.userId) {
+    await recordJobCreated(db, input.userId).catch((err: unknown) =>
+      logger.warn({ err, userId: input.userId }, 'usage rollup failed'),
+    );
+  }
 
   try {
     const validating = await transitionJob(db, {
@@ -405,6 +429,30 @@ export async function startDownload(
     assertSourceUsable(policy, input.container ?? job.targetContainer ?? undefined);
   } catch (err) {
     mapSourceError(err);
+  }
+
+  // Plan-level file cap: the analysis row (when present) must fit the
+  // caller's plan size limit, not just the source's.
+  const quota = await resolveQuota(db, input);
+  const requestedKey = input.format ?? job.requestedFormat;
+  if (requestedKey) {
+    const rows = await db
+      .select()
+      .from(mediaFormats)
+      .where(eq(mediaFormats.jobId, jobId))
+      .limit(50);
+    const picked =
+      rows.find(
+        (r) => r.extKey === requestedKey || r.label.toLowerCase() === requestedKey.toLowerCase(),
+      ) ?? rows.find((r) => r.container === requestedKey.toLowerCase());
+    const sizeBytes = picked?.filesizeBytes ?? null;
+    if (sizeBytes !== null && sizeBytes > quota.maxFileSizeMb * 1_048_576) {
+      throw new AppError(
+        'POLICY_RESTRICTED',
+        `This file exceeds the ${quota.maxFileSizeMb} MB limit on the ${quota.planCode} plan.`,
+        { details: { plan: quota.planCode, maxFileSizeMb: quota.maxFileSizeMb } },
+      );
+    }
   }
 
   const started = await transitionJob(db, {

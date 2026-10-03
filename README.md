@@ -134,7 +134,7 @@ Migration path to AWS ECS/Fargate stays open: containers are 12-factor
 
 ## Status
 
-Phases 1–6 complete:
+Phases 1–7 complete:
 
 - **1 — foundation:** workspaces, strict TypeScript, lint/format, health
   endpoints, docker-compose, CI.
@@ -166,5 +166,13 @@ Phases 1–6 complete:
   cursor-paginated admin reads, and append-only `audit_logs` (migration
   trigger). Source toggles invalidate the policy cache — disabling a source
   takes effect immediately, no redeploy.
+- **7 — monetization:** DB-driven plans (`free`/`pro`/`business`) and a limits
+  engine (daily jobs, concurrent jobs, plan file-size cap, priority tiers,
+  API-key hourly quota — env values only as fallbacks), Stripe behind a
+  `PaymentProvider` interface (null provider returns 503; raw-body HMAC
+  webhook signature verification, idempotent event application), metered API
+  keys (`fd_live_…` shown once, SHA-256 stored, Bearer auth, `api_usage`
+  hourly buckets), hashed-rollout feature flags evaluated per subject, a
+  flag-gated ad slot, and the `/account` Plan & billing + API keys UI.
 
 Subsequent phases follow the roadmap in `docs/architecture.md`.

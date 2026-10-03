@@ -7,14 +7,19 @@ import type {
   AdminSourcePatch,
   AdminUser,
   AnalyzeResult,
+  ApiKeyInfo,
+  ApiKeyUsage,
   AuditEntry,
+  CreatedApiKey,
   FeatureFlag,
   Job,
   JobResult,
   Page,
+  PlanInfo,
   PublicConfig,
   SessionPayload,
   Source,
+  Subscription,
   SystemSetting,
   TargetFormat,
   Usage,
@@ -131,6 +136,50 @@ export function listMySessions(opts: Opts = {}): Promise<{ data: UserSession[] }
 
 export function revokeMySession(id: string, opts: Opts = {}): Promise<{ ok: true }> {
   return apiFetch<{ ok: true }>(`/me/sessions/${id}`, { ...opts, method: 'DELETE' });
+}
+
+// --- billing + API keys (Phase 7) --------------------------------------------
+
+export function listPlans(opts: Opts = {}): Promise<{ data: PlanInfo[] }> {
+  return apiFetch<{ data: PlanInfo[] }>('/plans', opts);
+}
+
+export function getCurrentSubscription(opts: Opts = {}): Promise<Subscription> {
+  return apiFetch<Subscription>('/subscriptions/current', opts);
+}
+
+export function downgradeToFree(): Promise<Subscription> {
+  return apiFetch<Subscription>('/subscriptions', {
+    method: 'POST',
+    body: { planCode: 'free' },
+  });
+}
+
+export function cancelSubscription(): Promise<Subscription> {
+  return apiFetch<Subscription>('/subscriptions/cancel', { method: 'POST' });
+}
+
+export function startCheckout(planCode: string): Promise<{ url: string; providerRef: string }> {
+  return apiFetch<{ url: string; providerRef: string }>('/payments/checkout', {
+    method: 'POST',
+    body: { planCode },
+  });
+}
+
+export function listApiKeys(opts: Opts = {}): Promise<{ data: ApiKeyInfo[] }> {
+  return apiFetch<{ data: ApiKeyInfo[] }>('/api-keys', opts);
+}
+
+export function createApiKey(name: string): Promise<CreatedApiKey> {
+  return apiFetch<CreatedApiKey>('/api-keys', { method: 'POST', body: { name } });
+}
+
+export function revokeApiKey(id: string): Promise<{ id: string; revokedAt: string }> {
+  return apiFetch<{ id: string; revokedAt: string }>(`/api-keys/${id}`, { method: 'DELETE' });
+}
+
+export function getApiKeyUsage(id: string, opts: Opts = {}): Promise<ApiKeyUsage> {
+  return apiFetch<ApiKeyUsage>(`/api-keys/${id}/usage`, opts);
 }
 
 // --- admin (Phase 6) ---------------------------------------------------------

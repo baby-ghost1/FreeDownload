@@ -23,8 +23,18 @@ import { registerDownloadRoutes } from '../modules/downloads/routes.js';
 import { registerCatalogRoutes } from '../modules/catalog/routes.js';
 import { registerFilesRoutes } from '../modules/files/routes.js';
 import { registerAdminRoutes } from '../modules/admin/routes.js';
+import { registerApiKeyRoutes } from '../modules/apikeys/routes.js';
+import { registerBillingRoutes } from '../modules/billing/routes.js';
 import { closeQueues } from '../queue/queues.js';
 import { assertCsrf } from '../security/csrf.js';
+import {
+  loadApiKey,
+  meterApiKeyError,
+  meterApiKeyRequest,
+  readBearerToken,
+  touchApiKey,
+} from '../security/api-key.js';
+import { assertApiHourly, resolveQuota } from '../limits/engine.js';
 import { loadSession, readSessionToken, touchSession } from '../modules/auth/session.js';
 import {
   loadAdminSession,
@@ -145,6 +155,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   // Cookie-authenticated mutations also enforce double-submit CSRF here.
   app.decorateRequest('auth', null);
   app.decorateRequest('adminAuth', null);
+  app.decorateRequest('apiKey', null);
   app.addHook('preHandler', async (req: FastifyRequest) => {
     const db = getDb();
 
@@ -158,9 +169,38 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     req.adminAuth = adminContext;
     if (adminContext) await touchAdminSession(db, adminContext.session);
 
+    // Bearer API key (Phase 7): validated, metered and hourly-quota gated
+    // before the route runs. An invalid key answers 401 — it never degrades
+    // into anonymous traffic.
+    if (!context) {
+      const bearer = readBearerToken(req);
+      if (bearer) {
+        const keyContext = await loadApiKey(db, bearer);
+        if (!keyContext) {
+          throw new AppError('UNAUTHORIZED', 'The API key is invalid, expired or revoked.');
+        }
+        req.apiKey = keyContext;
+        const quota = await resolveQuota(db, { userId: keyContext.key.userId });
+        await assertApiHourly(db, keyContext.key.id, quota);
+        await meterApiKeyRequest(db, keyContext.key.id).catch((err: unknown) =>
+          req.log.warn({ err }, 'api usage meter failed'),
+        );
+        await touchApiKey(db, keyContext.key.id).catch(() => undefined);
+      }
+    }
+
     // Either ambient credential (user or admin cookie) demands double-submit.
     if (!SAFE_METHODS.has(req.method) && (context || adminContext)) {
       assertCsrf(req);
+    }
+  });
+
+  // Failed API-key requests count toward the hourly `errors` bucket.
+  app.addHook('onResponse', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (req.apiKey && reply.statusCode >= 400) {
+      await meterApiKeyError(getDb(), req.apiKey.key.id).catch((err: unknown) =>
+        req.log.warn({ err }, 'api error meter failed'),
+      );
     }
   });
 
@@ -239,6 +279,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       await registerCatalogRoutes(scope);
       await registerFilesRoutes(scope);
       await registerAdminRoutes(scope);
+      await registerApiKeyRoutes(scope);
+      await registerBillingRoutes(scope);
     },
     { prefix: '/api/v1' },
   );

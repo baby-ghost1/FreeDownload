@@ -105,14 +105,16 @@ function header(req: { headers: Record<string, unknown> }, name: string): string
 }
 
 /**
- * Who is asking: the signed-in user, or an anonymous caller presenting an
- * `X-Anon-Key` they persist locally (Phase 7 attaches quotas to it).
+ * Who is asking: the signed-in user, an API-key client (Bearer), or an
+ * anonymous caller presenting an `X-Anon-Key` they persist locally.
  */
 function actorOf(req: {
   auth: { user: { id: string } } | null;
+  apiKey: { key: { id: string; userId: string } } | null;
   headers: Record<string, unknown>;
-}): DownloadActor {
+}): DownloadActor & { apiKeyId?: string } {
   if (req.auth) return { userId: req.auth.user.id };
+  if (req.apiKey) return { userId: req.apiKey.key.userId, apiKeyId: req.apiKey.key.id };
 
   const anonKey = header(req, 'x-anon-key');
   if (anonKey && ANON_KEY_PATTERN.test(anonKey)) return { anonKey };
@@ -166,8 +168,9 @@ export async function registerDownloadRoutes(app: AppInstance): Promise<void> {
       const db = getDb();
       const actor = actorOf(req);
 
-      // Anonymous creation is the higher-abuse path (contract §15).
-      if (!req.auth) {
+      // Anonymous creation is the higher-abuse path (contract §15). API-key
+      // clients already passed key validation + hourly metering upstream.
+      if (!req.auth && !req.apiKey) {
         await verifyTurnstile(header(req, 'x-turnstile-token'), req.ip);
       }
 
@@ -209,6 +212,7 @@ export async function registerDownloadRoutes(app: AppInstance): Promise<void> {
             userId: actor.userId,
             anonKey: actor.anonKey,
             ip: req.ip,
+            apiKeyId: actor.apiKeyId,
           },
           db,
         );

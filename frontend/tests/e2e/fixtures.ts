@@ -1,11 +1,16 @@
 import type {
   AnalyzeResult,
+  ApiKeyInfo,
   Job,
   JobResult,
+  PlanInfo,
   PublicConfig,
   SessionPayload,
+  Subscription,
   TargetFormat,
+  Usage,
   User,
+  UserSession,
 } from '@/lib/api/types';
 
 /** Wire fixtures mirroring docs/api.md — used by the Playwright route mocks. */
@@ -24,7 +29,7 @@ export const publicConfig: PublicConfig = {
       priceCents: 0,
       currency: 'usd',
       interval: 'month',
-      limits: { jobsPerDay: 5, maxFileSizeMb: 200 },
+      limits: { jobsPerDay: 25, concurrentJobs: 2, maxFileSizeMb: 512, apiPerHour: 60 },
       features: { priorityQueue: false },
     },
     {
@@ -34,17 +39,17 @@ export const publicConfig: PublicConfig = {
       priceCents: 999,
       currency: 'usd',
       interval: 'month',
-      limits: { jobsPerDay: 100, maxFileSizeMb: 2048 },
+      limits: { jobsPerDay: 100, concurrentJobs: 3, maxFileSizeMb: 4096, apiPerHour: 600 },
       features: { priorityQueue: true },
     },
     {
-      code: 'max',
-      name: 'Max',
+      code: 'business',
+      name: 'Business',
       tier: 2,
       priceCents: 2999,
       currency: 'usd',
       interval: 'month',
-      limits: { jobsPerDay: 500, maxFileSizeMb: 4096 },
+      limits: { jobsPerDay: 1000, concurrentJobs: 10, maxFileSizeMb: 16384, apiPerHour: 3600 },
       features: { priorityQueue: true },
     },
   ],
@@ -147,3 +152,87 @@ export function notFound(method: string, path: string) {
     error: { code: 'NOT_FOUND', message: `Unmocked ${method} ${path}`, requestId: 'e2e' },
   };
 }
+
+// --- billing + API keys (Phase 7) --------------------------------------------
+
+export const planList: PlanInfo[] = publicConfig.plans.map((p, i) => ({
+  ...p,
+  interval: p.interval as 'month' | 'year',
+  limits: (p.limits ?? null) as PlanInfo['limits'],
+  features: (p.features ?? null) as Record<string, boolean> | null,
+  sortOrder: i + 1,
+}));
+
+export const freeSubscription: Subscription = {
+  status: 'active',
+  provider: 'none',
+  cancelAtPeriodEnd: false,
+  currentPeriodStart: null,
+  currentPeriodEnd: null,
+  canceledAt: null,
+  plan: planList[0]!,
+};
+
+export const proSubscription: Subscription = {
+  status: 'active',
+  provider: 'stripe',
+  cancelAtPeriodEnd: false,
+  currentPeriodStart: NOW,
+  currentPeriodEnd: '2026-11-03T12:00:00.000Z',
+  canceledAt: null,
+  plan: planList[1]!,
+};
+
+/** A paid plan granted outside Stripe (provider `none`) — downgrades directly. */
+export const businessSubscription: Subscription = {
+  status: 'active',
+  provider: 'none',
+  cancelAtPeriodEnd: false,
+  currentPeriodStart: NOW,
+  currentPeriodEnd: null,
+  canceledAt: null,
+  plan: planList[2]!,
+};
+
+export const apiKey: ApiKeyInfo = {
+  id: 'key-1',
+  name: 'ci',
+  prefix: 'fd_live_a1b2',
+  scopes: [],
+  rateTier: 'free',
+  lastUsedAt: NOW,
+  expiresAt: null,
+  revokedAt: null,
+  createdAt: NOW,
+};
+
+export const createdApiKey = {
+  ...apiKey,
+  rawKey: 'fd_live_abcdefghijklmnopqrstuvwxyz0123456789_-',
+};
+
+export const apiKeyUsage = {
+  totalRequests: 42,
+  totalErrors: 1,
+  buckets: [{ bucketStart: NOW, requests: 42, errors: 1, bytes: 0 }],
+};
+
+export const usageFixture: Usage = {
+  days: 30,
+  total: 7,
+  completed: 5,
+  failed: 2,
+  byDay: [{ day: '2026-10-01', count: 7, completed: 5, failed: 2 }],
+};
+
+export const sessionsFixture: UserSession[] = [
+  {
+    id: 'sess-1',
+    ip: '127.0.0.1',
+    userAgent: 'Playwright',
+    current: true,
+    lastSeenAt: NOW,
+    expiresAt: '2026-10-10T12:00:00.000Z',
+    createdAt: NOW,
+  },
+];

@@ -71,6 +71,18 @@ const EnvSchema = z.object({
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
   DOWNLOAD_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(60),
 
+  // --- quotas / billing (Phase 7) ------------------------------------------
+  // Fallbacks only — `plans.limits` in the database wins (contract §25, §71).
+  ANONYMOUS_DAILY_LIMIT: z.coerce.number().int().min(1).default(5),
+  FREE_DAILY_LIMIT: z.coerce.number().int().min(1).default(25),
+  PRO_DAILY_LIMIT: z.coerce.number().int().min(1).default(200),
+  ANON_CONCURRENCY: z.coerce.number().int().min(1).default(1),
+  USER_CONCURRENCY: z.coerce.number().int().min(1).default(2),
+  API_KEY_HOURLY_LIMIT: z.coerce.number().int().min(1).default(60),
+  PAYMENT_PROVIDER: z.enum(['none', 'stripe']).default('none'),
+  PAYMENT_PROVIDER_SECRET: z.string().optional(),
+  PAYMENT_WEBHOOK_SECRET: z.string().optional(),
+
   // --- abuse / Turnstile --------------------------------------------------
   TURNSTILE_SECRET_KEY: z.string().optional(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
@@ -157,6 +169,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     }
     if (env.SSRF_ALLOW_PRIVATE) missing.push('SSRF_ALLOW_PRIVATE (never in production)');
     if (env.WORKER_RUNNER === 'placeholder') missing.push('WORKER_RUNNER (pipeline required)');
+    if (env.PAYMENT_PROVIDER === 'stripe') {
+      if (!env.PAYMENT_PROVIDER_SECRET) missing.push('PAYMENT_PROVIDER_SECRET');
+      if (!env.PAYMENT_WEBHOOK_SECRET) missing.push('PAYMENT_WEBHOOK_SECRET');
+    }
     if (missing.length > 0) {
       throw new Error(
         `Production configuration incomplete — missing or default: ${missing.join(', ')}`,
@@ -224,6 +240,23 @@ export const config = {
     max: env.RATE_LIMIT_MAX,
     authMax: env.AUTH_RATE_LIMIT_MAX,
     downloadMax: env.DOWNLOAD_RATE_LIMIT_MAX,
+  },
+  /** Plan/anonymous quotas (Phase 7) — DB `plans.limits` overrides these. */
+  limits: {
+    anonDaily: env.ANONYMOUS_DAILY_LIMIT,
+    freeDaily: env.FREE_DAILY_LIMIT,
+    proDaily: env.PRO_DAILY_LIMIT,
+    anonConcurrency: env.ANON_CONCURRENCY,
+    userConcurrency: env.USER_CONCURRENCY,
+    apiKeyHourly: env.API_KEY_HOURLY_LIMIT,
+  },
+  /** Payments (Phase 7) — `none` keeps dev/test billing-free (NullProvider). */
+  payment: {
+    provider: env.PAYMENT_PROVIDER,
+    secret: env.PAYMENT_PROVIDER_SECRET ?? '',
+    webhookSecret: env.PAYMENT_WEBHOOK_SECRET ?? '',
+    successUrl: `${env.APP_URL}/account?checkout=success`,
+    cancelUrl: `${env.APP_URL}/account?checkout=cancelled`,
   },
   turnstile: {
     secretKey: env.TURNSTILE_SECRET_KEY,

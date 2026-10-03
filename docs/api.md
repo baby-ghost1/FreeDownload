@@ -82,8 +82,10 @@ Planned: `POST /auth/resend-verification` · `GET /auth/session`.
 ### Downloads ✅ (Phases 3–4)
 
 Identity: a session cookie **or** an `X-Anon-Key` header (client-generated,
-`[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs. Anonymous creation/analyze
-also carries `X-Turnstile-Token` once Turnstile is keyed.
+`[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs **or** an API key as
+`Authorization: Bearer fd_live_…` (Phase 7 — metered, see below). Anonymous
+creation/analyze also carries `X-Turnstile-Token` once Turnstile is keyed;
+Bearer requests skip the challenge.
 
 | Method | Path                           | Auth                 | Notes                                                                          |
 | ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
@@ -100,6 +102,14 @@ Request body: `{ "url": "https://.", "format"?: "mp4", "container"?: "mp4" }`.
 `^[a-z0-9]{2,5}$` — anything else is `400` before a job row exists. Only
 `http(s)` URLs are accepted; credentials in the URL are rejected and the
 stored URL is redacted (path kept, query/fragment dropped).
+
+Creation enforces the plan quota **before** a job row exists: the daily job
+count (UTC day via `usage_records`) and the number of concurrent active jobs
+(`queued`…`retrying`) each answer `429 RATE_LIMITED` with
+`details.scope = daily|concurrent`. `POST /:id/start` additionally enforces
+the plan's `maxFileSizeMb` against the picked format — over the cap is
+`403 POLICY_RESTRICTED` with `details.maxFileSizeMb`. Anonymous, free and
+paid jobs also differ in queue `priority` (60 → tier-based 50…10).
 
 **Analyze → start flow:** creating _without_ a format runs analysis and parks
 the job at `ready` (`errorCode: AWAITING_FORMAT` on the finished attempt).
@@ -166,16 +176,32 @@ current one also clears the cookies).
 
 Planned: `DELETE /me` · `GET /me/history`
 
-### Billing
+### Billing ✅ (Phase 7)
 
-`GET /plans` · `POST /subscriptions` · `GET /subscriptions/current` ·
-`POST /subscriptions/cancel` · `POST /payments/checkout` ·
-`POST /payments/webhook` (signature verified, idempotent)
+Implemented: `GET /plans` (active plans for pricing) ·
+`GET /subscriptions/current` (session; missing/canceled subscriptions fall
+back to the free plan) · `POST /subscriptions` (session + CSRF; switches to
+`free` only — paid plans start a checkout) · `POST /subscriptions/cancel`
+(free plans cancel immediately, provider subscriptions at period end; 409
+`CONFLICT` when nothing is active) · `POST /payments/checkout` (503
+`SERVICE_UNAVAILABLE` while `PAYMENT_PROVIDER=none`) ·
+`POST /payments/webhook` (raw-body `stripe-signature` HMAC-SHA256
+verification with a 5-minute tolerance; idempotent — subscriptions upsert on
+`provider_ref`, payments `ON CONFLICT DO NOTHING`, replayed events change
+nothing).
 
-### API keys
+### API keys ✅ (Phase 7)
 
-`POST /api-keys` (raw value returned exactly once) · `GET /api-keys` ·
-`DELETE /api-keys/:id` · `GET /api-keys/:id/usage`
+Implemented: `POST /api-keys` (session + CSRF; `fd_live_…` raw value
+returned exactly once, stored as SHA-256) · `GET /api-keys` ·
+`DELETE /api-keys/:id` (revoke — a foreign key answers 404) ·
+`GET /api-keys/:id/usage` (hourly buckets + totals).
+
+`Authorization: Bearer fd_live_…` authenticates the download routes; cookie
+CSRF does not apply to it. Every request is metered into `api_usage`
+(UTC-hour buckets) and gated by the plan's `apiPerHour` limit (429
+`details.scope = api-hourly`); invalid, expired or revoked keys answer 401
+before the route runs.
 
 ### Admin
 
@@ -218,4 +244,4 @@ Planned: `GET /admin/workers` · `GET /admin/revenue` ·
 | downloads CRUD, queue     | ✅ Phase 3 |
 | analyze, result, catalog  | ✅ Phase 4 |
 | account + admin console   | ✅ Phase 6 |
-| billing, API keys         | ⏳ Phase 7 |
+| billing, API keys         | ✅ Phase 7 |

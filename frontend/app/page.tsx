@@ -10,9 +10,11 @@ import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/progress';
+import { AdSlot } from '@/components/ad-slot';
 import { SITE_CONFIG } from '@/lib/constants/site';
 import { getPublicConfig, getTargetFormats } from '@/lib/api/endpoints';
 import type { PublicConfig, TargetFormat } from '@/lib/api/types';
+import { useSession } from '@/lib/session';
 
 const STEPS = [
   {
@@ -43,6 +45,7 @@ function price(cents: number, currency: string): string {
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useSession();
   const [url, setUrl] = useState('');
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [formats, setFormats] = useState<TargetFormat[]>([]);
@@ -130,6 +133,15 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Ad slot — rendered only when the `ads` flag is on for this subject */}
+      {config?.flags.ads === true && (
+        <section className="border-t border-border">
+          <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+            <AdSlot />
+          </div>
+        </section>
+      )}
+
       {/* Pricing */}
       <section id="pricing" className="border-t border-border">
         <div className="mx-auto w-full max-w-5xl px-4 py-14 sm:px-6">
@@ -175,11 +187,15 @@ export default function HomePage() {
                           {features?.priorityQueue ? 'Priority processing' : 'Standard processing'}
                         </p>
                         <Link
-                          href={plan.code === 'free' ? '/register' : '/register'}
+                          href={plan.code === 'free' || user === null ? '/register' : '/account'}
                           className={`${buttonClasses({ variant: plan.code === 'free' ? 'outline' : 'primary', size: 'sm' })} mt-3 w-full`}
                           data-testid={`plan-cta-${plan.code}`}
                         >
-                          {plan.code === 'free' ? 'Start free' : `Choose ${plan.name}`}
+                          {plan.code === 'free'
+                            ? 'Start free'
+                            : user === null
+                              ? `Choose ${plan.name}`
+                              : `Upgrade to ${plan.name}`}
                         </Link>
                       </CardContent>
                     </Card>

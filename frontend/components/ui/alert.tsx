@@ -24,15 +24,17 @@ export function Alert({
   className,
   children,
   role,
+  ...rest
 }: {
   tone?: AlertTone;
   className?: string;
   children: React.ReactNode;
   role?: 'alert' | 'status';
-}) {
+} & React.HTMLAttributes<HTMLDivElement>) {
   const t = TONES[tone];
   return (
     <div
+      {...rest}
       className={cn('flex gap-2.5 rounded-md border px-3.5 py-3 text-sm', t.wrap, className)}
       role={role ?? (tone === 'error' ? 'alert' : 'status')}
     >

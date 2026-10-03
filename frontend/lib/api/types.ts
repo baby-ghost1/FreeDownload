@@ -143,6 +143,58 @@ export interface UserSession {
   createdAt: string;
 }
 
+// --- billing + API keys (Phase 7) --------------------------------------------
+
+export interface PlanInfo {
+  code: string;
+  name: string;
+  tier: number;
+  priceCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  limits: {
+    jobsPerDay?: number;
+    concurrentJobs?: number;
+    maxFileSizeMb?: number;
+    apiPerHour?: number;
+  } | null;
+  features: Record<string, boolean> | null;
+  sortOrder: number;
+}
+
+export interface Subscription {
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete';
+  provider: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  canceledAt: string | null;
+  plan: PlanInfo;
+}
+
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  rateTier: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface CreatedApiKey extends ApiKeyInfo {
+  /** Shown exactly once, at creation — never retrievable again. */
+  rawKey: string;
+}
+
+export interface ApiKeyUsage {
+  totalRequests: number;
+  totalErrors: number;
+  buckets: Array<{ bucketStart: string; requests: number; errors: number; bytes: number }>;
+}
+
 // --- admin (Phase 6) ---------------------------------------------------------
 
 export type AdminRole = 'owner' | 'admin' | 'support' | 'viewer';
