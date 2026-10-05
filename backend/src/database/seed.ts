@@ -3,14 +3,14 @@ import { pathToFileURL } from 'node:url';
 
 import { closeDatabase, getDb } from './client.js';
 import { logger } from '../logging/logger.js';
-import { adminUsers, downloadSources, plans } from './schema/index.js';
+import { adminUsers, downloadSources, plans, systemSettings } from './schema/index.js';
 import { hashPassword } from '../security/passwords.js';
 import { normalizeEmail } from '../utils/crypto.js';
 
 /**
  * Idempotent seed: safe to run repeatedly (contract §12, §75).
  *
- * Only reference/operational data lives here — no user rows unless an owner
+ * Only reference/operational data lives here - no user rows unless an owner
  * account is explicitly requested through ADMIN_EMAIL/ADMIN_PASSWORD.
  */
 export async function seed(): Promise<void> {
@@ -76,6 +76,13 @@ export async function seed(): Promise<void> {
       set: { ...sourceRow, updatedAt: new Date() },
     });
 
+  // Anonymous daily cap, owned by the admin console. 0 = no cap (the
+  // default). onConflictDoNothing so reseed never clobbers an admin's value.
+  await db
+    .insert(systemSettings)
+    .values({ key: 'anon_daily_limit', value: 0 })
+    .onConflictDoNothing({ target: systemSettings.key });
+
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (adminEmail && adminPassword) {
@@ -101,7 +108,7 @@ export async function seed(): Promise<void> {
 }
 
 // True only when this file is the process entrypoint (tsx/node src/database/
-// seed.ts) — importing it from tests or the API must never seed or exit.
+// seed.ts) - importing it from tests or the API must never seed or exit.
 const isDirectRun =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 

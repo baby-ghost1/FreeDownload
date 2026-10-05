@@ -169,7 +169,7 @@ async function acquireLease(db: Database, jobId: string, workerId: string): Prom
   }
 
   // Hand-off takeover: the API moved the job to `ready`/`processing`
-  // (POST /downloads/:id/start) without attaching a lease — take it over
+  // (POST /downloads/:id/start) without attaching a lease - take it over
   // as-is; the pipeline picks up from whatever stage the status says.
   const taken = await db
     .update(downloadJobs)
@@ -277,6 +277,69 @@ function errorCodeOf(err: unknown): string {
   return 'WORKER_ERROR';
 }
 
+/**
+ * Failures no retry can fix: login-walled, removed/geo-blocked, oversized
+ * and media-less pages fail identically on every attempt. Burning all
+ * retries on them is what made doomed jobs bounce between `analyzing` and
+ * `processing` for minutes - park them as `failed` immediately (still
+ * admin-retryable) and never throw to BullMQ.
+ */
+const PERMANENT_SOURCE_CODES = new Set([
+  'SOURCE_UNAVAILABLE',
+  'SOURCE_TOO_LARGE',
+  'SOURCE_EXTRACT_FAILED',
+]);
+
+export function isPermanentFailure(err: unknown): boolean {
+  return err instanceof SourceError && PERMANENT_SOURCE_CODES.has(err.code);
+}
+
+/**
+ * Parks a live job as `failed` through LEGAL hops only. `retrying → failed`
+ * does not exist in the state machine (and `transitionJob` throws when a
+ * `from` list even contains an illegal hop), so retrying jobs hop through
+ * `queued` first. Returns false when someone else already decided the
+ * outcome - callers must treat that as settled, never as an error.
+ */
+async function parkAsFailed(
+  db: Database,
+  jobId: string,
+  patch: {
+    errorCode: string;
+    errorMessage: string;
+    retryCount?: number;
+  },
+  leaseToken?: string,
+): Promise<boolean> {
+  const job = await loadJob(db, jobId);
+  if (!job || isTerminal(job.status)) return false;
+  if (job.status === 'failed') return true;
+  if (job.status === 'retrying') {
+    const queued = await transitionJob(db, {
+      jobId,
+      from: ['retrying'],
+      to: 'queued',
+      ...(leaseToken !== undefined ? { leaseToken } : {}),
+      soft: true,
+    });
+    if (!queued) return false;
+  }
+  const parked = await transitionJob(db, {
+    jobId,
+    from: ['queued', ...LEASED],
+    to: 'failed',
+    patch: {
+      ...patch,
+      leaseToken: null,
+      leaseExpiresAt: null,
+      workerId: null,
+    },
+    ...(leaseToken !== undefined ? { leaseToken } : {}),
+    soft: true,
+  });
+  return parked !== null;
+}
+
 async function finishSuccess(
   db: Database,
   jobId: string,
@@ -295,6 +358,9 @@ async function finishSuccess(
     patch: {
       progress: 100,
       completedAt: new Date(),
+      // The raw URL served its purpose (extraction) - the redacted copy is
+      // all history/result surfaces ever read.
+      url: null,
       leaseToken: null,
       leaseExpiresAt: null,
       workerId: null,
@@ -304,7 +370,7 @@ async function finishSuccess(
   });
 
   if (!completed) {
-    // Cancelled/expired mid-run — the attempt still happened, the job did
+    // Cancelled/expired mid-run - the attempt still happened, the job did
     // not finish. Nobody else's outcome is overwritten: only our own row.
     await finishAttempt(db, attemptId, 'failed', 'CANCELLED', durationMs);
     logger.warn({ jobId }, 'job left the pipeline before completion');
@@ -384,7 +450,7 @@ async function finishFailure(
   });
 
   if (!failed) {
-    // Cancelled while we were failing — keep the terminal state it picked.
+    // Cancelled while we were failing - keep the terminal state it picked.
     logger.warn({ jobId, code }, 'job changed state during failure handling');
     return;
   }
@@ -416,7 +482,7 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
   const workerId = `worker-${process.pid}`;
   const acquisition = await acquireLease(db, jobId, workerId);
   if (acquisition.kind === 'busy') {
-    // A dead worker's lease has not expired yet — come back after the
+    // A dead worker's lease has not expired yet - come back after the
     // backoff instead of stealing the job mid-run.
     logger.debug({ jobId }, 'download job lease still settling; retrying');
     throw new LeaseBusyError();
@@ -505,9 +571,23 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
       return;
     }
     if (leaseLost) {
-      // Another worker may own it now — write nothing, let them continue.
+      // Another worker may own it now - write nothing, let them continue.
       await finishAttempt(db, attempt.id, 'failed', 'LEASE_LOST', durationMs);
       logger.warn({ jobId }, 'lease lost during download job; deferring to new owner');
+      return;
+    }
+
+    if (!timedOut && isPermanentFailure(err)) {
+      const code = errorCodeOf(err);
+      const message = (err instanceof Error ? err.message : String(err)).slice(0, 500);
+      const current = await loadJob(db, jobId);
+      const retryCount = Math.min(
+        (current?.retryCount ?? 0) + 1,
+        current?.maxRetries ?? config.queue.retryLimit,
+      );
+      await finishAttempt(db, attempt.id, 'failed', code, durationMs);
+      await parkAsFailed(db, jobId, { errorCode: code, errorMessage: message, retryCount }, leaseToken);
+      logger.warn({ jobId, code }, 'download job failed permanently; not retrying');
       return;
     }
 
@@ -524,7 +604,7 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
 
 /**
  * BullMQ has exhausted its attempts. Whatever state the row is in, it must
- * not stay in-flight forever — the job is parked in `dead_letter` for admin
+ * not stay in-flight forever - the job is parked in `dead_letter` for admin
  * replay (Phase 6). Best-effort: the cleanup sweep is the safety net.
  */
 export async function deadLetterExhaustedJob(
@@ -540,7 +620,7 @@ export async function deadLetterExhaustedJob(
     job.leaseExpiresAt !== null &&
     job.leaseExpiresAt.getTime() > Date.now();
   if (leaseAlive) {
-    // A worker is still heartbeating this job — BullMQ ran out of attempts
+    // A worker is still heartbeating this job - BullMQ ran out of attempts
     // (e.g. a very slow but healthy run). Leave the row alone; it finishes
     // normally or the cleanup sweep requeues it with fresh attempts.
     logger.warn({ jobId }, 'retries exhausted while a live worker holds the lease');
@@ -548,19 +628,11 @@ export async function deadLetterExhaustedJob(
   }
 
   if (job.status !== 'failed') {
-    const parked = await transitionJob(db, {
+    const parked = await parkAsFailed(
+      db,
       jobId,
-      from: ['queued', 'retrying', ...LEASED],
-      to: 'failed',
-      patch: {
-        errorCode: code,
-        errorMessage: 'Retries exhausted.',
-        leaseToken: null,
-        leaseExpiresAt: null,
-        workerId: null,
-      },
-      soft: true,
-    });
+      { errorCode: code, errorMessage: 'Retries exhausted.' },
+    );
     if (!parked) return; // somebody else already decided the outcome
   }
 

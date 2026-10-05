@@ -24,7 +24,7 @@ export const apiKeys = pgTable(
     name: text('name').notNull(),
     // Display prefix (e.g. fd_live_a1b2) so users can identify the key.
     prefix: text('prefix').notNull(),
-    // HMAC of the secret — the raw key is shown exactly once at creation.
+    // HMAC of the secret - the raw key is shown exactly once at creation.
     keyHash: text('key_hash').notNull(),
     scopes: jsonb('scopes')
       .notNull()
@@ -135,7 +135,7 @@ export const adminUsers = pgTable(
     role: text('role', { enum: ['owner', 'admin', 'support', 'viewer'] })
       .notNull()
       .default('viewer'),
-    // Argon2id of the TOTP secret — MFA is required for admin sessions (§75).
+    // Argon2id of the TOTP secret - MFA is required for admin sessions (§75).
     totpSecretEnc: text('totp_secret_enc'),
     ipAllowlist: jsonb('ip_allowlist')
       .notNull()
@@ -150,7 +150,7 @@ export const adminUsers = pgTable(
 
 /**
  * Admin sessions live apart from user sessions (§75): separate cookie, short
- * TTL and `mfa_ok` gating — MFA is verified at login before this flips true.
+ * TTL and `mfa_ok` gating - MFA is verified at login before this flips true.
  */
 export const adminSessions = pgTable(
   'admin_sessions',

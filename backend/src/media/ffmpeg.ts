@@ -23,7 +23,7 @@ export interface MediaProbe {
   hasAudio: boolean;
 }
 
-/** Magic bytes first — a file named `video.mp4` proves nothing (layer 5). */
+/** Magic bytes first - a file named `video.mp4` proves nothing (layer 5). */
 export function sniffContainer(buf: Buffer): string | null {
   if (buf.length < 12) return null;
 
@@ -32,7 +32,7 @@ export function sniffContainer(buf: Buffer): string | null {
     const rawBrand = buf.subarray(8, 12).toString('latin1');
     const brand = rawBrand.trim();
     if (brand.startsWith('M4A')) return 'm4a';
-    // QuickTime's brand is 'qt  ' — padding must survive the trim.
+    // QuickTime's brand is 'qt  ' - padding must survive the trim.
     if (rawBrand === 'qt  ' || brand === 'qt') return 'mov';
     return 'mp4';
   }
@@ -76,7 +76,7 @@ export async function probeMedia(
   try {
     parsed = JSON.parse(stdout);
   } catch {
-    throw new SourceError('SOURCE_INTEGRITY', 'ffprobe returned unreadable data');
+    throw new SourceError('SOURCE_INTEGRITY', 'The media file could not be inspected.');
   }
 
   const streams = parsed.streams ?? [];
@@ -118,7 +118,7 @@ export async function ensureContainer(
   const faststart = target === 'mp4' || target === 'mov' ? ['-movflags', '+faststart'] : [];
   const timeoutMs = opts.timeoutMs ?? config.queue.jobTimeoutMs;
 
-  // 1) Remux — container change only, streams untouched.
+  // 1) Remux - container change only, streams untouched.
   try {
     await runProcess(
       config.source.ffmpegPath,
@@ -140,10 +140,10 @@ export async function ensureContainer(
     if (existsSync(outPath)) return { path: outPath, container: target };
   } catch (err) {
     if (err instanceof SourceError) throw err;
-    // fall through to transcode — incompatible codecs are the usual cause
+    // fall through to transcode - incompatible codecs are the usual cause
   }
 
-  // 2) Transcode — video to H.264/AAC, audio-only to AAC.
+  // 2) Transcode - video to H.264/AAC, audio-only to AAC.
   const probe = await probeMedia(inputPath, { signal: opts.signal }).catch(() => null);
   const codecArgs = probe?.hasVideo
     ? ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-c:a', 'aac']
@@ -168,13 +168,16 @@ export async function ensureContainer(
     );
   } catch (err) {
     if (err instanceof ProcessError || err instanceof SourceError) {
-      throw new SourceError('SOURCE_INTEGRITY', 'the media could not be converted');
+      throw new SourceError(
+        'SOURCE_INTEGRITY',
+        'The media could not be converted. Try another format.',
+      );
     }
     throw err;
   }
 
   if (!existsSync(outPath)) {
-    throw new SourceError('SOURCE_INTEGRITY', 'conversion produced no output');
+    throw new SourceError('SOURCE_INTEGRITY', 'The conversion produced no file. Try another format.');
   }
   return { path: outPath, container: target };
 }

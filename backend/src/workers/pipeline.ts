@@ -77,7 +77,7 @@ async function loadJob(db: Database, jobId: string): Promise<DownloadJob | null>
   return rows[0] ?? null;
 }
 
-/** URL/policy violations are terminal — never retried, never dead-lettered. */
+/** URL/policy violations are terminal - never retried, never dead-lettered. */
 function asPolicy(err: unknown, message: string): never {
   if (err instanceof AppError && err.code === 'VALIDATION_ERROR') {
     throw new SourcePolicyError(message);
@@ -140,9 +140,16 @@ async function saveAnalysis(
         label: f.label.slice(0, 120),
         kind: f.kind,
         container: f.container,
-        width: f.width ?? null,
-        height: f.height ?? null,
-        fps: f.fps !== null && f.fps !== undefined ? Math.round(f.fps) : null,
+        width:
+          f.width !== null && f.width !== undefined && Number.isFinite(f.width) ? f.width : null,
+        height:
+          f.height !== null && f.height !== undefined && Number.isFinite(f.height)
+            ? f.height
+            : null,
+        fps:
+          f.fps !== null && f.fps !== undefined && Number.isFinite(f.fps)
+            ? Math.round(f.fps)
+            : null,
         vcodec: f.vcodec,
         acodec: f.acodec,
         bitrateKbps: f.bitrateKbps,
@@ -184,7 +191,7 @@ async function resolveSelection(
       maxHeight = picked.height;
       audioOnly = picked.kind === 'audio';
     } else {
-      // No analysis row — accept it as a plain container request.
+      // No analysis row - accept it as a plain container request.
       container ||= job.requestedFormat.toLowerCase();
     }
   }
@@ -212,7 +219,7 @@ async function sniffHead(path: string): Promise<string | null> {
 async function downloadPhase(db: Database, ctx: RunnerContext, job: DownloadJob): Promise<void> {
   const rawUrl = job.url;
   if (!rawUrl) {
-    // The raw URL is nulled only at expiry — a missing one here means the
+    // The raw URL is nulled only at expiry - a missing one here means the
     // row was tampered with or expired mid-run. Retrying cannot help.
     throw new SourceError('SOURCE_UNAVAILABLE', 'The original URL is no longer available.');
   }
@@ -226,7 +233,7 @@ async function downloadPhase(db: Database, ctx: RunnerContext, job: DownloadJob)
       patch: { startedAt: new Date() },
     });
   } else {
-    // `processing` (start endpoint) — heartbeat only.
+    // `processing` (start endpoint) - heartbeat only.
     await ctx.report(50);
   }
 
@@ -257,16 +264,25 @@ async function downloadPhase(db: Database, ctx: RunnerContext, job: DownloadJob)
     // Layer 5: magic bytes + size + a real stream probe before storage.
     const sniffed = await sniffHead(artifact.path);
     if (!sniffed) {
-      throw new SourceError('SOURCE_INTEGRITY', 'the downloaded file is not recognized media');
+      throw new SourceError(
+        'SOURCE_INTEGRITY',
+        'The downloaded file is not recognized media. Try another format.',
+      );
     }
     const size = (await stat(artifact.path)).size;
     if (size > maxMb * MB) {
-      throw new SourceError('SOURCE_TOO_LARGE', 'the file exceeds the size limit');
+      throw new SourceError(
+        'SOURCE_TOO_LARGE',
+        'This file is bigger than the size limit. Try a lower quality.',
+      );
     }
 
     const probe = await probeMedia(artifact.path, { signal: ctx.signal });
     if (!probe.hasAudio && !probe.hasVideo) {
-      throw new SourceError('SOURCE_INTEGRITY', 'the downloaded file has no media streams');
+      throw new SourceError(
+        'SOURCE_INTEGRITY',
+        'The downloaded file has no playable streams. Try another format.',
+      );
     }
 
     const ensured =
@@ -275,7 +291,10 @@ async function downloadPhase(db: Database, ctx: RunnerContext, job: DownloadJob)
         : await ensureContainer(artifact.path, selection.container, { signal: ctx.signal });
 
     if ((await stat(ensured.path)).size === 0) {
-      throw new SourceError('SOURCE_INTEGRITY', 'conversion produced an empty file');
+      throw new SourceError(
+        'SOURCE_INTEGRITY',
+        'The conversion produced an empty file. Try another format.',
+      );
     }
 
     await ctx.report(86, { from: ['processing'], to: 'uploading' });
@@ -342,6 +361,37 @@ const pipelineRunner: JobRunner = {
       if (job.sourceId) {
         const policy = await loadSourcePolicy(job.sourceId, db);
         assertSourceUsable(policy, job.targetContainer ?? undefined);
+      }
+      await downloadPhase(db, ctx, job);
+      return 'completed';
+    }
+
+    // Retries and crash recoveries already store the extractor output -
+    // re-running a full analyze on every attempt is what bounced doomed
+    // jobs between `analyzing` and `processing` for minutes. Reuse it.
+    // (Lease acquisition already moved the row to `analyzing`, so that
+    // status counts as "not yet analyzed this attempt" here too.)
+    const savedFormats = await db
+      .select({ id: mediaFormats.id })
+      .from(mediaFormats)
+      .where(eq(mediaFormats.jobId, ctx.jobId))
+      .limit(1);
+    if (
+      savedFormats.length > 0 &&
+      (job.status === 'queued' || job.status === 'retrying' || job.status === 'analyzing')
+    ) {
+      if (job.status !== 'analyzing') {
+        await ctx.report(5, { from: [job.status], to: 'analyzing' });
+      } else {
+        await ctx.report(5);
+      }
+      if (!job.requestedFormat && !job.targetContainer) {
+        await ctx.report(30, {
+          from: ['analyzing'],
+          to: 'ready',
+          patch: { analyzedAt: new Date() },
+        });
+        return 'awaiting_format';
       }
       await downloadPhase(db, ctx, job);
       return 'completed';

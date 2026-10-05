@@ -9,7 +9,7 @@ import { safeEqual, randomToken } from '../utils/crypto.js';
  *
  * Double-submit: the session row holds a CSRF token, mirrored into a
  * JS-readable cookie. Cookie-authenticated mutations must echo it back in
- * `X-CSRF-Token`. Bearer (API key) clients are exempt — they are immune to
+ * `X-CSRF-Token`. Bearer (API key) clients are exempt - they are immune to
  * ambient-credential CSRF by design.
  */
 export function issueCsrfToken(): string {

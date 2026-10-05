@@ -64,7 +64,7 @@ test('ad slot renders only when the ads flag is enabled', async ({ page }) => {
   const hidden = new ApiMock(page);
   await hidden.install();
   await page.goto('/');
-  await expect(page.getByTestId('plan-free')).toBeVisible();
+  await expect(page.getByTestId('hero-url')).toBeVisible();
   await expect(page.getByTestId('ad-slot')).toHaveCount(0);
 
   const shown = new ApiMock(page, { flags: { ads: true } });

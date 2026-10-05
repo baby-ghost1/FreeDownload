@@ -5,7 +5,7 @@ import { expect, test, type Route } from '@playwright/test';
  *
  * Two 500 shapes are replayed: Fastify's default dev serialization
  * (top-level `stack`) and the envelope with a leaked `stack` sibling.
- * The UI must render only the safe message — never frame markers.
+ * The UI must render only the safe message - never frame markers.
  */
 const STACK_PROBE = 'STACK_PROBE_MUST_NOT_RENDER';
 const STACK = `Error: boom\n    at handler (/app/node_modules/fastify/lib/handler.js:1:1)\n    at ${STACK_PROBE}`;

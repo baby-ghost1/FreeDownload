@@ -41,9 +41,8 @@ function json(route: Route, body: unknown, status = 200): Promise<void> {
   });
 }
 
-test('admin signs in, completes MFA and toggles a source at runtime', async ({ page }) => {
+test('admin signs in and toggles a source at runtime', async ({ page }) => {
   let signedIn = false;
-  let mfaOk = false;
   let sourceEnabled = true;
 
   await page.route('http://localhost:4000/**', async (route) => {
@@ -55,7 +54,7 @@ test('admin signs in, completes MFA and toggles a source at runtime', async ({ p
 
     if (path === '/admin/auth/me') {
       if (!signedIn) return json(route, unauthorized, 401);
-      return json(route, { admin: ADMIN, mfaOk });
+      return json(route, { admin: ADMIN, mfaOk: false });
     }
     if (path === '/admin/auth/login' && method === 'POST') {
       signedIn = true;
@@ -66,20 +65,8 @@ test('admin signs in, completes MFA and toggles a source at runtime', async ({ p
         mfaOk: false,
       });
     }
-    if (path === '/admin/auth/mfa/setup' && method === 'POST') {
-      return json(route, {
-        secret: 'JBSWY3DPEHPK3PXP',
-        otpauthUrl:
-          'otpauth://totp/FreeDownload:owner@example.com?secret=JBSWY3DPEHPK3PXP&issuer=FreeDownload',
-      });
-    }
-    if (path === '/admin/auth/mfa/complete' && method === 'POST') {
-      mfaOk = true;
-      return json(route, { ok: true });
-    }
     if (path === '/admin/auth/logout' && method === 'POST') {
       signedIn = false;
-      mfaOk = false;
       return json(route, { ok: true });
     }
     if (path === '/admin/overview') return json(route, OVERVIEW);
@@ -98,28 +85,22 @@ test('admin signs in, completes MFA and toggles a source at runtime', async ({ p
     );
   });
 
-  await page.goto('/admin');
+  await page.goto('/admin/login');
   await expect(page.getByTestId('admin-login')).toBeVisible();
 
   await page.getByLabel('Email').fill('owner@example.com');
-  await page.getByLabel('Password').fill('password123');
+  await page.getByLabel('Password', { exact: true }).fill('password123');
   await page.getByTestId('admin-login-submit').click();
 
-  // MFA gate: no admin data renders until enrollment confirms a code.
-  await expect(page.getByTestId('admin-mfa')).toBeVisible();
-  await expect(page.getByTestId('admin-app')).toHaveCount(0);
-
-  await page.getByTestId('mfa-setup-start').click();
-  await expect(page.getByTestId('mfa-secret')).toBeVisible();
-  await page.getByLabel('6-digit code').fill('123456');
-  await page.getByTestId('mfa-setup-submit').click();
-
-  // Dashboard.
+  // Dashboard - no second factor: ADMIN_MFA_REQUIRED is off, so the login
+  // lands straight on the console.
+  await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByTestId('admin-app')).toBeVisible();
   await expect(page.getByTestId('admin-total-jobs')).toContainText('12');
 
-  // Runtime source toggle — the Phase 6 exit criterion, surfaced in the UI.
+  // Runtime source toggle - the Phase 6 exit criterion, surfaced in the UI.
   await page.getByTestId('admin-tab-sources').click();
+  await expect(page).toHaveURL(/\/admin\/sources$/);
   await expect(page.getByTestId('source-row-generic')).toContainText('Enabled');
   await page.getByTestId('source-toggle-generic').click();
   await expect(page.getByTestId('source-row-generic')).toContainText('Disabled');

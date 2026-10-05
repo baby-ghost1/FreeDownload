@@ -7,7 +7,7 @@ import { config } from '../server/config.js';
 import type { Storage, StoredObject } from './types.js';
 
 /**
- * Local filesystem storage — development and tests only. Signed URLs point
+ * Local filesystem storage - development and tests only. Signed URLs point
  * back at the API (`GET /api/v1/files/...`) with an HMAC token carrying its
  * own expiry, mirroring R2's TTL behaviour. Production uses R2; the API
  * never serves bytes outside this driver.

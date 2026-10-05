@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /**
- * TOTP (RFC 6238) over HOTP (RFC 4226) — implemented on `node:crypto` so the
+ * TOTP (RFC 6238) over HOTP (RFC 4226) - implemented on `node:crypto` so the
  * admin MFA path adds no dependency. SHA-1 stays the default algorithm: it is
  * what every authenticator app expects (§75).
  */
@@ -9,7 +9,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const STEP_SECONDS = 30;
 
-/** RFC 4648 base32 without padding — the otpauth URI form. */
+/** RFC 4648 base32 without padding - the otpauth URI form. */
 export function base32Encode(buf: Buffer): string {
   let bits = 0;
   let value = 0;

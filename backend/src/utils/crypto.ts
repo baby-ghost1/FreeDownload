@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
-/** SHA-256 hex digest — for tokens and URLs we never need to reverse. */
+/** SHA-256 hex digest - for tokens and URLs we never need to reverse. */
 export function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }

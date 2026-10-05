@@ -1,6 +1,6 @@
 /**
  * Flag-gated ad placeholder (Phase 7). The `ads` feature flag decides whether
- * this renders at all — no third-party script ships until a network is
+ * this renders at all - no third-party script ships until a network is
  * actually wired in, so the slot is a static placeholder today.
  */
 export function AdSlot() {

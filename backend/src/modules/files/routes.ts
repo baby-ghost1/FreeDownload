@@ -27,7 +27,7 @@ const KEY_PATTERN = /^jobs\/[0-9a-fA-F-]{36}\/[A-Za-z0-9._-]{1,120}$/;
 const Query = z.object({ exp: z.string(), sig: z.string() });
 
 /**
- * Development/test transport for the `local` storage driver only — production
+ * Development/test transport for the `local` storage driver only - production
  * (R2) bypasses this route entirely and browsers stream bytes straight from
  * object storage (contract invariant 5). The HMAC token is the entire
  * authorization: no session, no job lookup, no enumeration surface.
@@ -72,10 +72,14 @@ export async function registerFilesRoutes(app: AppInstance): Promise<void> {
       }
 
       const ext = key.slice(key.lastIndexOf('.') + 1).toLowerCase();
+      // `attachment` forces a save-to-device instead of inline playback -
+      // the `download` attribute alone is ignored on cross-origin links.
+      const filename = key.slice(key.lastIndexOf('/') + 1);
       reply
         .type(MIME_BY_EXT[ext] ?? 'application/octet-stream')
         .header('content-length', String(size))
-        .header('cache-control', 'private, max-age=0, must-revalidate');
+        .header('cache-control', 'private, max-age=0, must-revalidate')
+        .header('content-disposition', `attachment; filename="${filename}"`);
       return reply.send(createReadStream(path));
     },
   );

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { ApiMock } from './api-mock';
 
-test('dark theme applies instantly and survives a reload', async ({ page }) => {
+test('theme toggle in the footer cycles choices and survives a reload', async ({ page }) => {
   const api = new ApiMock(page);
   await api.install();
 
@@ -10,7 +10,7 @@ test('dark theme applies instantly and survives a reload', async ({ page }) => {
   const toggle = page.getByRole('button', { name: /Switch theme/ });
   await expect(toggle).toHaveAttribute('data-theme-choice', 'system');
 
-  // Cycle: system → light → dark → system.
+  // Cycle: system → light → dark.
   await toggle.click();
   await expect(toggle).toHaveAttribute('data-theme-choice', 'light');
   await expect(page.locator('html')).toHaveClass(/light/);
@@ -19,12 +19,10 @@ test('dark theme applies instantly and survives a reload', async ({ page }) => {
   await expect(toggle).toHaveAttribute('data-theme-choice', 'dark');
   await expect(page.locator('html')).toHaveClass(/dark/);
 
-  // The pre-paint script restores the choice before hydration.
+  // The choice is restored after hydration on reload.
   await page.reload();
-  await expect(page.getByRole('button', { name: /Switch theme/ })).toHaveAttribute(
-    'data-theme-choice',
-    'dark',
-  );
+  const restored = page.getByRole('button', { name: /Switch theme/ });
+  await expect(restored).toHaveAttribute('data-theme-choice', 'dark');
   await expect(page.locator('html')).toHaveClass(/dark/);
 });
 

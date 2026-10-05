@@ -4,7 +4,7 @@ import { config } from '../server/config.js';
 import { AppError } from '../errors/app-error.js';
 
 /**
- * Password hashing — Argon2id (contract §26).
+ * Password hashing - Argon2id (contract §26).
  *
  * `@node-rs/argon2` defaults to Argon2id and exports its `Algorithm` as an
  * ambient const enum (unreadable under `verbatimModuleSyntax`), so we rely on
@@ -29,7 +29,7 @@ export async function verifyPassword(storedHash: string, password: string): Prom
   try {
     return await verify(storedHash, password);
   } catch {
-    // Malformed/corrupt hash — treat as a failed verification, never a 500.
+    // Malformed/corrupt hash - treat as a failed verification, never a 500.
     return false;
   }
 }

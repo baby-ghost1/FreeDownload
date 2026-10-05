@@ -30,9 +30,10 @@ export function buttonClasses({
   className?: string;
 } = {}): string {
   return twMerge(
-    'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-    'duration-[var(--duration-fast)] select-none whitespace-nowrap',
+    'inline-flex items-center justify-center rounded-md font-medium transition-all',
+    'duration-200 ease-[var(--ease-out)] select-none whitespace-nowrap',
     'disabled:pointer-events-none disabled:opacity-50',
+    'active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2',
     VARIANTS[variant],
     SIZES[size],
     className,

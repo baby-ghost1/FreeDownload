@@ -7,6 +7,10 @@ import { closeDatabase, getDb } from '../../src/database/client.js';
 import { closeRedis } from '../../src/redis/client.js';
 import { closeQueues, getQueue, QUEUE_NAMES } from '../../src/queue/queues.js';
 import {
+  adminSessions,
+  adminUsers,
+  apiKeys,
+  apiUsage,
   downloadAttempts,
   downloadJobs,
   files,
@@ -203,5 +207,101 @@ describeInfra('cleanup sweep (integration)', () => {
     const freshFileRow = (await db.select().from(files).where(eq(files.id, freshFile.id)))[0];
     expect(oldFileRow!.purgedAt).not.toBeNull();
     expect(freshFileRow!.purgedAt).toBeNull();
+  }, 30_000);
+
+  it('purges aged attempts, api usage, admin sessions and expired jobs', async () => {
+    const db = getDb();
+    const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+
+    const liveJob = await insertJob({ status: 'completed', expiresAt: FUTURE });
+    await db.insert(downloadAttempts).values([
+      { jobId: liveJob.id, attemptNo: 1, status: 'failed', finishedAt: daysAgo(100) },
+      { jobId: liveJob.id, attemptNo: 2, status: 'failed', finishedAt: daysAgo(10) },
+    ]);
+
+    const keyOwner = (
+      await db
+        .insert(users)
+        .values({
+          email: `cleanup-key-${randomUUID().replace(/-/g, '').slice(0, 12)}@example.com`,
+          passwordHash: '$argon2id$placeholder',
+          status: 'active',
+        })
+        .returning({ id: users.id })
+    )[0]!.id;
+    const keyId = (
+      await db
+        .insert(apiKeys)
+        .values({
+          userId: keyOwner,
+          name: 'retention',
+          prefix: `fd_${randomUUID().slice(0, 8)}`,
+          keyHash: `hash-${randomUUID()}`,
+        })
+        .returning({ id: apiKeys.id })
+    )[0]!.id;
+    await db.insert(apiUsage).values([
+      { apiKeyId: keyId, bucketStart: daysAgo(100), requests: 5 },
+      { apiKeyId: keyId, bucketStart: daysAgo(10), requests: 5 },
+    ]);
+
+    const adminId = (
+      await db
+        .insert(adminUsers)
+        .values({
+          email: `retention-${randomUUID().replace(/-/g, '').slice(0, 12)}@example.com`,
+          passwordHash: '$argon2id$placeholder',
+          role: 'viewer',
+          active: true,
+        })
+        .returning({ id: adminUsers.id })
+    )[0]!.id;
+    const oldSessionId = (
+      await db
+        .insert(adminSessions)
+        .values({
+          adminId,
+          tokenHash: `hash-${randomUUID()}`,
+          csrfToken: 'csrf',
+          expiresAt: daysAgo(40),
+        })
+        .returning({ id: adminSessions.id })
+    )[0]!.id;
+    const liveSessionId = (
+      await db
+        .insert(adminSessions)
+        .values({ adminId, tokenHash: `hash-${randomUUID()}`, csrfToken: 'csrf', expiresAt: FUTURE })
+        .returning({ id: adminSessions.id })
+    )[0]!.id;
+
+    const oldExpired = await insertJob({ status: 'expired', url: null, expiresAt: daysAgo(70) });
+
+    const stats = await runCleanupSweep(db);
+
+    expect(stats.attemptsPurged).toBeGreaterThanOrEqual(1);
+    expect(stats.apiUsagePurged).toBeGreaterThanOrEqual(1);
+    expect(stats.adminSessionsPurged).toBeGreaterThanOrEqual(1);
+    expect(stats.jobsHardDeleted).toBeGreaterThanOrEqual(1);
+
+    const attemptsLeft = await db
+      .select()
+      .from(downloadAttempts)
+      .where(eq(downloadAttempts.jobId, liveJob.id));
+    expect(attemptsLeft).toHaveLength(1);
+    expect(attemptsLeft[0]!.attemptNo).toBe(2);
+
+    expect(
+      (await db.select().from(adminSessions).where(eq(adminSessions.id, oldSessionId))).length,
+    ).toBe(0);
+    expect(
+      (await db.select().from(adminSessions).where(eq(adminSessions.id, liveSessionId))).length,
+    ).toBe(1);
+
+    expect(
+      (await db.select().from(downloadJobs).where(eq(downloadJobs.id, oldExpired.id))).length,
+    ).toBe(0);
+    expect(
+      (await db.select().from(downloadJobs).where(eq(downloadJobs.id, liveJob.id))).length,
+    ).toBe(1);
   }, 30_000);
 });

@@ -19,7 +19,7 @@ export function getPool(): pg.Pool {
       connectionTimeoutMillis: 5_000,
       idleTimeoutMillis: 30_000,
       // Set by the migration role in production; the runtime role is least
-      // privilege (no DDL) — contract §14.
+      // privilege (no DDL) - contract §14.
       application_name: config.serviceName,
     });
     pool.on('error', (err) => {
@@ -36,7 +36,7 @@ export function getDb(): Database {
   return db;
 }
 
-/** Readiness probe — coarse status only, never connection details. */
+/** Readiness probe - coarse status only, never connection details. */
 export async function pingDatabase(): Promise<'pass' | 'fail'> {
   try {
     await getPool().query('select 1');

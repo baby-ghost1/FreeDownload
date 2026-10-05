@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { AppError } from '../errors/app-error.js';
 
 /**
- * Stripe webhook signature verification (Phase 7) — `t=<ts>,v1=<hmac>` where
+ * Stripe webhook signature verification (Phase 7) - `t=<ts>,v1=<hmac>` where
  * `v1 = HMAC-SHA256(secret, "<ts>.<rawBody>")`. Verified with a 5-minute
  * tolerance against replay, comparing digests in constant time.
  */

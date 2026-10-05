@@ -53,7 +53,7 @@ describe('job state machine', () => {
     }
 
     // `completed` is terminal for the user, but the retention sweep may
-    // still move it to `expired` — and nothing else.
+    // still move it to `expired` - and nothing else.
     expect(isTerminal('completed')).toBe(true);
     expect(TRANSITIONS.completed).toEqual(['expired']);
     expect(canTransition('completed', 'cancelled')).toBe(false);
@@ -66,7 +66,7 @@ describe('job state machine', () => {
     expect(canTransition('dead_letter', 'cancelled')).toBe(false);
     expect(canTransition('dead_letter', 'completed')).toBe(false);
 
-    // Policy-restricted jobs can be dismissed — or revived once the admin
+    // Policy-restricted jobs can be dismissed - or revived once the admin
     // re-enables the source (Phase 6).
     expect(isTerminal('policy_restricted')).toBe(true);
     expect(TRANSITIONS.policy_restricted).toEqual(['cancelled', 'queued']);

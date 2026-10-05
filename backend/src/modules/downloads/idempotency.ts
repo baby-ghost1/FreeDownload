@@ -18,7 +18,7 @@ function redisKey(key: string): string {
   return `idem:${key}`;
 }
 
-/** Best-effort Redis guard — never fails the request if Redis is down. */
+/** Best-effort Redis guard - never fails the request if Redis is down. */
 async function redisBegin(key: string, ttlSec: number): Promise<'taken' | 'free' | 'unknown'> {
   try {
     const res = await getRedis().set(redisKey(key), 'in_progress', 'EX', ttlSec, 'NX');

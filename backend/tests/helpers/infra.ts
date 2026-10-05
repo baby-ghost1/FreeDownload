@@ -20,7 +20,7 @@ function canConnect(port: number): Promise<boolean> {
 /**
  * Integration tests need Postgres and Redis (docker compose up). Locally they
  * skip when the containers are down so `npm test` stays green; in CI they
- * always run — a missing service there is a pipeline failure, not a skip.
+ * always run - a missing service there is a pipeline failure, not a skip.
  */
 export async function infraAvailable(): Promise<boolean> {
   const [pg, redis] = await Promise.all([canConnect(PG_PORT), canConnect(REDIS_PORT)]);

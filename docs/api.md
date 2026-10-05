@@ -1,4 +1,4 @@
-# API — `/api/v1`
+# API - `/api/v1`
 
 REST, JSON in/out. Every route declares a Zod schema (request + response);
 OpenAPI export of those schemas lands with the downloads API.
@@ -8,7 +8,7 @@ OpenAPI export of those schemas lands with the downloads API.
 | Topic              | Rule                                                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Base path          | `/api/v1`                                                                                                     |
-| Auth (first party) | session cookie — `HttpOnly`, `Secure`, `SameSite=None` cross-site, `SameSite=Lax` same-site                   |
+| Auth (first party) | session cookie - `HttpOnly`, `Secure`, `SameSite=None` cross-site, `SameSite=Lax` same-site                   |
 | Auth (API clients) | `Authorization: Bearer <api_key>`                                                                             |
 | CSRF               | double-submit token on all cookie-authenticated mutations                                                     |
 | Request ID         | `X-Request-Id` echoed on every response; accepted from the client only if it matches `^[A-Za-z0-9._-]{8,64}$` |
@@ -43,8 +43,8 @@ Stack traces, worker output and internal hostnames are never returned.
 
 | Method | Path      | Auth | Notes                                               |
 | ------ | --------- | ---- | --------------------------------------------------- |
-| GET    | `/health` | none | liveness — process is up                            |
-| GET    | `/ready`  | none | readiness — dependency checks, `503` when not ready |
+| GET    | `/health` | none | liveness - process is up                            |
+| GET    | `/ready`  | none | readiness - dependency checks, `503` when not ready |
 
 ### Auth ✅ (Phase 2)
 
@@ -83,7 +83,7 @@ Planned: `POST /auth/resend-verification` · `GET /auth/session`.
 
 Identity: a session cookie **or** an `X-Anon-Key` header (client-generated,
 `[A-Za-z0-9_-]{8,64}`) that owns anonymous jobs **or** an API key as
-`Authorization: Bearer fd_live_…` (Phase 7 — metered, see below). Anonymous
+`Authorization: Bearer fd_live_…` (Phase 7 - metered, see below). Anonymous
 creation/analyze also carries `X-Turnstile-Token` once Turnstile is keyed;
 Bearer requests skip the challenge.
 
@@ -91,7 +91,7 @@ Bearer requests skip the challenge.
 | ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
 | POST   | `/api/v1/downloads`            | session+CSRF \| anon | 201 + job; honors `Idempotency-Key` (replay → 201 + `Idempotent-Replay: true`) |
 | POST   | `/api/v1/downloads/analyze`    | session+CSRF \| anon | synchronous metadata + format list, Redis-cached (`ANALYZE_CACHE_TTL_SEC`)     |
-| GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) - only the caller's jobs                          |
+| GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) + `cursor`, newest first with `nextCursor` - only the caller's jobs |
 | GET    | `/api/v1/downloads/:id`        | session \| anon      | status + progress; a foreign job answers `404`, never `403`                    |
 | POST   | `/api/v1/downloads/:id/start`  | session+CSRF \| anon | `ready` → `processing` with the chosen `format`/`container`; else `409`        |
 | GET    | `/api/v1/downloads/:id/result` | session \| anon      | signed URL once `completed` (409 before that, 404 if purged)                   |
@@ -99,7 +99,7 @@ Bearer requests skip the challenge.
 
 Request body: `{ "url": "https://.", "format"?: "mp4", "container"?: "mp4" }`.
 `format` matches `^[A-Za-z0-9][A-Za-z0-9.#_-]{0,63}$`, `container`
-`^[a-z0-9]{2,5}$` — anything else is `400` before a job row exists. Only
+`^[a-z0-9]{2,5}$` - anything else is `400` before a job row exists. Only
 `http(s)` URLs are accepted; credentials in the URL are rejected and the
 stored URL is redacted (path kept, query/fragment dropped).
 
@@ -107,7 +107,7 @@ Creation enforces the plan quota **before** a job row exists: the daily job
 count (UTC day via `usage_records`) and the number of concurrent active jobs
 (`queued`…`retrying`) each answer `429 RATE_LIMITED` with
 `details.scope = daily|concurrent`. `POST /:id/start` additionally enforces
-the plan's `maxFileSizeMb` against the picked format — over the cap is
+the plan's `maxFileSizeMb` against the picked format - over the cap is
 `403 POLICY_RESTRICTED` with `details.maxFileSizeMb`. Anonymous, free and
 paid jobs also differ in queue `priority` (60 → tier-based 50…10).
 
@@ -125,10 +125,10 @@ unreachable sources answer `503`.
 
 `result` returns `{ url, expiresAt, sizeBytes, container, mimeType }` where
 `url` is a short-lived signed link (R2 presigned GET in production, HMAC
-`GET /api/v1/files/...` for the local dev driver) — media bytes never travel
+`GET /api/v1/files/...` for the local dev driver) - media bytes never travel
 through the API (contract invariant 5).
 
-Job payload — no raw URL, hash, IP or lease ever crosses the wire:
+Job payload - no raw URL, hash, IP or lease ever crosses the wire:
 
 ```json
 {
@@ -160,10 +160,10 @@ enqueues (contract invariant 1).
 | ------ | ----------------------- | ---- | ----------------------------------------------------------------------------- |
 | GET    | `/api/v1/sources`       | none | enabled sources + health `mode` (`active`/`maintenance`/…)                    |
 | GET    | `/api/v1/formats`       | none | supported output formats for `body.format`                                    |
-| GET    | `/api/v1/config/public` | none | limits, flags, plans, Turnstile site key; `Cache-Control: public, max-age=60` |
+| GET    | `/api/v1/config/public` | none | limits, flags, plans, navbar (`system_settings.navbar_config`, fail-open visible), Turnstile site key; `Cache-Control: public, max-age=60` |
 
 `GET /api/v1/files/*` serves bytes **only** when `STORAGE_DRIVER=local`
-(development) and requires the HMAC token minted with the signed URL — it 404s
+(development) and requires the HMAC token minted with the signed URL - it 404s
 in production, where browsers stream straight from R2.
 
 ### Account
@@ -181,12 +181,12 @@ Planned: `DELETE /me` · `GET /me/history`
 Implemented: `GET /plans` (active plans for pricing) ·
 `GET /subscriptions/current` (session; missing/canceled subscriptions fall
 back to the free plan) · `POST /subscriptions` (session + CSRF; switches to
-`free` only — paid plans start a checkout) · `POST /subscriptions/cancel`
+`free` only - paid plans start a checkout) · `POST /subscriptions/cancel`
 (free plans cancel immediately, provider subscriptions at period end; 409
 `CONFLICT` when nothing is active) · `POST /payments/checkout` (503
 `SERVICE_UNAVAILABLE` while `PAYMENT_PROVIDER=none`) ·
 `POST /payments/webhook` (raw-body `stripe-signature` HMAC-SHA256
-verification with a 5-minute tolerance; idempotent — subscriptions upsert on
+verification with a 5-minute tolerance; idempotent - subscriptions upsert on
 `provider_ref`, payments `ON CONFLICT DO NOTHING`, replayed events change
 nothing).
 
@@ -194,7 +194,7 @@ nothing).
 
 Implemented: `POST /api-keys` (session + CSRF; `fd_live_…` raw value
 returned exactly once, stored as SHA-256) · `GET /api-keys` ·
-`DELETE /api-keys/:id` (revoke — a foreign key answers 404) ·
+`DELETE /api-keys/:id` (revoke - a foreign key answers 404) ·
 `GET /api-keys/:id/usage` (hourly buckets + totals).
 
 `Authorization: Bearer fd_live_…` authenticates the download routes; cookie
@@ -220,7 +220,7 @@ Implemented: `POST /admin/auth/login` (rate-limited; optional `code`) ·
 `POST /admin/jobs/:id/retry|cancel` (retry requeues
 `failed|dead_letter|policy_restricted|retrying`) ·
 `GET /admin/sources` · `GET /admin/sources/:id` ·
-`PATCH /admin/sources/:id` (enabled/mode/formats — invalidates the policy
+`PATCH /admin/sources/:id` (enabled/mode/formats - invalidates the policy
 cache, so the change is live without a redeploy) ·
 `GET /admin/users` · `PATCH /admin/users/:id` (suspend kills the user's
 sessions on their next request) · `GET /admin/audit-logs` ·

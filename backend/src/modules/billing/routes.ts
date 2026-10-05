@@ -146,7 +146,7 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
     {
       schema: {
         description:
-          'Switch to another plan. Paid plans start a checkout instead — ' +
+          'Switch to another plan. Paid plans start a checkout instead - ' +
           'this endpoint only downgrades to free immediately.',
         body: PlanBody,
         response: { 200: SubscriptionSchema, ...errorResponses(400, 401, 403) },
@@ -270,7 +270,7 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
     },
   );
 
-  // Webhooks need the exact bytes Stripe signed — a child scope replaces the
+  // Webhooks need the exact bytes Stripe signed - a child scope replaces the
   // JSON parser with a raw-string passthrough for this route only.
   await app.register(async (webhookScope) => {
     webhookScope.removeAllContentTypeParsers();

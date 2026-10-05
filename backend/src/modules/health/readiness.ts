@@ -2,7 +2,7 @@ export type CheckStatus = 'pass' | 'fail' | 'skipped';
 
 export interface HealthCheck {
   name: string;
-  /** Coarse status only — never expose hosts, credentials or versions (§43). */
+  /** Coarse status only - never expose hosts, credentials or versions (§43). */
   run(): Promise<CheckStatus> | CheckStatus;
 }
 

@@ -130,7 +130,7 @@ describe('uuidv7', () => {
   });
 
   it('sorts by timestamp across milliseconds', () => {
-    // RFC 9562 only promises ordering by the embedded millisecond clock —
+    // RFC 9562 only promises ordering by the embedded millisecond clock -
     // ids minted inside the same millisecond tie-break randomly by design.
     const ids = Array.from({ length: 500 }, () => uuidv7());
     const timestamps = ids.map((id) => BigInt(`0x${id.slice(0, 8)}${id.slice(9, 13)}`));

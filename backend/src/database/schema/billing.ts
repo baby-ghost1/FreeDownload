@@ -14,7 +14,7 @@ import {
 import { createdAt, id, updatedAt } from './helpers.js';
 import { users } from './auth.js';
 
-/** Plans are data, not code — pricing and limits never live in application logic. */
+/** Plans are data, not code - pricing and limits never live in application logic. */
 export const plans = pgTable(
   'plans',
   {

@@ -5,7 +5,7 @@ import { BASE_URL, record, thresholds } from './lib/common.js';
 
 /**
  * Public catalog reads: health, enabled sources, target formats and the
- * client bootstrap config. Unauthenticated, database-backed, cache-friendly —
+ * client bootstrap config. Unauthenticated, database-backed, cache-friendly -
  * this is the read path every landing/browse page depends on.
  *
  * Default run is a 1-VU smoke (well under the 300/min global limiter).

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt } from 'drizzle-orm';
 
 import { AppError } from '../../errors/app-error.js';
 import { config } from '../../server/config.js';
@@ -57,14 +57,25 @@ const CANCELLABLE = [
 
 /**
  * Basic URL sanity. Full SSRF validation (private ranges, redirects, DNS
- * rebinding) is the Phase 4 guard and runs again on every hop — this only
+ * rebinding) is the Phase 4 guard and runs again on every hop - this only
  * keeps obviously broken input out of the database.
  */
 export function parsePublicUrl(raw: string): URL {
+  // People paste "youtube.com/watch?v=…" all the time (snapsave-style UX) -
+  // promote scheme-less input to https:// before parsing. An explicit scheme
+  // (mailto:, javascript:, …) is left alone so the protocol check rejects it.
+  const trimmed = raw.trim();
+  const hadScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+  const candidate = hadScheme ? trimmed : `https://${trimmed}`;
   let parsed: URL;
   try {
-    parsed = new URL(raw);
+    parsed = new URL(candidate);
   } catch {
+    throw new AppError('VALIDATION_ERROR', 'That does not look like a valid URL.');
+  }
+  // Without a scheme the input must at least look like a host ("example.com")
+  // - bare words like "not-a-url" stay rejected instead of becoming jobs.
+  if (!hadScheme && !parsed.hostname.includes('.')) {
     throw new AppError('VALIDATION_ERROR', 'That does not look like a valid URL.');
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -82,7 +93,7 @@ export function parsePublicUrl(raw: string): URL {
   return parsed;
 }
 
-/** Drop query/fragment/userinfo — tokens and tracking never hit the row. */
+/** Drop query/fragment/userinfo - tokens and tracking never hit the row. */
 export function redactUrl(url: URL): string {
   return `${url.protocol}//${url.host}${url.pathname}`;
 }
@@ -99,7 +110,7 @@ async function resolveSource(db: Database): Promise<string> {
     throw new AppError('UNSUPPORTED_SOURCE', 'No download source is currently available.');
   }
   if (source.mode !== 'active') {
-    // Admins flip sources at runtime — no redeploy needed (contract §12).
+    // Admins flip sources at runtime - no redeploy needed (contract §12).
     throw new AppError(
       source.mode === 'restricted' ? 'POLICY_RESTRICTED' : 'UNSUPPORTED_SOURCE',
       source.mode === 'restricted'
@@ -241,26 +252,51 @@ export async function cancelDownload(
   return cancelled;
 }
 
+/** Cursor = base64url(ISO createdAt) - keyset pagination, newest first. */
+export function encodeJobsCursor(createdAt: Date): string {
+  return Buffer.from(createdAt.toISOString()).toString('base64url');
+}
+
+export function decodeJobsCursor(raw: string): Date {
+  try {
+    const parsed = new Date(Buffer.from(raw, 'base64url').toString('utf8'));
+    if (Number.isNaN(parsed.getTime())) throw new Error('bad date');
+    return parsed;
+  } catch {
+    throw new AppError('VALIDATION_ERROR', 'Invalid cursor.');
+  }
+}
+
 export async function listOwnJobs(
   actor: DownloadActor,
-  limit: number,
+  input: { limit: number; cursor?: string | undefined },
   db: Database = getDb(),
-): Promise<DownloadJob[]> {
+): Promise<{ data: DownloadJob[]; nextCursor: string | null }> {
   if (!actor.userId && !actor.anonKey) {
     throw new AppError('UNAUTHORIZED', 'Authentication is required.');
   }
 
-  const condition =
+  const limit = Math.min(Math.max(input.limit, 1), 100);
+  const conditions = [
     actor.userId !== undefined
       ? eq(downloadJobs.userId, actor.userId)
-      : and(eq(downloadJobs.anonKey, actor.anonKey ?? ''), isNull(downloadJobs.userId));
+      : and(eq(downloadJobs.anonKey, actor.anonKey ?? ''), isNull(downloadJobs.userId)),
+    input.cursor ? lt(downloadJobs.createdAt, decodeJobsCursor(input.cursor)) : undefined,
+  ].filter((c) => c !== undefined);
 
-  return db
+  const rows = await db
     .select()
     .from(downloadJobs)
-    .where(condition)
+    .where(and(...conditions))
     .orderBy(desc(downloadJobs.createdAt))
-    .limit(Math.min(Math.max(limit, 1), 100));
+    .limit(limit + 1);
+
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    data: page,
+    nextCursor: rows.length > limit && last ? encodeJobsCursor(last.createdAt) : null,
+  };
 }
 
 export function actorFromRequest(
@@ -273,19 +309,18 @@ export function actorFromRequest(
   };
 }
 
-/** Source trouble never reaches clients verbatim — mapped to §46 codes. */
+/** Source trouble never reaches clients verbatim - mapped to §46 codes. */
 function mapSourceError(err: unknown): never {
   if (err instanceof SourcePolicyError) {
     throw new AppError('POLICY_RESTRICTED', err.message);
   }
   if (err instanceof SourceError) {
-    throw new AppError(
-      'SERVICE_UNAVAILABLE',
-      'The source could not be reached. Try again shortly.',
-      {
-        cause: err,
-      },
-    );
+    // Adapter messages are authored for users (no stderr leaks through),
+    // so they are safe to surface verbatim instead of the generic 503 page.
+    throw new AppError('SERVICE_UNAVAILABLE', err.message, {
+      cause: err,
+      expose: true,
+    });
   }
   throw err;
 }
@@ -314,6 +349,11 @@ export interface AnalyzeResult {
 }
 
 const DESC_MAX = 1_000;
+
+/** Adapters are untyped at runtime - a stray NaN would crash response JSON. */
+function finite(v: number | null | undefined): number | null {
+  return v !== null && v !== undefined && Number.isFinite(v) ? v : null;
+}
 
 /**
  * Synchronous metadata extraction for `POST /downloads/analyze`: SSRF +
@@ -365,7 +405,7 @@ export async function analyzeDownloadUrl(
       ...(analysis.sourceUrls ?? []),
     ]);
   } catch (err) {
-    // Redirects can land anywhere — a private hop is a policy block, and
+    // Redirects can land anywhere - a private hop is a policy block, and
     // VALIDATION_ERROR from SSRF is exactly that.
     if (err instanceof AppError && err.code === 'VALIDATION_ERROR') {
       throw new AppError('POLICY_RESTRICTED', 'That source redirected to a private address.');
@@ -376,21 +416,24 @@ export async function analyzeDownloadUrl(
   const result: AnalyzeResult = {
     url: redactUrl(parsed),
     title: analysis.title?.slice(0, 500) ?? null,
-    durationSec: analysis.durationSec ?? null,
+    durationSec: finite(analysis.durationSec),
     thumbnailUrl: analysis.thumbnailUrl ?? null,
     uploader: analysis.uploader?.slice(0, 250) ?? null,
     description: analysis.description?.slice(0, DESC_MAX) ?? null,
-    formats: analysis.formats.map((f) => ({
-      key: f.key,
-      label: f.label,
-      kind: f.kind,
-      container: f.container,
-      width: f.width ?? null,
-      height: f.height ?? null,
-      fps: f.fps !== null && f.fps !== undefined ? Math.round(f.fps) : null,
-      filesizeBytes: f.filesizeBytes ?? null,
-      isDefault: f.isDefault,
-    })),
+    formats: analysis.formats.map((f) => {
+      const fps = finite(f.fps);
+      return {
+        key: f.key,
+        label: f.label,
+        kind: f.kind,
+        container: f.container,
+        width: finite(f.width),
+        height: finite(f.height),
+        fps: fps !== null ? Math.round(fps) : null,
+        filesizeBytes: finite(f.filesizeBytes),
+        isDefault: f.isDefault,
+      };
+    }),
     cachedAt: new Date().toISOString(),
   };
 
@@ -467,7 +510,7 @@ export async function startDownload(
     },
   });
   if (!started) {
-    throw new AppError('CONFLICT', 'The job changed state — reload and try again.');
+    throw new AppError('CONFLICT', 'The job changed state - reload and try again.');
   }
 
   try {
@@ -505,7 +548,7 @@ export async function getJobResult(
   const job = await getOwnedJob(jobId, actor, db);
   if (!job) throw new AppError('NOT_FOUND', 'Download job not found.');
   if (job.status !== 'completed') {
-    throw new AppError('CONFLICT', `The download is ${job.status} — no result yet.`);
+    throw new AppError('CONFLICT', `The download is ${job.status} - no result yet.`);
   }
 
   const rows = await db
@@ -519,11 +562,23 @@ export async function getJobResult(
     throw new AppError('NOT_FOUND', 'The file has expired and been purged.');
   }
 
+  // The download-link window is anchored to the file's creation (one fixed
+  // window per finished job). Every /result call inside the window returns
+  // the SAME expiry, so refresh never revives an expired link - and the
+  // signature itself is minted only for the time that is actually left.
   const ttl = config.storage.signedUrlTtlSec;
-  const url = await getStorage().signedUrl(file.objectKey, ttl);
+  const windowEnd = new Date(file.createdAt.getTime() + ttl * 1000);
+  const remainingMs = windowEnd.getTime() - Date.now();
+  if (remainingMs <= 0) {
+    throw new AppError(
+      'NOT_FOUND',
+      'This link has expired - start a new download to get a fresh one.',
+    );
+  }
+  const url = await getStorage().signedUrl(file.objectKey, Math.ceil(remainingMs / 1000));
   return {
     url,
-    expiresAt: new Date(Date.now() + ttl * 1000),
+    expiresAt: windowEnd,
     sizeBytes: file.sizeBytes ?? null,
     container: file.container ?? null,
     mimeType: file.mimeType ?? null,

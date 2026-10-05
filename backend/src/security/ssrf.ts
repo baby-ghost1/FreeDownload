@@ -9,7 +9,7 @@ import { config } from '../server/config.js';
  * network client until the host resolves to public addresses only.
  *
  * yt-dlp resolves DNS itself, so we additionally validate every URL it
- * reports back (final page URL, media URLs) before any bytes are stored —
+ * reports back (final page URL, media URLs) before any bytes are stored -
  * `assertSafeAnalysisUrls`. First-party HTTP clients must call
  * `assertSafeUrl` per hop, re-validating after every redirect (max 5).
  */
@@ -57,7 +57,7 @@ function isBlockedIpv6(ip: string): boolean {
   const addr = ip.toLowerCase();
   if (addr === '::' || addr === '::1') return true;
 
-  // IPv4-mapped (:ffff:1.2.3.4 / :ffff:0102:0304) — judge the embedded v4.
+  // IPv4-mapped (:ffff:1.2.3.4 / :ffff:0102:0304) - judge the embedded v4.
   const mapped =
     /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(addr) ??
     /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(addr);
@@ -87,13 +87,13 @@ export function isBlockedIp(ip: string): boolean {
   const version = isIP(ip);
   if (version === 4) return isBlockedIpv4(ip);
   if (version === 6) return isBlockedIpv6(ip);
-  return true; // not an IP at all — callers only pass resolved addresses
+  return true; // not an IP at all - callers only pass resolved addresses
 }
 
 function assertHostnameSafe(url: URL, allowPrivate: boolean): void {
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
 
-  if (allowPrivate) return; // tests only — never production
+  if (allowPrivate) return; // tests only - never production
 
   if (BLOCKED_HOSTNAMES.has(host)) {
     throw new AppError('VALIDATION_ERROR', 'That URL points to a private or internal address.');
@@ -143,8 +143,8 @@ export interface SafeUrlOptions {
 }
 
 /**
- * Full entry check: scheme, userinfo, port, hostname suffixes and — after
- * DNS resolution — every answer must be a public address. Throws
+ * Full entry check: scheme, userinfo, port, hostname suffixes and - after
+ * DNS resolution - every answer must be a public address. Throws
  * `VALIDATION_ERROR` when the URL must not be fetched.
  */
 export async function assertSafeUrl(raw: string | URL, opts: SafeUrlOptions = {}): Promise<void> {
@@ -159,7 +159,7 @@ export async function assertSafeUrl(raw: string | URL, opts: SafeUrlOptions = {}
   }
   assertHostnameSafe(url, allowPrivate);
 
-  if (allowPrivate) return; // tests only — never production
+  if (allowPrivate) return; // tests only - never production
 
   const addrs = await resolveAddresses(url.hostname.replace(/^\[|\]$/g, ''));
   const bad = addrs.find((ip) => isBlockedIp(ip));
@@ -184,7 +184,7 @@ export async function assertSafeAnalysisUrls(
     try {
       url = new URL(candidate);
     } catch {
-      continue; // relative or extractor junk — not fetchable as-is
+      continue; // relative or extractor junk - not fetchable as-is
     }
     const key = url.hostname.toLowerCase();
     if (checked.has(key)) continue;

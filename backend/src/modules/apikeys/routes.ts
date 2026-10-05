@@ -23,7 +23,7 @@ const KeySchema = z.object({
   createdAt: z.date(),
 });
 
-/** The raw secret appears exactly once — in the create response only. */
+/** The raw secret appears exactly once - in the create response only. */
 const CreatedKeySchema = KeySchema.extend({ rawKey: z.string() });
 
 const KeyListSchema = z.object({ data: z.array(KeySchema) });

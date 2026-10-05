@@ -34,7 +34,7 @@ export async function createSession(
 ): Promise<CreatedSession> {
   const token = randomToken(32);
   const csrfToken = issueCsrfToken();
-  const expiresAt = new Date(Date.now() + config.session.ttlSeconds);
+  const expiresAt = new Date(Date.now() + config.session.ttlSeconds * 1000);
 
   await db.insert(sessions).values({
     userId,

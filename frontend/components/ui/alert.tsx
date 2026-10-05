@@ -1,3 +1,6 @@
+'use client';
+
+import { motion } from 'motion/react';
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
 import { cn } from '@/lib/utils/cn';
@@ -19,27 +22,29 @@ const TONES: Record<AlertTone, { wrap: string; icon: React.ReactNode }> = {
   },
 };
 
-export function Alert({
-  tone = 'info',
-  className,
-  children,
-  role,
-  ...rest
-}: {
+export interface AlertProps {
   tone?: AlertTone;
   className?: string;
   children: React.ReactNode;
   role?: 'alert' | 'status';
-} & React.HTMLAttributes<HTMLDivElement>) {
+  id?: string;
+  'data-testid'?: string;
+}
+
+export function Alert({ tone = 'info', className, children, role, id, ...rest }: AlertProps) {
   const t = TONES[tone];
   return (
-    <div
+    <motion.div
+      id={id}
       {...rest}
-      className={cn('flex gap-2.5 rounded-md border px-3.5 py-3 text-sm', t.wrap, className)}
+      initial={{ opacity: 0, y: -8, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className={cn('flex gap-2.5 rounded-md border px-3.5 py-3 text-sm shadow-1', t.wrap, className)}
       role={role ?? (tone === 'error' ? 'alert' : 'status')}
     >
       {t.icon}
       <div className="min-w-0">{children}</div>
-    </div>
+    </motion.div>
   );
 }

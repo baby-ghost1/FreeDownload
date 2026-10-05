@@ -1,9 +1,11 @@
-import { and, eq, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, lte, or } from 'drizzle-orm';
 
 import { config } from '../server/config.js';
 import { logger } from '../logging/logger.js';
 import { getDb, type Database } from '../database/client.js';
 import {
+  adminSessions,
+  apiUsage,
   downloadAttempts,
   downloadJobs,
   emailVerifications,
@@ -48,14 +50,25 @@ export interface SweepStats {
   tokensPurged: number;
   filesPurged: number;
   metadataTrimmed: number;
+  attemptsPurged: number;
+  apiUsagePurged: number;
+  adminSessionsPurged: number;
+  jobsHardDeleted: number;
 }
+
+/** Retention windows for data nobody reads anymore (contract §51). */
+const DAY_MS = 86_400_000;
+const ATTEMPTS_RETENTION_MS = 90 * DAY_MS;
+const API_USAGE_RETENTION_MS = 90 * DAY_MS;
+const ADMIN_SESSIONS_RETENTION_MS = 30 * DAY_MS;
+const EXPIRED_JOBS_RETENTION_MS = 60 * DAY_MS;
 
 /** How long the extractor's raw JSON dump stays in `media_metadata`. */
 const METADATA_RAW_RETENTION_MS = 7 * 86_400_000;
 
 /**
  * One cleanup pass. Bulk updates are guarded by `WHERE status = <legal source>`
- * — the same condition `transitionJob` enforces — so the state machine is
+ * - the same condition `transitionJob` enforces - so the state machine is
  * never bypassed, just applied in bulk.
  */
 export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStats> {
@@ -70,10 +83,14 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
     tokensPurged: 0,
     filesPurged: 0,
     metadataTrimmed: 0,
+    attemptsPurged: 0,
+    apiUsagePurged: 0,
+    adminSessionsPurged: 0,
+    jobsHardDeleted: 0,
   };
 
   // 1. Finished jobs past their retention window become `expired`. The raw
-  //    URL is nullified here too (contract §51) — it has no purpose once the
+  //    URL is nullified here too (contract §51) - it has no purpose once the
   //    download window closes.
   const expired = await db
     .update(downloadJobs)
@@ -83,7 +100,7 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
   stats.expiredCompleted = expired.length;
 
   // 2. Anything still unfinished past its deadline is cancelled, not retried
-  //    forever — the user's link window has closed.
+  //    forever - the user's link window has closed.
   const stale = await db
     .update(downloadJobs)
     .set({
@@ -136,7 +153,7 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
       .returning({ id: downloadJobs.id });
     if (failed.length === 0) continue;
 
-    // The dead worker's attempt never reported back — close it out so the
+    // The dead worker's attempt never reported back - close it out so the
     // attempt log reflects reality.
     await db
       .update(downloadAttempts)
@@ -196,7 +213,7 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
     ).length;
 
   // 5. Files past retention are deleted from object storage first, then
-  //    marked purged — a failed delete leaves the row for the next sweep.
+  //    marked purged - a failed delete leaves the row for the next sweep.
   const expiringFiles = await db
     .select({ id: files.id, objectKey: files.objectKey })
     .from(files)
@@ -227,6 +244,54 @@ export async function runCleanupSweep(db: Database = getDb()): Promise<SweepStat
       .set({ raw: null })
       .where(and(isNotNull(mediaMetadata.raw), lte(mediaMetadata.fetchedAt, rawCutoff)))
       .returning({ id: mediaMetadata.id })
+  ).length;
+
+  // 7. Retention: finished attempts, stale API metering, dead admin
+  //    sessions and long-expired jobs (cascades attempts, formats, metadata
+  //    and files) are deleted outright - nobody reads them anymore.
+  //    (audit_logs stays append-only: a DB trigger forbids DELETE.)
+  stats.attemptsPurged = (
+    await db
+      .delete(downloadAttempts)
+      .where(
+        and(
+          isNotNull(downloadAttempts.finishedAt),
+          lt(downloadAttempts.finishedAt, new Date(now.getTime() - ATTEMPTS_RETENTION_MS)),
+        ),
+      )
+      .returning({ id: downloadAttempts.id })
+  ).length;
+
+  stats.apiUsagePurged = (
+    await db
+      .delete(apiUsage)
+      .where(lt(apiUsage.bucketStart, new Date(now.getTime() - API_USAGE_RETENTION_MS)))
+      .returning({ apiKeyId: apiUsage.apiKeyId })
+  ).length;
+
+  const adminSessionCutoff = new Date(now.getTime() - ADMIN_SESSIONS_RETENTION_MS);
+  stats.adminSessionsPurged = (
+    await db
+      .delete(adminSessions)
+      .where(
+        or(
+          lt(adminSessions.expiresAt, adminSessionCutoff),
+          and(isNotNull(adminSessions.revokedAt), lt(adminSessions.revokedAt, adminSessionCutoff)),
+        ),
+      )
+      .returning({ id: adminSessions.id })
+  ).length;
+
+  stats.jobsHardDeleted = (
+    await db
+      .delete(downloadJobs)
+      .where(
+        and(
+          eq(downloadJobs.status, 'expired'),
+          lt(downloadJobs.expiresAt, new Date(now.getTime() - EXPIRED_JOBS_RETENTION_MS)),
+        ),
+      )
+      .returning({ id: downloadJobs.id })
   ).length;
 
   return stats;

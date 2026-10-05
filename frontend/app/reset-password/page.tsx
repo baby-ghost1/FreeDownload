@@ -54,7 +54,7 @@ function ResetForm() {
   if (done) {
     return (
       <Alert tone="success" data-testid="reset-done">
-        Password updated — all sessions were signed out. Redirecting to sign in…
+        Password updated - all sessions were signed out. Redirecting to sign in…
       </Alert>
     );
   }

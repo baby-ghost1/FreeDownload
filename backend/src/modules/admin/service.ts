@@ -12,6 +12,8 @@ import {
   type DownloadJob,
 } from '../../database/schema/index.js';
 import { invalidateSourcePolicyCache } from '../../downloader/policy.js';
+import { invalidateSettingsCache } from '../../limits/engine.js';
+import { NAVBAR_SETTING_KEY, assertNavbarValue } from '../catalog/navbar.js';
 import { enqueueDownloadJob } from '../../queue/queues.js';
 import { transitionJob } from '../downloads/state-machine.js';
 
@@ -25,7 +27,7 @@ function defined(filters: Array<SQL | undefined>): SQL[] {
  * state here so a disable takes effect without a redeploy.
  */
 
-/** Cursor = base64url(ISO createdAt) — keyset pagination over `created_at`. */
+/** Cursor = base64url(ISO createdAt) - keyset pagination over `created_at`. */
 export function encodeCursor(createdAt: Date): string {
   return Buffer.from(createdAt.toISOString()).toString('base64url');
 }
@@ -309,7 +311,7 @@ export interface SourcePatch {
 
 /**
  * The Phase 6 exit criterion: flipping `enabled`/`mode` here is picked up by
- * the policy layer (cache invalidated below) — no redeploy.
+ * the policy layer (cache invalidated below) - no redeploy.
  */
 export async function updateSource(
   db: Database,
@@ -519,6 +521,22 @@ export async function updateSetting(
   value: unknown,
   updatedBy: string,
 ): Promise<SettingView> {
+  if (key === 'anon_daily_limit') {
+    const ok =
+      typeof value === 'number' &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value <= 100000;
+    if (!ok) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'anon_daily_limit must be 0 (no cap) or a whole number of downloads per day.',
+      );
+    }
+  }
+  if (key === NAVBAR_SETTING_KEY) {
+    assertNavbarValue(value);
+  }
   const rows = await db
     .insert(systemSettings)
     .values({ key, value, updatedBy })
@@ -528,5 +546,6 @@ export async function updateSetting(
     })
     .returning();
   const row = rows[0]!;
+  if (key === 'anon_daily_limit') invalidateSettingsCache();
   return { key: row.key, value: row.value, updatedAt: row.updatedAt };
 }

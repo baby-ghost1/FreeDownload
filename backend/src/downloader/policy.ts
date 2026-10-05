@@ -6,7 +6,7 @@ import { SourceError, SourcePolicyError } from './errors.js';
 
 /**
  * Runtime source policy (contract §12): admins flip `mode` in PostgreSQL and
- * every worker picks it up within the cache TTL — no redeploy.
+ * every worker picks it up within the cache TTL - no redeploy.
  */
 export interface SourcePolicy {
   sourceId: string;
@@ -68,10 +68,10 @@ export async function loadSourcePolicy(
 
 /**
  * Throws before any network work:
- * - `SourcePolicyError` — deliberately taken out of rotation (disabled/
+ * - `SourcePolicyError` - deliberately taken out of rotation (disabled/
  *   restricted) or the container is not allowed → `policy_restricted`;
- * - `SourceError` — temporary (maintenance, source down) → retried;
- * - missing policy — treated as restricted.
+ * - `SourceError` - temporary (maintenance, source down) → retried;
+ * - missing policy - treated as restricted.
  */
 export function assertSourceUsable(
   policy: SourcePolicy | null,
@@ -97,7 +97,7 @@ export function assertSourceUsable(
   }
 }
 
-/** Convenience for the API side (create/analyze) — policy rows only. */
+/** Convenience for the API side (create/analyze) - policy rows only. */
 export async function assertSourceUsableById(
   sourceId: string,
   container?: string,

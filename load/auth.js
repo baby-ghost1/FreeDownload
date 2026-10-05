@@ -9,7 +9,7 @@ import { BASE_URL, jsonHeaders, record, thresholds } from './lib/common.js';
  *
  * Auth routes are limited to AUTH_RATE_LIMIT_MAX (default 10) requests per
  * minute per IP, so the default pacing (~8 auth requests/min) stays inside
- * the limit. Full staging runs must raise AUTH_RATE_LIMIT_MAX first — see
+ * the limit. Full staging runs must raise AUTH_RATE_LIMIT_MAX first - see
  * README "Load testing".
  *
  *   k6 run --vus 5 --duration 3m load/auth.js   # staging, limits raised
@@ -41,7 +41,7 @@ export default function () {
   });
 
   // k6 persists cookies within an iteration, so the session minted by
-  // register rides along on the login request — a cookie-authenticated
+  // register rides along on the login request - a cookie-authenticated
   // mutation must echo the double-submit token or it answers 403.
   const loginHeaders = { ...jsonHeaders };
   if (reg.status === 201) {

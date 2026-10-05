@@ -51,7 +51,7 @@ export function getMailer(): Mailer {
   if (!mailer) {
     mailer = config.email.transport === 'smtp' ? new UnimplementedMailer() : new ConsoleMailer();
     if (config.isProduction && config.email.transport === 'console') {
-      logger.warn('MAIL_TRANSPORT=console in production — emails are logged, not delivered');
+      logger.warn('MAIL_TRANSPORT=console in production - emails are logged, not delivered');
     }
   }
   return mailer;

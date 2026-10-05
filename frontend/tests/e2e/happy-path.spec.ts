@@ -8,9 +8,8 @@ test('happy path: paste link, analyze, pick format, watch progress, get download
   const api = new ApiMock(page);
   await api.install();
 
-  // Landing renders plans and a hero entry point.
+  // Landing renders a hero entry point.
   await page.goto('/');
-  await expect(page.getByTestId('plan-free')).toBeVisible();
   await expect(page.getByTestId('hero-url')).toBeVisible();
 
   // Hand the link to the download flow.

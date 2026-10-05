@@ -127,7 +127,7 @@ describeInfra('download worker (integration)', () => {
       .orderBy(downloadAttempts.attemptNo);
 
     expect(attempts.length).toBeGreaterThanOrEqual(2);
-    // Attempt 1 never reported back — the reclaim pass closed it out.
+    // Attempt 1 never reported back - the reclaim pass closed it out.
     expect(attempts[0]!.attemptNo).toBe(1);
     expect(attempts[0]!.status).toBe('failed');
     expect(attempts[0]!.errorCode).toBe('LEASE_EXPIRED');

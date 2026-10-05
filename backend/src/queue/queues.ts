@@ -14,7 +14,7 @@ export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
 /**
  * BullMQ gets its own connection settings (no `keyPrefix`, and BullMQ's
- * workers require `maxRetriesPerRequest: null`) — deliberately separate from
+ * workers require `maxRetriesPerRequest: null`) - deliberately separate from
  * the general-purpose client in `src/redis/client.ts`.
  */
 function connectionOptions(): ConnectionOptions {
@@ -59,7 +59,7 @@ export function getQueue(name: string): Queue {
  *
  * The BullMQ job id is pinned to the database job id so a double enqueue
  * (client retry, API crash between insert and enqueue, cleanup requeue) can
- * never create a second concurrent delivery — duplicates would burn retry
+ * never create a second concurrent delivery - duplicates would burn retry
  * attempts while a healthy worker owns the job. Cleanup passes
  * `dedupe: false` because it only runs when the previous BullMQ entry is
  * known to be gone.

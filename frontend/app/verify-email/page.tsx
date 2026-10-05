@@ -46,7 +46,7 @@ function VerifyInner() {
       )}
       {state === 'ok' && (
         <Alert tone="success" data-testid="verify-ok">
-          Email verified — you can now sign in.
+          Email verified - you can now sign in.
         </Alert>
       )}
       {state === 'error' && <Alert tone="error">{message}</Alert>}

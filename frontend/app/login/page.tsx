@@ -23,7 +23,7 @@ function LoginForm() {
 
   const next = (() => {
     const raw = searchParams.get('next');
-    // Same-origin path only — blocks open redirects.
+    // Same-origin path only - blocks open redirects.
     if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
     return '/';
   })() as Route;

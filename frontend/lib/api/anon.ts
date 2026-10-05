@@ -13,7 +13,7 @@ function defaultStore(): KeyValueStore | null {
   try {
     return typeof localStorage === 'undefined' ? null : localStorage;
   } catch {
-    // Storage can throw in privacy modes — degrade to a per-session key.
+    // Storage can throw in privacy modes - degrade to a per-session key.
     return null;
   }
 }

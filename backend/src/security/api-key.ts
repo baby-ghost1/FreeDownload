@@ -8,7 +8,7 @@ import { startOfUtcHour } from '../limits/engine.js';
 
 /**
  * API keys (Phase 7): raw `fd_live_…` shown once, stored as SHA-256, and
- * presented as `Authorization: Bearer fd_live_…` (CSRF-exempt by design —
+ * presented as `Authorization: Bearer fd_live_…` (CSRF-exempt by design -
  * there is no ambient cookie credential behind it).
  */
 export const API_KEY_PREFIX = 'fd_live_';
@@ -62,7 +62,7 @@ export async function loadApiKey(db: Database, raw: string): Promise<ApiKeyConte
   return { key: row.key, user: row.user };
 }
 
-/** `last_used_at` slides at most once a minute — no write per request. */
+/** `last_used_at` slides at most once a minute - no write per request. */
 export async function touchApiKey(db: Database, keyId: string): Promise<void> {
   const last = touchedAt.get(keyId) ?? 0;
   if (Date.now() - last < TOUCH_INTERVAL_MS) return;

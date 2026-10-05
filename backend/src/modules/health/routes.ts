@@ -24,7 +24,7 @@ export async function registerHealthRoutes(app: AppInstance): Promise<void> {
     '/health',
     {
       schema: {
-        description: 'Liveness probe — process is running.',
+        description: 'Liveness probe - process is running.',
         response: { 200: HealthSchema },
       },
     },
@@ -39,7 +39,7 @@ export async function registerHealthRoutes(app: AppInstance): Promise<void> {
     '/ready',
     {
       schema: {
-        description: 'Readiness probe — dependency health.',
+        description: 'Readiness probe - dependency health.',
         response: { 200: ReadySchema, 503: ReadySchema },
       },
     },

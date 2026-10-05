@@ -44,12 +44,15 @@ export class ApiMock {
   private jobPolls = 0;
   private subscription: Subscription;
   private keys: ApiKeyInfo[] = [apiKey];
+  /** Mirrors the real cookie session: auth POSTs flip this on (and off on logout). */
+  private signedIn: boolean;
 
   constructor(
     private readonly page: Page,
     private readonly opts: ApiMockOptions = {},
   ) {
     this.subscription = opts.subscription ?? freeSubscription;
+    this.signedIn = opts.signedIn ?? false;
   }
 
   async install(): Promise<void> {
@@ -73,15 +76,15 @@ export class ApiMock {
     const path = new URL(request.url()).pathname.replace(/^\/api\/v1/, '');
 
     if (path === '/me') {
-      return this.json(
-        route,
-        this.opts.signedIn ? user : unauthorized,
-        this.opts.signedIn ? 200 : 401,
-      );
+      return this.json(route, this.signedIn ? user : unauthorized, this.signedIn ? 200 : 401);
     }
-    if (path === '/auth/login' && method === 'POST') return this.json(route, session);
+    if (path === '/auth/login' && method === 'POST') {
+      this.signedIn = true;
+      return this.json(route, session);
+    }
     if (path === '/auth/register' && method === 'POST') {
       // Echo the submitted profile so assertions on the header are honest.
+      this.signedIn = true;
       const body = request.postDataJSON() as { email?: string; displayName?: string | null };
       return this.json(route, {
         user: {
@@ -92,7 +95,10 @@ export class ApiMock {
         csrfToken: 'csrf-e2e',
       });
     }
-    if (path === '/auth/logout' && method === 'POST') return this.json(route, { ok: true });
+    if (path === '/auth/logout' && method === 'POST') {
+      this.signedIn = false;
+      return this.json(route, { ok: true });
+    }
     if (path === '/config/public') {
       return this.json(route, {
         ...publicConfig,

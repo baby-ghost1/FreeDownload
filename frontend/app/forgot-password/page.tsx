@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
     >
       {sent ? (
         <Alert tone="success" role="status" data-testid="forgot-sent">
-          If that address has an account, a reset link is on its way. Check your inbox — the link
+          If that address has an account, a reset link is on its way. Check your inbox - the link
           expires shortly.
         </Alert>
       ) : (

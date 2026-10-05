@@ -26,7 +26,7 @@ export function storeTheme(choice: ThemeChoice): void {
     if (choice === 'system') localStorage.removeItem(THEME_STORAGE_KEY);
     else localStorage.setItem(THEME_STORAGE_KEY, choice);
   } catch {
-    // privacy mode — the session keeps the in-memory choice
+    // privacy mode - the session keeps the in-memory choice
   }
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(THEME_EVENT));
 }
@@ -34,7 +34,7 @@ export function storeTheme(choice: ThemeChoice): void {
 const THEME_EVENT = 'fd-theme-change';
 
 /**
- * Notifies `useSyncExternalStore` subscribers when the choice changes —
+ * Notifies `useSyncExternalStore` subscribers when the choice changes -
  * same-tab writes via the custom event, other tabs via the storage event.
  */
 export function subscribeTheme(callback: () => void): () => void {

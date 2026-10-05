@@ -9,12 +9,12 @@ import { BASE_URL, jsonHeaders, record, thresholds } from './lib/common.js';
  *
  * A fresh X-Anon-Key per iteration keeps every create outside the
  * ANONYMOUS_DAILY_LIMIT (5/day/key) and AN_CONCURRENCY (1 active job/key)
- * caps — the load target is the job pipeline, not the quota gate (which has
+ * caps - the load target is the job pipeline, not the quota gate (which has
  * its own integration tests). POST /downloads is limited to
  * DOWNLOAD_RATE_LIMIT_MAX (default 60/min); the default pacing issues ~25
  * creates/min. No worker call is made at creation time, so no external
  * network egress happens from this script. Scale staging runs only after
- * raising RATE_LIMIT_MAX and DOWNLOAD_RATE_LIMIT_MAX — see README.
+ * raising RATE_LIMIT_MAX and DOWNLOAD_RATE_LIMIT_MAX - see README.
  *
  *   k6 run --vus 10 --duration 2m load/downloads.js
  */

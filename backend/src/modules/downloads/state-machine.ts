@@ -4,7 +4,7 @@ import { AppError } from '../../errors/app-error.js';
 import type { Database } from '../../database/client.js';
 import { downloadJobs, type DownloadJob } from '../../database/schema/index.js';
 
-/** Statuses a job can hold — mirrors the `download_jobs.status` column. */
+/** Statuses a job can hold - mirrors the `download_jobs.status` column. */
 export type JobStatus = DownloadJob['status'];
 
 /**
@@ -16,7 +16,7 @@ export const TRANSITIONS: Readonly<Record<JobStatus, readonly JobStatus[]>> = {
   validating: ['queued', 'policy_restricted', 'failed', 'cancelled'],
   queued: ['analyzing', 'failed', 'cancelled'],
   // A source can also be policy-blocked mid-flight (admin disabled it, the
-  // extractor resolved to a private address) — those must not retry.
+  // extractor resolved to a private address) - those must not retry.
   analyzing: ['ready', 'failed', 'retrying', 'policy_restricted', 'cancelled'],
   ready: ['processing', 'failed', 'policy_restricted', 'cancelled'],
   processing: ['uploading', 'failed', 'policy_restricted', 'cancelled'],
@@ -53,13 +53,13 @@ export function canTransition(from: JobStatus, to: JobStatus): boolean {
 
 export interface TransitionInput {
   jobId: string;
-  /** Allowed current statuses — the optimistic concurrency guard. */
+  /** Allowed current statuses - the optimistic concurrency guard. */
   from: readonly JobStatus[];
   to: JobStatus;
   /** Extra columns written atomically with the status change. */
   patch?: Partial<DownloadJob>;
   /**
-   * When set, the update only lands if this worker still holds the lease —
+   * When set, the update only lands if this worker still holds the lease -
    * a worker that lost its lease can no longer mutate the job.
    */
   leaseToken?: string;
@@ -69,7 +69,7 @@ export interface TransitionInput {
 
 /**
  * Optimistic state transition: `UPDATE … WHERE status = ANY(from)`.
- * A zero-row update means someone else moved the job first — we abort rather
+ * A zero-row update means someone else moved the job first - we abort rather
  * than clobbering (contract §Job lifecycle).
  */
 export async function transitionJob(
@@ -113,6 +113,6 @@ export async function transitionJob(
   }
   throw new AppError(
     'CONFLICT',
-    `Job is ${current[0]!.status} — expected ${input.from.join(' or ')}.`,
+    `Job is ${current[0]!.status} - expected ${input.from.join(' or ')}.`,
   );
 }

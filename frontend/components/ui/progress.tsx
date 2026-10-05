@@ -37,9 +37,11 @@ export function Progress({
     >
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunken">
         <div
-          className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]"
+          className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-primary to-info transition-[width] duration-500 ease-[var(--ease-out)]"
           style={{ width: `${clamped}%` }}
-        />
+        >
+          <div aria-hidden="true" className="progress-stripes absolute inset-0 opacity-60" />
+        </div>
       </div>
       <span className="w-10 text-right text-xs font-medium tabular-nums text-muted-foreground">
         {clamped}%

@@ -113,7 +113,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   if (options.rateLimit !== false) {
     await app.register(rateLimit, {
       global: true,
-      // Emits `Ratelimit-*` (RFC draft) — the names the CORS expose list
+      // Emits `Ratelimit-*` (RFC draft) - the names the CORS expose list
       // below already publishes to browsers.
       enableDraftSpec: true,
       max: config.rateLimit.max,
@@ -123,7 +123,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
       redis: getRedis(),
       skipOnError: true,
       // The plugin *throws* this value (index.js), so it must arrive as a
-      // real 429 error — a bare envelope object would fall through the
+      // real 429 error - a bare envelope object would fall through the
       // generic handler below and become a 500.
       errorResponseBuilder: (_req, context) => {
         const err = new Error(`Too many requests. Try again in ${context.after}.`) as Error & {
@@ -176,7 +176,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     if (adminContext) await touchAdminSession(db, adminContext.session);
 
     // Bearer API key (Phase 7): validated, metered and hourly-quota gated
-    // before the route runs. An invalid key answers 401 — it never degrades
+    // before the route runs. An invalid key answers 401 - it never degrades
     // into anonymous traffic.
     if (!context) {
       const bearer = readBearerToken(req);

@@ -8,8 +8,8 @@ import type { StripeEvent } from '../../payments/webhook.js';
 /**
  * Webhook event application (Phase 7).
  *
- * Idempotency is natural-key based — subscriptions upsert on `provider_ref`
- * and payments do `ON CONFLICT DO NOTHING` on it — so redelivered events are
+ * Idempotency is natural-key based - subscriptions upsert on `provider_ref`
+ * and payments do `ON CONFLICT DO NOTHING` on it - so redelivered events are
  * no-ops without tracking event ids.
  */
 export interface ApplyResult {
@@ -38,11 +38,11 @@ async function applyCheckoutCompleted(db: Database, event: StripeEvent): Promise
   const checkoutRef = str(obj.id);
   const { userId, planCode } = metadataOf(obj as Record<string, unknown>);
   if (!checkoutRef || !userId || !planCode) {
-    logger.warn({ eventId: event.id }, 'checkout event missing identifiers — ignored');
+    logger.warn({ eventId: event.id }, 'checkout event missing identifiers - ignored');
     return { handled: false };
   }
   if (planCode !== 'free' && planCode !== 'pro' && planCode !== 'business') {
-    logger.warn({ eventId: event.id, planCode }, 'checkout event for unknown plan — ignored');
+    logger.warn({ eventId: event.id, planCode }, 'checkout event for unknown plan - ignored');
     return { handled: false };
   }
 
@@ -51,7 +51,7 @@ async function applyCheckoutCompleted(db: Database, event: StripeEvent): Promise
   if (!user[0] || !plan[0]) {
     logger.warn(
       { eventId: event.id, userId, planCode },
-      'checkout event for unknown user/plan — ignored',
+      'checkout event for unknown user/plan - ignored',
     );
     return { handled: false };
   }

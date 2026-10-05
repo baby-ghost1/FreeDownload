@@ -11,7 +11,7 @@ export const users = pgTable(
   {
     id: id(),
     email: text('email').notNull(),
-    // Argon2id encoded string — never plaintext (contract §26).
+    // Argon2id encoded string - never plaintext (contract §26).
     passwordHash: text('password_hash').notNull(),
     status: text('status', { enum: ['pending', 'active', 'suspended', 'deleted'] })
       .notNull()
@@ -34,7 +34,7 @@ export const sessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    // SHA-256 of the cookie value — plaintext tokens only live in the browser.
+    // SHA-256 of the cookie value - plaintext tokens only live in the browser.
     tokenHash: text('token_hash').notNull(),
     csrfToken: text('csrf_token').notNull(),
     ip: inet('ip'),

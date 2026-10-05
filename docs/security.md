@@ -12,7 +12,7 @@ service that performs network requests on their behalf.
   `fd_session` is `HttpOnly`, `Secure` + `SameSite=None` in production
   (`Lax` in development), signed when `COOKIE_SECRET` is set. Sliding
   `last_seen_at`, revocation on logout, password change and reset.
-- **CSRF**: double-submit — `fd_csrf` (readable by the frontend) is mirrored
+- **CSRF**: double-submit - `fd_csrf` (readable by the frontend) is mirrored
   into `X-CSRF-Token` on every cookie-authenticated mutation; bearer clients
   are exempt because they carry no ambient credentials.
 - **Single-use tokens** (verify e-mail, reset password): stored hashed, short
@@ -23,7 +23,7 @@ service that performs network requests on their behalf.
   on auth endpoints (`RATE_LIMIT_*`, `AUTH_RATE_LIMIT_MAX`), failing open if
   Redis is unreachable so an outage never locks everyone out.
 - **Turnstile**: server-side verification on registration and password
-  recovery — enforced in production, fail-closed when the key is configured
+  recovery - enforced in production, fail-closed when the key is configured
   but verification cannot be completed, skipped in development.
 - **Configuration**: Zod-validated environment; production refuses to boot
   without `SESSION_SECRET`/`COOKIE_SECRET` or with dev-default URLs.
@@ -31,11 +31,11 @@ service that performs network requests on their behalf.
   never returned.
 - **Containers**: multi-stage build, non-root runtime user, healthchecks.
 - **SSRF guards** (Phase 4): `src/security/ssrf.ts` validates every URL the
-  API and the worker touch — WHATWG parse, `http(s)` only, no userinfo, port
+  API and the worker touch - WHATWG parse, `http(s)` only, no userinfo, port
   allowlist, DNS resolution with _all_ answers checked against private /
   metadata / mapped-IPv6 ranges, blocked hostname suffixes, and a re-sweep of
   every URL an extractor reports (redirects, thumbnails, format URLs).
-  `SSRF_ALLOW_PRIVATE=true` is a vitest-only escape hatch — production config
+  `SSRF_ALLOW_PRIVATE=true` is a vitest-only escape hatch - production config
   validation rejects it outright.
 - **Exec isolation** (Phase 4): `src/downloader/executors/proc.ts` spawns
   yt-dlp/ffmpeg/ffprobe with argument arrays only; container and format ids
@@ -47,7 +47,7 @@ service that performs network requests on their behalf.
   (never retried); signed result URLs carry their own expiry and the local
   dev file route HMAC-verifies each request.
 
-## Layer 1 — edge (Cloudflare)
+## Layer 1 - edge (Cloudflare)
 
 - DNS + TLS everywhere, HSTS in production.
 - WAF managed rules, bot score, DDoS absorption.
@@ -56,14 +56,14 @@ service that performs network requests on their behalf.
   login after repeated failures, anonymous job creation past a threshold,
   report submission. Never on every interaction.
 
-## Layer 2 — application
+## Layer 2 - application
 
 | Control       | Implementation                                                                                                                                           |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Transport     | HTTPS only; cookies `Secure` + `HttpOnly`; `SameSite=None` cross-site (Vercel → VPS) with CSRF double-submit on mutations                                |
 | CORS          | explicit origin allowlist from `CORS_ORIGINS`; credentials only for allowed origins; no `*`; `OPTIONS` preflight max-age 600                             |
 | Headers       | `helmet` on the API (HSTS, `X-Content-Type-Options`, `Referrer-Policy`, frame deny); Next.js adds its own in `next.config.ts`                            |
-| Validation    | Zod on every request body/query/param; output encoded; `bodyLimit` 1 MiB — media never posts through the API                                             |
+| Validation    | Zod on every request body/query/param; output encoded; `bodyLimit` 1 MiB - media never posts through the API                                             |
 | Errors        | uniform `{ error: { code, message, requestId } }`; 5xx never exposes internals; stack traces only in logs                                                |
 | Rate limiting | per-IP global bucket today (in-memory); Redis-backed multi-layer limits (IP / user / API key / endpoint / concurrency) in Phase 2                        |
 | Passwords     | Argon2id (`ARGON2_MEMORY_KIB`, `ARGON2_TIME_COST`); plaintext never stored or logged                                                                     |
@@ -72,9 +72,9 @@ service that performs network requests on their behalf.
 | Admin         | separate `admin_users` table, TOTP MFA, short sessions, IP allowlist, immutable audit row per mutation                                                   |
 | Secrets       | environment/secret manager only; `.env` gitignored; pino redaction list covers `password`, `token`, `authorization`, `cookie`, `url`, `apiKey`, `secret` |
 
-## Layer 3 — SSRF protection (mandatory)
+## Layer 3 - SSRF protection (mandatory)
 
-**Implemented**: `src/security/ssrf.ts` — `assertSafeUrl` (parse → allowlist →
+**Implemented**: `src/security/ssrf.ts` - `assertSafeUrl` (parse → allowlist →
 DNS → resolved-IP range checks) and `assertSafeAnalysisUrls` (re-sweep of
 extractor-reported URLs), unit-tested by `tests/unit/ssrf.test.ts`.
 
@@ -97,12 +97,12 @@ User URLs are never handed to a network client without validation:
 6. Validate the response: `Content-Type` **and** magic bytes before anything is
    stored or uploaded.
 
-## Layer 4 — command execution
+## Layer 4 - command execution
 
 **Implemented**: `src/downloader/executors/proc.ts` (spawn, argument arrays,
 timeout/abort, stderr tails) + allowlists in `ytdlp.ts`.
 
-- `execFile`/`spawn` with **argument arrays only** — never string interpolation,
+- `execFile`/`spawn` with **argument arrays only** - never string interpolation,
   never `exec(`…`)`.
 - Format identifiers and codecs are validated against allowlisted patterns
   (`^[a-z0-9]{1,10}$`) before becoming an argument.
@@ -110,7 +110,7 @@ timeout/abort, stderr tails) + allowlists in `ytdlp.ts`.
 - Workers run as non-root with CPU/memory limits and a read-only root FS where
   practical.
 
-## Layer 5 — media/file security
+## Layer 5 - media/file security
 
 **Implemented**: `src/media/ffmpeg.ts` (`sniffContainer`, `probeMedia`,
 `ensureContainer`) + `downloadPhase` in `src/workers/pipeline.ts`; signed
@@ -122,13 +122,13 @@ delivery via `src/storage/{local,r2}.ts` and the token-gated
 - Generated media is never executable content; served only via signed URLs with
   a TTL, never as permanent public objects.
 
-## Layer 6 — abuse prevention
+## Layer 6 - abuse prevention
 
 - Multi-layer rate limits with plan-derived quotas (config/DB, not hard-coded).
 - Per-user / per-IP / per-source concurrency caps.
 - Risk scoring over multiple signals (`abuse_events`): request rate, repeated
   failed jobs, repeated source failures, suspicious IPs, automated signups.
-- No automatic bans from a single signal — configurable thresholds plus human
+- No automatic bans from a single signal - configurable thresholds plus human
   review.
 - Dependency scanning (Dependabot + `npm audit` + CodeQL), container scanning,
   least-privilege DB role (no DDL for the runtime user).
@@ -153,7 +153,7 @@ runs axe-core WCAG 2.1 A/AA audits on public, signed-in and admin routes
 (`a11y.spec.ts`). CI gates `npm audit --omit=dev` (zero production
 vulnerabilities) alongside CodeQL and Dependabot. The only known advisories
 are four dev-only `braces`/`micromatch`/`fast-glob` findings pulled in by
-`@next/eslint-plugin-next`'s glob chain — the advisory range is `*`, no fixed
+`@next/eslint-plugin-next`'s glob chain - the advisory range is `*`, no fixed
 release exists upstream, and none of it ships to production; the separate
 `esbuild` chain is pinned with a root `overrides` entry
 (`@esbuild-kit/core-utils` → `esbuild ^0.25`).

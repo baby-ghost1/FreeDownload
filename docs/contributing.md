@@ -17,7 +17,7 @@ npm run test:e2e
 ```
 
 4. CI runs exactly the same sequence against Postgres 18 + Redis 8 service
-   containers — a red pipeline blocks merge. `npm run load` (k6 smoke) is
+   containers - a red pipeline blocks merge. `npm run load` (k6 smoke) is
    optional locally; it needs k6 installed and a running stack on `:4000`.
 
 ## Quality rules (contract §81–82)
@@ -60,5 +60,5 @@ weekly PRs for patch/minor updates and ignores major bumps (reviewed manually).
 1. Create `backend/src/downloader/adapters/<source>/`.
 2. Implement `SourceAdapter` (`canHandle`, `analyze`, `getFormats`, `download`).
 3. Add a row to `download_sources` (policy is data, not code).
-4. Add unit tests with mocked HTTP — never hit live sources in CI.
+4. Add unit tests with mocked HTTP - never hit live sources in CI.
 5. Confirm one bad source cannot take down the worker loop.

@@ -12,7 +12,7 @@ import { BASE_URL, jsonHeaders, record, thresholds } from './lib/common.js';
  * `Authorization: Bearer`. A 200 with the job list or a typed
  * `RATE_LIMITED` 429 envelope are both valid outcomes: the free plan's
  * apiPerHour (60) is deliberately low, so sustained runs are expected to
- * exhaust the quota — that is the enforcement path being verified.
+ * exhaust the quota - that is the enforcement path being verified.
  *
  *   k6 run --vus 5 --duration 2m load/api-quota.js
  */

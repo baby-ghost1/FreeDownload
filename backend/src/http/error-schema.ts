@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** The §46 error envelope — one definition reused by every error response. */
+/** The §46 error envelope - one definition reused by every error response. */
 export const ErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
   'UNAUTHORIZED',

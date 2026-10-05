@@ -6,7 +6,7 @@ import { REDACT_OPTIONS } from '../../src/logging/logger.js';
 
 /**
  * The production logger's exact redaction config, replayed against an
- * in-memory stream — asserts that credentials, cookies and user URLs are
+ * in-memory stream - asserts that credentials, cookies and user URLs are
  * censored while ordinary fields survive untouched.
  */
 function capture() {
@@ -73,7 +73,7 @@ describe('log redaction (contract §22, §51)', () => {
       expect(text).not.toContain(secret);
     }
 
-    // Non-sensitive context must survive — redaction is surgical.
+    // Non-sensitive context must survive - redaction is surgical.
     expect(text).toContain('ada@example.com');
     expect(text).toContain('req-01abcdef');
     expect(text).toContain('vitest');

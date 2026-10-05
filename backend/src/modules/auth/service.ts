@@ -260,7 +260,7 @@ export async function changePassword(
     );
 }
 
-/** Used by `GET /me` — refresh nothing, just return the caller. */
+/** Used by `GET /me` - refresh nothing, just return the caller. */
 export async function getUserById(id: string, db: Database = getDb()): Promise<User | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;

@@ -40,7 +40,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create your account"
-      description="Track downloads and manage your links — free to start."
+      description="Track downloads and manage your links - free to start."
       testId="register-page"
       footer={
         <>

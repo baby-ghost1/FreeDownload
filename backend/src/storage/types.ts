@@ -1,7 +1,7 @@
 /**
  * Storage hides the byte store behind two implementations: R2 (production)
  * and a local directory (development/tests). Media bytes never pass through
- * the API in R2 mode — the browser fetches a short-lived signed URL
+ * the API in R2 mode - the browser fetches a short-lived signed URL
  * directly (contract invariant 5).
  */
 
@@ -20,7 +20,7 @@ export interface Storage {
   remove(key: string): Promise<void>;
 }
 
-/** Object keys are server-generated — remote filenames are never trusted. */
+/** Object keys are server-generated - remote filenames are never trusted. */
 export function jobObjectKey(jobId: string, container: string): string {
   return `jobs/${jobId}/media.${container}`;
 }

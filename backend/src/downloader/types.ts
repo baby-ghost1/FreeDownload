@@ -1,5 +1,5 @@
 /**
- * SourceAdapter — every source-specific behaviour lives behind this
+ * SourceAdapter - every source-specific behaviour lives behind this
  * interface (contract invariant 6). The API never calls it; workers do.
  */
 
@@ -42,7 +42,7 @@ export interface AnalyzeOptions {
   timeoutMs?: number;
 }
 
-/** What the user picked — structured so it can never become shell input. */
+/** What the user picked - structured so it can never become shell input. */
 export interface FormatSelection {
   /** Target container, validated `^[a-z0-9]{2,5}$`. */
   container: string;

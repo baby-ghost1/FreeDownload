@@ -33,9 +33,9 @@ function readCookie(name: string): string | null {
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
-  /** JSON body — serialized here; omit for GET/DELETE without a payload. */
+  /** JSON body - serialized here; omit for GET/DELETE without a payload. */
   body?: unknown;
-  /** Attach `X-Anon-Key` (default true — harmless alongside a session). */
+  /** Attach `X-Anon-Key` (default true - harmless alongside a session). */
   anon?: boolean;
 }
 
@@ -60,7 +60,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   try {
     res = await fetch(`${SITE_CONFIG.api.baseUrl}${path}`, init);
   } catch {
-    // Network-level failure (API down, offline) — a typed error either way.
+    // Network-level failure (API down, offline) - a typed error either way.
     throw new ApiError(0);
   }
 

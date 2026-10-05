@@ -54,7 +54,7 @@ describeInfra('admin + account API (integration)', () => {
   let ownerSecret = '';
   let support: Session;
   let genericSourceId = '';
-  // Admin cookies cannot call user routes — download creation needs a
+  // Admin cookies cannot call user routes - download creation needs a
   // regular signed-in user alongside them.
   let userSession: Session;
 
@@ -152,6 +152,22 @@ describeInfra('admin + account API (integration)', () => {
     return app.inject({ method: 'GET', url, headers: { cookie: session.cookie } });
   }
 
+  /**
+   * The §75 MFA gate is off by default (ADMIN_MFA_REQUIRED unset/false);
+   * tests that assert its 401/403 behavior flip it on around themselves -
+   * the gate is read at request time, so no restart is needed.
+   */
+  async function withMfaRequired<T>(fn: () => Promise<T>): Promise<T> {
+    const previous = process.env.ADMIN_MFA_REQUIRED;
+    process.env.ADMIN_MFA_REQUIRED = 'true';
+    try {
+      return await fn();
+    } finally {
+      if (previous === undefined) delete process.env.ADMIN_MFA_REQUIRED;
+      else process.env.ADMIN_MFA_REQUIRED = previous;
+    }
+  }
+
   function adminPatch(url: string, session: Session, payload: Record<string, unknown>) {
     return app.inject({
       method: 'PATCH',
@@ -176,10 +192,18 @@ describeInfra('admin + account API (integration)', () => {
     owner = { cookie: cookieHeader(res), csrf: cookieValue(res, 'fd_csrf') };
   });
 
-  it('blocks admin data until MFA enrollment completes', async () => {
+  it('serves admin data to an unenrolled session while the gate is off', async () => {
     const res = await adminGet('/api/v1/admin/overview', owner);
-    expect(res.statusCode).toBe(403);
-    expect(res.json().error.details).toEqual({ mfaRequired: true });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().jobs.total).toBeGreaterThanOrEqual(0);
+  });
+
+  it('blocks admin data until MFA enrollment completes', async () => {
+    await withMfaRequired(async () => {
+      const res = await adminGet('/api/v1/admin/overview', owner);
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error.details).toEqual({ mfaRequired: true });
+    });
   });
 
   it('requires the CSRF header on admin mutations', async () => {
@@ -223,16 +247,18 @@ describeInfra('admin + account API (integration)', () => {
   });
 
   it('requires the second factor on every login once enrolled', async () => {
-    const noCode = await login(OWNER_EMAIL, OWNER_PASSWORD);
-    expect(noCode.statusCode).toBe(401);
-    expect(noCode.json().error.details).toEqual({ mfaRequired: true });
+    await withMfaRequired(async () => {
+      const noCode = await login(OWNER_EMAIL, OWNER_PASSWORD);
+      expect(noCode.statusCode).toBe(401);
+      expect(noCode.json().error.details).toEqual({ mfaRequired: true });
 
-    const withCode = await login(OWNER_EMAIL, OWNER_PASSWORD, totp(ownerSecret));
-    expect(withCode.statusCode).toBe(200);
-    const body = withCode.json();
-    expect(body.mfaEnrolled).toBe(true);
-    expect(body.mfaOk).toBe(true);
-    owner = { cookie: cookieHeader(withCode), csrf: cookieValue(withCode, 'fd_csrf') };
+      const withCode = await login(OWNER_EMAIL, OWNER_PASSWORD, totp(ownerSecret));
+      expect(withCode.statusCode).toBe(200);
+      const body = withCode.json();
+      expect(body.mfaEnrolled).toBe(true);
+      expect(body.mfaOk).toBe(true);
+      owner = { cookie: cookieHeader(withCode), csrf: cookieValue(withCode, 'fd_csrf') };
+    });
   });
 
   it('gates mutations by role: support may read but not mutate', async () => {

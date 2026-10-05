@@ -4,8 +4,9 @@ import { asc, eq } from 'drizzle-orm';
 import { config } from '../../server/config.js';
 import { getDb } from '../../database/client.js';
 import type { AppInstance } from '../../types/app.js';
-import { downloadSources, plans } from '../../database/schema/index.js';
+import { downloadSources, plans, systemSettings } from '../../database/schema/index.js';
 import { evaluateFlags } from '../../flags/flags.js';
+import { DEFAULT_NAVBAR, NAVBAR_SETTING_KEY, normalizeNavbar } from './navbar.js';
 
 const SourceSchema = z.object({
   slug: z.string(),
@@ -34,6 +35,15 @@ const PublicConfigSchema = z.object({
     signedUrlTtlSec: z.number(),
   }),
   flags: z.record(z.string(), z.boolean()),
+  navbar: z.object({
+    visible: z.boolean(),
+    links: z.object({
+      home: z.boolean(),
+      download: z.boolean(),
+      downloads: z.boolean(),
+      auth: z.boolean(),
+    }),
+  }),
   plans: z.array(
     z.object({
       code: z.string(),
@@ -48,7 +58,7 @@ const PublicConfigSchema = z.object({
   ),
 });
 
-/** What the API can turn a URL into — static contract surface (docs/api.md). */
+/** What the API can turn a URL into - static contract surface (docs/api.md). */
 const TARGET_FORMATS = [
   { key: 'mp4', label: 'MP4 (best quality)', kind: 'video' as const, container: 'mp4' },
   { key: 'webm', label: 'WebM (smallest size)', kind: 'video' as const, container: 'webm' },
@@ -61,7 +71,7 @@ const TARGET_FORMATS = [
 /**
  * Public catalog + client bootstrap: source health, supported output formats,
  * and safe public config (site key, limits, feature flags, pricing). No
- * infrastructure details — contract §43.
+ * infrastructure details - contract §43.
  */
 export async function registerCatalogRoutes(app: AppInstance): Promise<void> {
   app.get(
@@ -122,9 +132,14 @@ export async function registerCatalogRoutes(app: AppInstance): Promise<void> {
       const anonKey = typeof anonHeader === 'string' ? anonHeader : undefined;
       const subject = req.auth?.user.id ?? anonKey;
 
-      const [flags, planRows] = await Promise.all([
+      const [flags, planRows, navbarRows] = await Promise.all([
         evaluateFlags(db, subject),
         db.select().from(plans).where(eq(plans.active, true)).orderBy(asc(plans.sortOrder)),
+        db
+          .select({ value: systemSettings.value })
+          .from(systemSettings)
+          .where(eq(systemSettings.key, NAVBAR_SETTING_KEY))
+          .limit(1),
       ]);
 
       reply.header('cache-control', 'public, max-age=60');
@@ -139,6 +154,7 @@ export async function registerCatalogRoutes(app: AppInstance): Promise<void> {
           signedUrlTtlSec: config.storage.signedUrlTtlSec,
         },
         flags,
+        navbar: normalizeNavbar(navbarRows[0]?.value ?? DEFAULT_NAVBAR),
         plans: planRows.map((plan) => ({
           code: plan.code,
           name: plan.name,

@@ -6,7 +6,7 @@ import { config } from '../server/config.js';
  * Payment provider abstraction (Phase 7).
  *
  * `none` (dev/test/default) fails loudly with 503 instead of pretending a
- * checkout happened; `stripe` is a thin REST client — no SDK dependency.
+ * checkout happened; `stripe` is a thin REST client - no SDK dependency.
  */
 export interface CheckoutInput {
   userId: string;

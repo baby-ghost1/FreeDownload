@@ -14,7 +14,7 @@ export interface AuditEntry {
 }
 
 /**
- * Appends one immutable audit row (§75 — a trigger rejects UPDATE/DELETE).
+ * Appends one immutable audit row (§75 - a trigger rejects UPDATE/DELETE).
  * An audit failure never masks a successful mutation: it degrades to a log
  * line, which the ops pipeline still ships to the same sink.
  */

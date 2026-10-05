@@ -9,7 +9,7 @@ export { localObjectPath, verifyFileToken } from './local.js';
 
 let instance: Storage | null = null;
 
-/** Selected by STORAGE_DRIVER — `r2` is the production choice. */
+/** Selected by STORAGE_DRIVER - `r2` is the production choice. */
 export function getStorage(): Storage {
   if (!instance) {
     instance = config.storage.driver === 'r2' ? r2Storage : localStorage;

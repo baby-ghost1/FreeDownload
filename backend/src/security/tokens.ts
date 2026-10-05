@@ -3,7 +3,7 @@ import { AppError } from '../errors/app-error.js';
 import { randomToken, sha256 } from '../utils/crypto.js';
 
 export interface IssuedToken {
-  /** Plaintext value — returned to the user exactly once (emailed link). */
+  /** Plaintext value - returned to the user exactly once (emailed link). */
   token: string;
   /** SHA-256 digest stored in the database. */
   tokenHash: string;

@@ -27,7 +27,7 @@ export interface RunnerContext {
 }
 
 /**
- * `awaiting_format` — analysis finished and the job parked in `ready`
+ * `awaiting_format` - analysis finished and the job parked in `ready`
  * until the user picks a format (`POST /downloads/:id/start`).
  */
 export type RunOutcome = 'completed' | 'awaiting_format';

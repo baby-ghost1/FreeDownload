@@ -24,7 +24,7 @@ export const downloadSources = pgTable(
     name: text('name').notNull(),
     adapterKey: text('adapter_key').notNull(),
     enabled: boolean('enabled').notNull().default(true),
-    // active | maintenance | restricted | disabled — admin-controlled, no
+    // active | maintenance | restricted | disabled - admin-controlled, no
     // redeploy needed to take a source out of rotation (contract §12).
     mode: text('mode', { enum: ['active', 'maintenance', 'restricted', 'disabled'] })
       .notNull()
@@ -68,7 +68,7 @@ export const downloadJobs = pgTable(
     // the raw URL is never retained past expiry (contract §51).
     urlHash: text('url_hash').notNull(),
     urlRedacted: text('url_redacted'),
-    // Raw URL — workers need the full query (`?v=…`) to actually fetch, and
+    // Raw URL - workers need the full query (`?v=…`) to actually fetch, and
     // retries must survive Redis flushes. Lives in PG only until the job
     // expires; the cleanup sweep nulls it (contract §51).
     url: text('url'),

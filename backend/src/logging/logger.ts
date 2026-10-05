@@ -34,7 +34,7 @@ const REDACT_PATHS = [
   'res.headers["set-cookie"]',
 ];
 
-// Pretty-printing spawns a worker thread — never do it in tests (open handles)
+// Pretty-printing spawns a worker thread - never do it in tests (open handles)
 // or production (JSON only).
 const devTransport =
   config.isProduction || config.isTest

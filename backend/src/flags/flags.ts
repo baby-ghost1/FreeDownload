@@ -7,7 +7,7 @@ import { featureFlags } from '../database/schema/index.js';
  * Server-side feature-flag evaluation (Phase 7).
  *
  * `rollout` semantics: 0 = flag is on for every audience (the admin UI's
- * default), 100 = same; anything else is a percentage — anonymous subjects
+ * default), 100 = same; anything else is a percentage - anonymous subjects
  * (no id to bucket) only pass at 0/100.
  */
 export function rolloutBucket(subject: string): number {

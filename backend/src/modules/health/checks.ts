@@ -5,7 +5,7 @@ import { readinessRegistry } from './readiness.js';
 /**
  * Registers Postgres and Redis readiness probes (contract §43).
  *
- * Under Vitest the probes report `skipped` so unit tests stay hermetic —
+ * Under Vitest the probes report `skipped` so unit tests stay hermetic -
  * integration tests set `READINESS_LIVE=1` to exercise them against the
  * containers from `docker-compose.yml`.
  */

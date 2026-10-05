@@ -8,6 +8,7 @@ import {
   downloadJobs,
   plans,
   subscriptions,
+  systemSettings,
   usageRecords,
 } from '../database/schema/index.js';
 
@@ -23,7 +24,8 @@ export interface PlanQuota {
   planId: string | null;
   planCode: QuotaPlanCode;
   tier: number;
-  jobsPerDay: number;
+  /** Null = no daily cap (anonymous limit is off until an admin sets one). */
+  jobsPerDay: number | null;
   concurrentJobs: number;
   maxFileSizeMb: number;
   apiPerHour: number;
@@ -36,7 +38,7 @@ export interface QuotaActor {
   anonKey?: string | null | undefined;
 }
 
-/** Anonymous jobs outrank every paid tier — capacity release valve (§12). */
+/** Anonymous jobs outrank every paid tier - capacity release valve (§12). */
 export const ANON_PRIORITY = 60;
 
 /** `tier` is 0/10/20 → 50/30/10, clamped into [10, 50] (contract §Job queue). */
@@ -78,10 +80,46 @@ function defaultDailyFor(code: QuotaPlanCode): number {
   return code === 'free' ? config.limits.freeDaily : config.limits.proDaily;
 }
 
+export const ANON_DAILY_LIMIT_KEY = 'anon_daily_limit';
+
+const SETTINGS_TTL_MS = 30_000;
+const settingsCache = new Map<string, { value: unknown; expires: number }>();
+
+export function invalidateSettingsCache(): void {
+  settingsCache.clear();
+}
+
+async function readSetting(db: Database, key: string): Promise<unknown> {
+  const hit = settingsCache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  const rows = await db
+    .select({ value: systemSettings.value })
+    .from(systemSettings)
+    .where(eq(systemSettings.key, key))
+    .limit(1);
+  const value = rows[0]?.value ?? null;
+  settingsCache.set(key, { value, expires: Date.now() + SETTINGS_TTL_MS });
+  return value;
+}
+
+/**
+ * Anonymous daily cap, owned by the admin console (`system_settings` row
+ * `anon_daily_limit`). Missing or 0 = no cap. The env var is only a boot-time
+ * fallback and is ignored once the setting row exists.
+ */
+export async function getAnonDailyLimit(db: Database): Promise<number | null> {
+  const raw = await readSetting(db, ANON_DAILY_LIMIT_KEY);
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return Math.min(Math.floor(raw), 1_000_000);
+  }
+  return null;
+}
+
 /**
  * The effective quota for an actor: an active subscription wins, otherwise the
  * `free` plan row, otherwise env fallbacks (seed missing). Anonymous callers
- * are quota'd purely by env against their X-Anon-Key.
+ * are quota'd against their X-Anon-Key; their daily cap comes from the admin
+ * console setting and is off until an admin sets a value.
  */
 export async function resolveQuota(db: Database, actor: QuotaActor): Promise<PlanQuota> {
   if (!actor.userId) {
@@ -89,7 +127,7 @@ export async function resolveQuota(db: Database, actor: QuotaActor): Promise<Pla
       planId: null,
       planCode: 'anonymous',
       tier: -1,
-      jobsPerDay: config.limits.anonDaily,
+      jobsPerDay: await getAnonDailyLimit(db),
       concurrentJobs: config.limits.anonConcurrency,
       maxFileSizeMb: config.source.maxFileSizeMb,
       apiPerHour: config.limits.apiKeyHourly,
@@ -142,17 +180,19 @@ export async function assertQuota(
   quota: PlanQuota,
   actor: QuotaActor,
 ): Promise<void> {
-  const [daily] = await db
-    .select({ n: count() })
-    .from(downloadJobs)
-    .where(and(actorCondition(actor), gte(downloadJobs.createdAt, startOfUtcDay())));
+  if (quota.jobsPerDay !== null) {
+    const [daily] = await db
+      .select({ n: count() })
+      .from(downloadJobs)
+      .where(and(actorCondition(actor), gte(downloadJobs.createdAt, startOfUtcDay())));
 
-  if ((daily?.n ?? 0) >= quota.jobsPerDay) {
-    throw new AppError(
-      'RATE_LIMITED',
-      `Daily limit of ${quota.jobsPerDay} downloads reached on the ${quota.planCode} plan.`,
-      { details: { scope: 'daily', limit: quota.jobsPerDay, plan: quota.planCode } },
-    );
+    if ((daily?.n ?? 0) >= quota.jobsPerDay) {
+      throw new AppError(
+        'RATE_LIMITED',
+        `Daily limit of ${quota.jobsPerDay} downloads reached on the ${quota.planCode} plan.`,
+        { details: { scope: 'daily', limit: quota.jobsPerDay, plan: quota.planCode } },
+      );
+    }
   }
 
   const [active] = await db
@@ -175,7 +215,7 @@ export async function assertQuota(
   }
 }
 
-/** Hourly API-key metering gate — checked before the request is served. */
+/** Hourly API-key metering gate - checked before the request is served. */
 export async function assertApiHourly(
   db: Database,
   apiKeyId: string,

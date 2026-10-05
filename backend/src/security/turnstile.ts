@@ -7,7 +7,7 @@ import { logger } from '../logging/logger.js';
  *
  * Enforced in production for: registration, password recovery, anonymous job
  * creation past a threshold. Without a secret key in development the check is
- * skipped — but in production a missing key is a hard failure, never a silent
+ * skipped - but in production a missing key is a hard failure, never a silent
  * bypass.
  */
 export async function verifyTurnstile(token: string | undefined, remoteIp?: string): Promise<void> {
@@ -50,7 +50,7 @@ export async function verifyTurnstile(token: string | undefined, remoteIp?: stri
   } catch (err) {
     if (err instanceof AppError) throw err;
     logger.warn({ err: { message: (err as Error).message } }, 'turnstile verification error');
-    // Fail closed — an unverifiable challenge must not be treated as passed.
+    // Fail closed - an unverifiable challenge must not be treated as passed.
     throw new AppError('SERVICE_UNAVAILABLE', 'Could not verify the security challenge.');
   }
 }

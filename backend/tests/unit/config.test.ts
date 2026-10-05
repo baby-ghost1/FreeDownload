@@ -5,7 +5,7 @@ import { loadEnv } from '../../src/server/config.js';
 /**
  * Production hardening matrix (contract §56): the process must refuse to
  * boot on missing secrets, dev-default infrastructure, SSRF escape hatches
- * and half-configured payment providers — never degrade silently.
+ * and half-configured payment providers - never degrade silently.
  */
 const PROD_OK: NodeJS.ProcessEnv = {
   NODE_ENV: 'production',

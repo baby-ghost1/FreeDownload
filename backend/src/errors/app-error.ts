@@ -1,7 +1,7 @@
 /**
  * Typed application error (contract §46).
  *
- * Only `code`, `message` and `requestId` reach the client — internals stay in
+ * Only `code`, `message` and `requestId` reach the client - internals stay in
  * logs. Every throw site uses one of these or an unexpected-error wrapper.
  */
 export type ErrorCode =
@@ -40,7 +40,12 @@ export class AppError extends Error {
   constructor(
     code: ErrorCode,
     message: string,
-    options?: { details?: Record<string, unknown>; cause?: unknown; statusCode?: number },
+    options?: {
+      details?: Record<string, unknown>;
+      cause?: unknown;
+      statusCode?: number;
+      expose?: boolean;
+    },
   ) {
     super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = 'AppError';
@@ -48,7 +53,7 @@ export class AppError extends Error {
     this.statusCode = options?.statusCode ?? STATUS_BY_CODE[code];
     this.details = options?.details;
     // Only errors we deliberately author are safe to surface verbatim.
-    this.expose = this.statusCode < 500;
+    this.expose = options?.expose ?? this.statusCode < 500;
   }
 }
 

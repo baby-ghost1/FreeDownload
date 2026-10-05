@@ -5,9 +5,16 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string | undefined;
 }
 
-export function Input({ error, className, id, ...props }: InputProps) {
+export function Input({
+  error,
+  className,
+  id,
+  ref,
+  ...props
+}: InputProps & { ref?: React.Ref<HTMLInputElement> }) {
   return (
     <input
+      ref={ref}
       id={id}
       aria-invalid={error ? true : undefined}
       aria-describedby={error && id ? `${id}-error` : undefined}

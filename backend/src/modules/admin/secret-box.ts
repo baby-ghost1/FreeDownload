@@ -5,7 +5,7 @@ import { config } from '../../server/config.js';
 /**
  * TOTP secrets are encrypted at rest (AES-256-GCM, key derived from
  * SESSION_SECRET). Production mandates SESSION_SECRET; dev/test fall back to
- * a fixed label — the local database itself is unprotected there.
+ * a fixed label - the local database itself is unprotected there.
  */
 function boxKey(): Buffer {
   return scryptSync(config.session.secret || 'freedownload-dev-session-secret', 'fd-totp-v1', 32);

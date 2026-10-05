@@ -27,7 +27,7 @@ export async function startWorkers(
 /**
  * Graceful shutdown: stop taking new jobs, let in-flight ones finish within
  * `graceMs`, then force-close. Unfinished jobs simply lose their lease and
- * are retried elsewhere — workers are stateless (contract §7).
+ * are retried elsewhere - workers are stateless (contract §7).
  */
 export async function stopWorkers(
   handles: WorkerHandles,

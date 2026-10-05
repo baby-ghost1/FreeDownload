@@ -68,12 +68,12 @@ authentication, paywalls, access controls or platform security mechanisms.
 
 ## Non-negotiable invariants
 
-1. The API never runs downloads or transcodes synchronously — it validates,
+1. The API never runs downloads or transcodes synchronously - it validates,
    authorizes and enqueues only.
 2. Workers are stateless, lease-based and horizontally scalable.
 3. PostgreSQL is the only source of truth; Redis is disposable and rebuildable.
 4. Every user URL passes SSRF validation on entry **and** after every redirect.
-5. Media bytes never pass through Vercel or the API — the browser fetches
+5. Media bytes never pass through Vercel or the API - the browser fetches
    directly from R2 with a short-lived signed URL.
 6. All source-specific logic lives behind the `SourceAdapter` interface.
 
@@ -131,10 +131,10 @@ priority. Per-user, per-IP and per-source semaphores prevent hoarding.
 | Area              | Decision                                                                                   | Rationale                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | Package manager   | **npm 11 + workspaces**                                                                    | user requirement; turbo detects npm from the lockfile                                                                |
-| TypeScript        | **6.0.3** (not 7.0.2)                                                                      | `typescript-eslint@8.71` peer caps at `<6.1.0` — documented compatibility exception                                  |
+| TypeScript        | **6.0.3** (not 7.0.2)                                                                      | `typescript-eslint@8.71` peer caps at `<6.1.0` - documented compatibility exception                                  |
 | API framework     | Fastify 5 + `fastify-type-provider-zod`                                                    | schema-first routes, Zod validation, fast                                                                            |
 | ORM               | Drizzle ORM + drizzle-kit                                                                  | TS-first schema, reviewable SQL migrations committed to the repo                                                     |
-| Frontend          | Next.js 16, React 19, Tailwind v4                                                          | current stable; Tailwind v4 is CSS-first, so there is **no `tailwind.config.ts`** — tokens live in `app/globals.css` |
+| Frontend          | Next.js 16, React 19, Tailwind v4                                                          | current stable; Tailwind v4 is CSS-first, so there is **no `tailwind.config.ts`** - tokens live in `app/globals.css` |
 | Lint              | ESLint 10 + `typescript-eslint` + `@next/eslint-plugin-next` + `eslint-plugin-react-hooks` | `eslint-config-next` transitively requires plugins that only support ESLint ≤9; a11y is enforced with axe in E2E     |
 | Hosting           | Frontend on Vercel, API/workers on VPS containers                                          | cost-conscious, matches the Docker contract                                                                          |
 | Cross-origin auth | direct API calls, strict CORS allowlist, `SameSite=None; Secure` cookies + CSRF            | avoids per-request Vercel proxy cost on status polling                                                               |
@@ -164,7 +164,7 @@ Phases 1–8 are complete (details in the root README's Status section).
 | worker crash      | lease expires → requeue, `attempt++`, orphan temp files GC'd                                          |
 | Redis down        | API 503 + `Retry-After` on job creation; workers pause; PG intact                                     |
 | PostgreSQL down   | `/ready` fails, API 503; workers hold; no data loss                                                   |
-| R2 down           | upload retried with backoff, intermediate artifact reused — no re-encode                              |
+| R2 down           | upload retried with backoff, intermediate artifact reused - no re-encode                              |
 | source broken     | per-source `SourceError` → source health degraded → jobs fail gracefully; admin can disable instantly |
 | job timeout       | process group killed → `FAILED` → `RETRYING`                                                          |
 | retries exhausted | `DEAD_LETTER` + admin alert                                                                           |

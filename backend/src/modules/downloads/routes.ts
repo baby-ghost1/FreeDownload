@@ -94,7 +94,10 @@ const ResultResponse = z.object({
 
 const ParamsId = z.object({ id: z.uuid() });
 
-const ListQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) });
+const ListQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.string().min(1).optional(),
+});
 
 const ANON_KEY_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{8,200}$/;
@@ -125,7 +128,7 @@ function actorOf(req: {
   );
 }
 
-/** Only `toJobResponse` output ever reaches a client — no hashes, IPs, leases. */
+/** Only `toJobResponse` output ever reaches a client - no hashes, IPs, leases. */
 function toJobResponse(job: DownloadJob) {
   return {
     id: job.id,
@@ -232,14 +235,18 @@ export async function registerDownloadRoutes(app: AppInstance): Promise<void> {
     '/downloads',
     {
       schema: {
-        description: 'Jobs owned by the caller (session or X-Anon-Key).',
+        description:
+          'Jobs owned by the caller (session or X-Anon-Key), newest first (cursor paginated).',
         querystring: ListQuery,
-        response: { 200: z.object({ data: z.array(JobSchema) }) },
+        response: {
+          200: z.object({ data: z.array(JobSchema), nextCursor: z.string().nullable() }),
+          ...errorResponses(400, 401),
+        },
       },
     },
     async (req) => {
-      const jobs = await listOwnJobs(actorOf(req), req.query.limit, getDb());
-      return { data: jobs.map(toJobResponse) };
+      const page = await listOwnJobs(actorOf(req), req.query, getDb());
+      return { data: page.data.map(toJobResponse), nextCursor: page.nextCursor };
     },
   );
 

@@ -313,7 +313,7 @@ export async function registerAdminResourceRoutes(app: AppInstance): Promise<voi
     {
       schema: {
         description:
-          'Update source policy (enabled/mode/formats). Takes effect immediately — no redeploy.',
+          'Update source policy (enabled/mode/formats). Takes effect immediately - no redeploy.',
         params: IdParams,
         body: SourcePatchBody,
         response: { 200: SourceSchema, ...errorResponses(400, 401, 403, 404) },

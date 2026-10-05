@@ -30,7 +30,7 @@ function cookieValue(
   return res.cookies.find((c) => c.name === name)?.value;
 }
 
-/** Every error response must be the §46 envelope — never internals. */
+/** Every error response must be the §46 envelope - never internals. */
 function expectCleanEnvelope(res: { json: () => unknown }): void {
   const body = res.json() as { error?: Record<string, unknown> };
   expect(body.error).toBeDefined();
@@ -104,7 +104,7 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
 
   it('sends HSTS only in production', async () => {
     const res = await app.inject({ method: 'GET', url: '/health' });
-    // vitest runs NODE_ENV=test — production-only header must stay off.
+    // vitest runs NODE_ENV=test - production-only header must stay off.
     expect(res.headers['strict-transport-security']).toBeUndefined();
   });
 
@@ -264,7 +264,7 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
 
   it('answers a global burst with a typed 429 and rate-limit headers', async () => {
     // Limiter keys live in Redis for the whole window and outlive the test
-    // process — randomize the bucket IP so rapid reruns never inherit counts.
+    // process - randomize the bucket IP so rapid reruns never inherit counts.
     const remoteAddress = `198.51.100.${1 + Math.floor(Math.random() * 200)}`;
     let first = true;
     for (let i = 0; i < 10; i += 1) {
@@ -289,7 +289,7 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
 
   it('applies the tighter per-route auth limit', async () => {
     const remoteAddress = `198.51.100.${1 + Math.floor(Math.random() * 200)}`;
-    // AUTH_RATE_LIMIT_MAX=5 (vitest env) — the sixth attempt is rejected
+    // AUTH_RATE_LIMIT_MAX=5 (vitest env) - the sixth attempt is rejected
     // before the handler runs, regardless of credentials.
     let blocked = false;
     for (let i = 0; i < 6; i += 1) {

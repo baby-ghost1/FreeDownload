@@ -1,5 +1,5 @@
 /**
- * Source failures are not job failures — the class decides how the pipeline
+ * Source failures are not job failures - the class decides how the pipeline
  * routes the error (security layer: a failing source degrades only its own
  * jobs).
  */

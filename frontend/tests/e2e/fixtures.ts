@@ -13,7 +13,7 @@ import type {
   UserSession,
 } from '@/lib/api/types';
 
-/** Wire fixtures mirroring docs/api.md — used by the Playwright route mocks. */
+/** Wire fixtures mirroring docs/api.md - used by the Playwright route mocks. */
 
 const NOW = '2026-10-03T12:00:00.000Z';
 
@@ -21,6 +21,10 @@ export const publicConfig: PublicConfig = {
   turnstile: { enabled: false, siteKey: null },
   limits: { maxFileSizeMb: 2048, analyzeCacheTtlSec: 3600, signedUrlTtlSec: 900 },
   flags: {},
+  navbar: {
+    visible: true,
+    links: { home: true, download: true, downloads: true, auth: true },
+  },
   plans: [
     {
       code: 'free',
@@ -183,7 +187,7 @@ export const proSubscription: Subscription = {
   plan: planList[1]!,
 };
 
-/** A paid plan granted outside Stripe (provider `none`) — downgrades directly. */
+/** A paid plan granted outside Stripe (provider `none`) - downgrades directly. */
 export const businessSubscription: Subscription = {
   status: 'active',
   provider: 'none',

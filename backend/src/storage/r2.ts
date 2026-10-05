@@ -7,7 +7,7 @@ import { logger } from '../logging/logger.js';
 import type { Storage, StoredObject } from './types.js';
 
 /**
- * R2 storage via S3-compatible SigV4 — no SDK dependency: presigned GETs
+ * R2 storage via S3-compatible SigV4 - no SDK dependency: presigned GETs
  * for the browser (TTL'd, contract invariant 5), presigned PUT for upload,
  * signed DELETE for purge.
  */
@@ -31,7 +31,7 @@ function sha256Hex(data: string | Buffer): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
-/** RFC3986 encoding — AWS rejects JavaScript's default `!'()*` leakage. */
+/** RFC3986 encoding - AWS rejects JavaScript's default `!'()*` leakage. */
 export function uriEncode(value: string, encodeSlash = true): string {
   return encodeURIComponent(value)
     .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
@@ -74,12 +74,12 @@ export interface PresignInput {
 }
 
 /**
- * Query-string-authenticated request URL. Pure and deterministic — the unit
+ * Query-string-authenticated request URL. Pure and deterministic - the unit
  * test pins the signature for a fixed clock and key.
  */
 export function presignRequest(input: PresignInput): string {
   const now = input.now ?? new Date();
-  // 20261002T120000Z — ISO without dashes, colon and milliseconds.
+  // 20261002T120000Z - ISO without dashes, colon and milliseconds.
   const stamp = now
     .toISOString()
     .replace(/[-:]/g, '')
@@ -117,7 +117,7 @@ export function presignRequest(input: PresignInput): string {
   return input.url.toString();
 }
 
-/** Header-authenticated request (DELETE) — used for purging objects. */
+/** Header-authenticated request (DELETE) - used for purging objects. */
 async function signedFetch(creds: Credentials, method: 'DELETE', key: string): Promise<Response> {
   const now = new Date();
   const stamp = now

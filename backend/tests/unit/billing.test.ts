@@ -53,7 +53,7 @@ describe('feature flag rollout', () => {
     expect(a).toBe(rolloutBucket('user-aaaaaaaaaaaaaaaa'));
     expect(a).toBeGreaterThanOrEqual(0);
     expect(a).toBeLessThan(100);
-    // Different subjects spread — a full slice of the id space stays covered.
+    // Different subjects spread - a full slice of the id space stays covered.
     const buckets = new Set(Array.from({ length: 200 }, (_, i) => rolloutBucket(`subject-${i}`)));
     expect(buckets.size).toBeGreaterThan(50);
   });
