@@ -7,6 +7,9 @@ import {
   adminMe,
   adminMfaComplete,
   adminMfaSetup,
+  changeAdminPassword,
+  listAdminSessions,
+  revokeAdminSession,
   adminRetryJob,
   analyzeUrl,
   cancelJob,
@@ -65,7 +68,7 @@ type Case = {
 
 const BODY = { url: 'https://example.com/v' };
 
-/** Every endpoint is a thin apiFetch wrapper — assert path, method and body. */
+/** Every endpoint is a thin apiFetch wrapper - assert path, method and body. */
 const CASES: Case[] = [
   // downloads + catalog
   {
@@ -82,6 +85,11 @@ const CASES: Case[] = [
   { path: '/downloads/j1', init: { anon: true }, call: () => getJob('j1', { anon: true }) },
   { path: '/downloads?limit=20', init: {}, call: () => listJobs() },
   { path: '/downloads?limit=50', init: {}, call: () => listJobs(50) },
+  {
+    path: '/downloads?limit=50&cursor=c1',
+    init: {},
+    call: () => listJobs(50, 'c1'),
+  },
   { path: '/downloads/j1/cancel', init: { method: 'POST' }, call: () => cancelJob('j1') },
   {
     path: '/downloads/j1/start',
@@ -170,8 +178,19 @@ const CASES: Case[] = [
     init: { method: 'POST', body: { code: '123456' } },
     call: () => adminMfaComplete('123456'),
   },
+  { path: '/admin/auth/sessions', init: {}, call: () => listAdminSessions() },
+  {
+    path: '/admin/auth/sessions/s1',
+    init: { method: 'DELETE' },
+    call: () => revokeAdminSession('s1'),
+  },
+  {
+    path: '/admin/auth/password',
+    init: { method: 'POST', body: { currentPassword: 'old', newPassword: 'newpass123' } },
+    call: () => changeAdminPassword({ currentPassword: 'old', newPassword: 'newpass123' }),
+  },
 
-  // admin resources — query builders called empty (all branches false) and
+  // admin resources - query builders called empty (all branches false) and
   // fully populated (all branches true)
   { path: '/admin/overview', init: {}, call: () => getAdminOverview() },
   { path: '/admin/jobs', init: {}, call: () => listAdminJobs() },

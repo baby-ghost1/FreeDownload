@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 
-import { config } from '../../server/config.js';
+import { adminMfaRequired, config } from '../../server/config.js';
 import { AppError } from '../../errors/app-error.js';
 import type { Database } from '../../database/client.js';
 import {
@@ -15,7 +15,7 @@ import { issueCsrfToken, setCsrfCookie } from '../../security/csrf.js';
 
 /**
  * Admin sessions (§75): separate `fd_admin` cookie, short TTL, and `mfa_ok`
- * gating — everything beyond login/MFA enrollment requires a verified session.
+ * gating - everything beyond login/MFA enrollment requires a verified session.
  */
 export interface AdminContext {
   admin: AdminUser;
@@ -43,7 +43,7 @@ export async function createAdminSession(
 ): Promise<CreatedAdminSession> {
   const token = randomToken(32);
   const csrfToken = issueCsrfToken();
-  const expiresAt = new Date(Date.now() + config.admin.ttlSeconds);
+  const expiresAt = new Date(Date.now() + config.admin.ttlSeconds * 1000);
 
   await db.insert(adminSessions).values({
     adminId,
@@ -70,7 +70,7 @@ export function setAdminSessionCookies(
     expires: session.expiresAt,
     signed: config.session.secret.length > 0,
   });
-  // The double-submit cookie is shared with user sessions — whichever login
+  // The double-submit cookie is shared with user sessions - whichever login
   // ran last owns it, and assertCsrf only ever compares cookie vs header.
   setCsrfCookie(reply, session.csrfToken);
 }
@@ -85,7 +85,7 @@ export function readAdminSessionToken(req: FastifyRequest): string | undefined {
 }
 
 export function clearAdminSessionCookies(reply: FastifyReply): void {
-  // Only the admin cookie is cleared — fd_csrf may still belong to a user
+  // Only the admin cookie is cleared - fd_csrf may still belong to a user
   // session opened in the same browser.
   reply.clearCookie(config.admin.cookieName, {
     path: '/',
@@ -123,7 +123,7 @@ export async function loadAdminSession(
   return { session: row.session, admin: row.admin };
 }
 
-/** Slides `last_seen_at` at most once a minute — mirrors user sessions. */
+/** Slides `last_seen_at` at most once a minute - mirrors user sessions. */
 export async function touchAdminSession(db: Database, session: AdminSession): Promise<void> {
   const oneMinuteAgo = new Date(Date.now() - 60_000);
   if (session.lastSeenAt.getTime() > oneMinuteAgo.getTime()) return;
@@ -141,6 +141,62 @@ export async function revokeAdminSession(db: Database, session: AdminSession): P
     .where(and(eq(adminSessions.id, session.id), isNull(adminSessions.revokedAt)));
 }
 
+/** At most 50 live admin sessions per admin - oldest beyond that are revoked. */
+export const MAX_ADMIN_SESSIONS = 50;
+
+export async function enforceAdminSessionLimit(db: Database, adminId: string): Promise<void> {
+  const rows = await db
+    .select({ id: adminSessions.id })
+    .from(adminSessions)
+    .where(
+      and(
+        eq(adminSessions.adminId, adminId),
+        isNull(adminSessions.revokedAt),
+      ),
+    )
+    .orderBy(desc(adminSessions.createdAt))
+    .limit(MAX_ADMIN_SESSIONS + 1);
+  if (rows.length <= MAX_ADMIN_SESSIONS) return;
+  const overflow = rows.slice(MAX_ADMIN_SESSIONS);
+  for (const row of overflow) {
+    await db
+      .update(adminSessions)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(adminSessions.id, row.id), isNull(adminSessions.revokedAt)));
+  }
+}
+
+export interface AdminSessionView {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  lastSeenAt: Date;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+/** Live (non-revoked, non-expired) sessions for the devices UI, newest first. */
+export async function listAdminSessions(
+  db: Database,
+  adminId: string,
+): Promise<AdminSessionView[]> {
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: adminSessions.id,
+      ip: adminSessions.ip,
+      userAgent: adminSessions.userAgent,
+      lastSeenAt: adminSessions.lastSeenAt,
+      expiresAt: adminSessions.expiresAt,
+      createdAt: adminSessions.createdAt,
+    })
+    .from(adminSessions)
+    .where(and(eq(adminSessions.adminId, adminId), isNull(adminSessions.revokedAt)))
+    .orderBy(desc(adminSessions.createdAt))
+    .limit(MAX_ADMIN_SESSIONS);
+  return rows.filter((r) => r.expiresAt.getTime() > now.getTime());
+}
+
 /** Convenience for routes: authenticated admin or the §46 envelope. */
 export function requireAdmin(
   req: FastifyRequest,
@@ -150,7 +206,7 @@ export function requireAdmin(
   if (!context) {
     throw new AppError('UNAUTHORIZED', 'Admin authentication is required.');
   }
-  if (!context.session.mfaOk && !opts.allowUnmfa) {
+  if (!opts.allowUnmfa && adminMfaRequired() && !context.session.mfaOk) {
     throw new AppError('FORBIDDEN', 'Complete MFA enrollment to continue.', {
       details: { mfaRequired: true },
     });

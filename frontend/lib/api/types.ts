@@ -1,6 +1,6 @@
 /**
  * Wire types mirroring the API contract (docs/api.md). Dates arrive as ISO
- * strings — they stay strings on the client; only formatting layers parse.
+ * strings - they stay strings on the client; only formatting layers parse.
  */
 
 export type JobStatus =
@@ -90,6 +90,10 @@ export interface PublicConfig {
     signedUrlTtlSec: number;
   };
   flags: Record<string, boolean>;
+  navbar: {
+    visible: boolean;
+    links: { home: boolean; download: boolean; downloads: boolean; auth: boolean };
+  };
   plans: Array<{
     code: string;
     name: string;
@@ -185,7 +189,7 @@ export interface ApiKeyInfo {
 }
 
 export interface CreatedApiKey extends ApiKeyInfo {
-  /** Shown exactly once, at creation — never retrievable again. */
+  /** Shown exactly once, at creation - never retrievable again. */
   rawKey: string;
 }
 
@@ -211,6 +215,16 @@ export interface AdminLoginResult {
   csrfToken: string;
   mfaEnrolled: boolean;
   mfaOk: boolean;
+}
+
+export interface AdminSessionInfo {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  current: boolean;
+  lastSeenAt: string;
+  expiresAt: string;
+  createdAt: string;
 }
 
 export interface AdminOverview {

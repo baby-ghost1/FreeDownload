@@ -3,6 +3,7 @@ import type {
   AdminJob,
   AdminLoginResult,
   AdminOverview,
+  AdminSessionInfo,
   AdminSource,
   AdminSourcePatch,
   AdminUser,
@@ -27,7 +28,7 @@ import type {
   UserSession,
 } from './types';
 
-/** Typed endpoints — paths live here so a contract change is one edit (§31). */
+/** Typed endpoints - paths live here so a contract change is one edit (§31). */
 
 type Opts = Pick<RequestOptions, 'anon' | 'signal'>;
 
@@ -50,8 +51,14 @@ export function getJob(id: string, opts: Opts = {}): Promise<Job> {
   return apiFetch<Job>(`/downloads/${id}`, opts);
 }
 
-export function listJobs(limit = 20, opts: Opts = {}): Promise<{ data: Job[] }> {
-  return apiFetch<{ data: Job[] }>(`/downloads?limit=${limit}`, opts);
+export function listJobs(
+  limit = 20,
+  cursor?: string,
+  opts: Opts = {},
+): Promise<Page<Job>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  return apiFetch<Page<Job>>(`/downloads?${params.toString()}`, opts);
 }
 
 export function cancelJob(id: string, opts: Opts = {}): Promise<Job> {
@@ -213,6 +220,21 @@ export function adminMfaComplete(code: string): Promise<{ ok: true }> {
     method: 'POST',
     body: { code },
   });
+}
+
+export function listAdminSessions(opts: Opts = {}): Promise<{ data: AdminSessionInfo[] }> {
+  return apiFetch<{ data: AdminSessionInfo[] }>('/admin/auth/sessions', opts);
+}
+
+export function revokeAdminSession(id: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/auth/sessions/${id}`, { method: 'DELETE' });
+}
+
+export function changeAdminPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>('/admin/auth/password', { method: 'POST', body: input });
 }
 
 export function getAdminOverview(opts: Opts = {}): Promise<AdminOverview> {

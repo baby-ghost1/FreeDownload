@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 
 /**
- * Load `.env` if present — no dotenv dependency, Node's built-in loader.
+ * Load `.env` if present - no dotenv dependency, Node's built-in loader.
  * Checked in the workspace directory first, then the monorepo root.
  */
 function loadDotEnv(): void {
@@ -12,7 +12,7 @@ function loadDotEnv(): void {
       try {
         process.loadEnvFile(candidate);
       } catch {
-        // A malformed .env must not crash startup silently — surface below via schema.
+        // A malformed .env must not crash startup silently - surface below via schema.
       }
       return;
     }
@@ -62,8 +62,8 @@ const EnvSchema = z.object({
   // localhost is treated as trustworthy by browsers, so dev stays Lax.
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).optional(),
   COOKIE_SECURE: boolish.optional(),
-  // Admin sessions are deliberately short-lived (§75).
-  ADMIN_SESSION_TTL_MIN: z.coerce.number().int().min(5).default(480),
+  // Admin sessions live until explicit logout, capped at 30 days (§75).
+  ADMIN_SESSION_TTL_MIN: z.coerce.number().int().min(5).default(43200),
 
   // --- rate limits (config-driven, contract §25) ---------------------------
   RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().min(1).default(60),
@@ -72,7 +72,7 @@ const EnvSchema = z.object({
   DOWNLOAD_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(60),
 
   // --- quotas / billing (Phase 7) ------------------------------------------
-  // Fallbacks only — `plans.limits` in the database wins (contract §25, §71).
+  // Fallbacks only - `plans.limits` in the database wins (contract §25, §71).
   ANONYMOUS_DAILY_LIMIT: z.coerce.number().int().min(1).default(5),
   FREE_DAILY_LIMIT: z.coerce.number().int().min(1).default(25),
   PRO_DAILY_LIMIT: z.coerce.number().int().min(1).default(200),
@@ -92,7 +92,9 @@ const EnvSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
   QUEUE_RETRY_LIMIT: z.coerce.number().int().min(0).max(10).default(3),
   LEASE_TTL_MS: z.coerce.number().int().min(1_000).default(30_000),
-  JOB_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(300_000),
+  // Long 4K videos download for many minutes - 5 minutes killed them
+  // mid-run (dead_letter SOURCE_TIMEOUT after 3 wasted retries).
+  JOB_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(1_800_000),
   CLEANUP_INTERVAL_MIN: z.coerce.number().int().min(1).default(15),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(20_000),
   IDEMPOTENCY_TTL_H: z.coerce.number().int().min(1).default(24),
@@ -175,7 +177,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     }
     if (missing.length > 0) {
       throw new Error(
-        `Production configuration incomplete — missing or default: ${missing.join(', ')}`,
+        `Production configuration incomplete - missing or default: ${missing.join(', ')}`,
       );
     }
   }
@@ -224,7 +226,7 @@ export const config = {
     verifyTtlHours: env.VERIFY_TOKEN_TTL_H,
     resetTtlMinutes: env.RESET_TOKEN_TTL_MIN,
   },
-  /** Admin panel (Phase 6) — separate cookie + short TTL (§75). */
+  /** Admin panel (Phase 6) - separate cookie + short TTL (§75). */
   admin: {
     cookieName: 'fd_admin',
     ttlMinutes: env.ADMIN_SESSION_TTL_MIN,
@@ -241,7 +243,7 @@ export const config = {
     authMax: env.AUTH_RATE_LIMIT_MAX,
     downloadMax: env.DOWNLOAD_RATE_LIMIT_MAX,
   },
-  /** Plan/anonymous quotas (Phase 7) — DB `plans.limits` overrides these. */
+  /** Plan/anonymous quotas (Phase 7) - DB `plans.limits` overrides these. */
   limits: {
     anonDaily: env.ANONYMOUS_DAILY_LIMIT,
     freeDaily: env.FREE_DAILY_LIMIT,
@@ -250,7 +252,7 @@ export const config = {
     userConcurrency: env.USER_CONCURRENCY,
     apiKeyHourly: env.API_KEY_HOURLY_LIMIT,
   },
-  /** Payments (Phase 7) — `none` keeps dev/test billing-free (NullProvider). */
+  /** Payments (Phase 7) - `none` keeps dev/test billing-free (NullProvider). */
   payment: {
     provider: env.PAYMENT_PROVIDER,
     secret: env.PAYMENT_PROVIDER_SECRET ?? '',
@@ -288,7 +290,7 @@ export const config = {
     user: env.SMTP_USER,
     password: env.SMTP_PASSWORD,
   },
-  /** Download engine (Phase 4) — yt-dlp/FFmpeg executors, source policy. */
+  /** Download engine (Phase 4) - yt-dlp/FFmpeg executors, source policy. */
   source: {
     timeoutMs: env.SOURCE_TIMEOUT_MS,
     analyzeCacheTtlSec: env.ANALYZE_CACHE_TTL_SEC,
@@ -318,3 +320,14 @@ export const config = {
 } as const;
 
 export type AppConfig = typeof config;
+
+/**
+ * Admin 2FA gate (§75): when on, login demands a TOTP code and every admin
+ * route rejects sessions that have not completed enrollment. Off by default -
+ * ADMIN_EMAIL/ADMIN_PASSWORD from .env are the boot credentials. Read at
+ * request time so tests and ops can flip it without a restart.
+ */
+export function adminMfaRequired(): boolean {
+  const raw = process.env.ADMIN_MFA_REQUIRED;
+  return raw === 'true' || raw === '1';
+}
