@@ -159,48 +159,60 @@ export function SiteNavbar() {
   );
 
   return (
-    <motion.header
-      initial={false}
-      animate={{ y: hidden ? '-130%' : '0%', opacity: hidden ? 0 : 1 }}
-      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-3"
-    >
-      <nav
-        ref={navRef}
-        aria-label="Primary"
-        className="glass pointer-events-auto relative flex w-fit max-w-full items-center gap-1 rounded-full border border-border bg-surface/80 py-1.5 pl-2 pr-1.5 shadow-3"
-      >
-        <Link
-          href="/"
-          aria-label={`${SITE_CONFIG.name} home`}
-          className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
-        >
-          <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-info text-sm font-bold text-white shadow-2">
-            F
-          </span>
-          <span className="hidden text-sm font-semibold tracking-tight min-[420px]:inline">
-            {SITE_CONFIG.name}
-          </span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="site-nav-menu"
-          aria-label={open ? 'Close menu' : 'Open menu'}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <motion.span
-            key={open ? 'x' : 'menu'}
-            initial={{ opacity: 0, rotate: -60, scale: 0.8 }}
-            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+    <>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="flex"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
+          />
+        )}
+      </AnimatePresence>
+      <motion.header
+        initial={false}
+        animate={{ y: hidden && !open ? '-130%' : '0%', opacity: hidden && !open ? 0 : 1 }}
+        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-6"
+      >
+        <nav
+          ref={navRef}
+          aria-label="Primary"
+          className="pointer-events-auto relative mx-auto flex w-full max-w-5xl items-center justify-between gap-2"
+        >
+          <Link
+            href="/"
+            aria-label={`${SITE_CONFIG.name} home`}
+            className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
           >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </motion.span>
-        </button>
+            <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-info text-sm font-bold text-white shadow-2">
+              F
+            </span>
+            <span className="text-sm font-semibold tracking-tight">{SITE_CONFIG.name}</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="site-nav-menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            className="glass flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground shadow-2 transition-colors hover:text-foreground"
+          >
+            <motion.span
+              key={open ? 'x' : 'menu'}
+              initial={{ opacity: 0, rotate: -60, scale: 0.8 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              transition={{ duration: 0.25 }}
+              className="flex"
+            >
+              {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            </motion.span>
+          </button>
 
         <AnimatePresence>
           {open && (
@@ -287,7 +299,8 @@ export function SiteNavbar() {
             </motion.div>
           )}
         </AnimatePresence>
-      </nav>
-    </motion.header>
+        </nav>
+      </motion.header>
+    </>
   );
 }
