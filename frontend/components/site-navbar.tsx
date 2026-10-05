@@ -177,7 +177,7 @@ export function SiteNavbar() {
         initial={false}
         animate={{ y: hidden && !open ? '-130%' : '0%', opacity: hidden && !open ? 0 : 1 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-6"
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 px-12 pt-3 sm:px-20"
       >
         <nav
           ref={navRef}
@@ -201,7 +201,7 @@ export function SiteNavbar() {
             aria-expanded={open}
             aria-controls="site-nav-menu"
             aria-label={open ? 'Close menu' : 'Open menu'}
-            className="glass flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground shadow-2 transition-colors hover:text-foreground"
+            className="glass flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-foreground shadow-2 transition-colors hover:text-foreground"
           >
             <motion.span
               key={open ? 'x' : 'menu'}
@@ -210,7 +210,11 @@ export function SiteNavbar() {
               transition={{ duration: 0.25 }}
               className="flex"
             >
-              {open ? <X className="size-5" /> : <Menu className="size-5" />}
+              {open ? (
+              <X className="size-5" strokeWidth={2.5} />
+            ) : (
+              <Menu className="size-5" strokeWidth={2.5} />
+            )}
             </motion.span>
           </button>
 
