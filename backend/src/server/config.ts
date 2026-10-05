@@ -86,6 +86,9 @@ const EnvSchema = z.object({
   // --- abuse / Turnstile --------------------------------------------------
   TURNSTILE_SECRET_KEY: z.string().optional(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  // Temporary kill-switch for the bot check (abuse-prone - re-enable with
+  // real keys before opening up). Defaults to enforced.
+  TURNSTILE_DISABLED: boolish.default(false),
 
   // --- queue / workers (Phase 3) ------------------------------------------
   BULLMQ_PREFIX: z.string().min(1).default('fd'),
@@ -267,7 +270,8 @@ export const config = {
     secretKey: env.TURNSTILE_SECRET_KEY,
     siteKey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     // Verification is enforced in production; dev/test run without a key.
-    required: env.NODE_ENV === 'production',
+    // TURNSTILE_DISABLED=true drops enforcement entirely (temporary only).
+    required: env.NODE_ENV === 'production' && !env.TURNSTILE_DISABLED,
   },
   queue: {
     prefix: env.BULLMQ_PREFIX,

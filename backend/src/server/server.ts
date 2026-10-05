@@ -37,6 +37,10 @@ async function main(): Promise<void> {
     logger.error({ err: reason }, 'unhandled promise rejection');
   });
 
+  if (config.env === 'production' && !config.turnstile.required) {
+    logger.warn('turnstile bot-check is DISABLED - anonymous endpoints are abuse-prone');
+  }
+
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
     logger.info({ port: config.port, url: `http://localhost:${config.port}` }, 'api listening');
