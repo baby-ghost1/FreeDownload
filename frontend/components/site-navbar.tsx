@@ -150,7 +150,7 @@ export function SiteNavbar() {
     };
   }, [open ]);
 
-  if (pathname.startsWith('/admin')) return null;
+  if (pathname !== '/') return null;
   if (!navbar.visible) return null;
 
   const showAuth = navbar.links.auth;
