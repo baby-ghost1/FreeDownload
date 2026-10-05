@@ -101,6 +101,9 @@ const EnvSchema = z.object({
   // Which JobRunner the download worker drives: the real pipeline, or the
   // Phase 3 placeholder (tests default to placeholder; Phase 4 tests opt in).
   WORKER_RUNNER: z.enum(['pipeline', 'placeholder']).default('pipeline'),
+  // Run the download/cleanup workers INSIDE the API process (free-tier
+  // single service: one command serves HTTP and drains the queue).
+  WORKER_IN_API: boolish.default(false),
 
   // --- download engine (Phase 4) ------------------------------------------
   SOURCE_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(60_000),
@@ -316,6 +319,7 @@ export const config = {
   },
   worker: {
     runner: env.WORKER_RUNNER,
+    embedded: env.WORKER_IN_API,
   },
 } as const;
 

@@ -1,13 +1,28 @@
 import { buildApp } from './app.js';
 import { config } from './config.js';
 import { logger } from '../logging/logger.js';
+import { closeQueues } from '../queue/queues.js';
+import { closeRedis } from '../redis/client.js';
+import { startWorkers, stopWorkers, type WorkerHandles } from '../workers/index.js';
 
 async function main(): Promise<void> {
   const app = await buildApp();
 
+  let workers: WorkerHandles | null = null;
+  if (config.worker.embedded) {
+    // Free-tier single service: the API process also drains the queue, so
+    // one command (and one Render free instance) runs everything.
+    workers = await startWorkers();
+  }
+
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'shutting down');
     try {
+      if (workers) {
+        await stopWorkers(workers);
+        await closeQueues();
+        await closeRedis();
+      }
       await app.close();
       process.exit(0);
     } catch (err) {
