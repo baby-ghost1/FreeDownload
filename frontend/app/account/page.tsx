@@ -287,7 +287,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-3xl space-y-6 px-4 pb-10 pt-20 sm:px-6 sm:pt-28">
+    <div className="relative mx-auto w-full max-w-3xl space-y-6 px-4 pb-10 pt-10 sm:px-6 sm:pt-12">
       <SoftBackdrop />
       <div className="relative">
         <BackButton href="/" label="Back to home" />

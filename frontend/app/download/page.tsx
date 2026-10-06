@@ -100,7 +100,7 @@ function FormatOption({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-foreground">{format.label}</span>
-          {format.isDefault && <Badge tone="default">Recommended</Badge>}
+          {format.isDefault && !busy && <Badge tone="default">Recommended</Badge>}
         </span>
         <span className="mt-0.5 block text-xs text-muted-foreground">
           {format.container.toUpperCase()}
@@ -109,10 +109,14 @@ function FormatOption({
           {size ? ` · ${size}` : ''}
         </span>
       </span>
-      <Download
-        className="size-4 shrink-0 text-muted-foreground transition-all duration-300 group-hover:translate-y-0.5 group-hover:text-primary"
-        aria-hidden="true"
-      />
+      {busy ? (
+        <Spinner className="size-4 shrink-0" aria-hidden="true" />
+      ) : (
+        <Download
+          className="size-4 shrink-0 text-muted-foreground transition-all duration-300 group-hover:translate-y-0.5 group-hover:text-primary"
+          aria-hidden="true"
+        />
+      )}
     </motion.button>
   );
 }
@@ -233,8 +237,14 @@ function DownloadFlow() {
   return (
     <div
       data-platform={platform.id}
-      className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-20 sm:px-6 sm:pt-28"
+      className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-10 sm:px-6 sm:pt-12"
     >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_70%)]" />
+        <div className="animate-drift-a absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-[70%] rounded-full bg-primary/10 blur-3xl" />
+        <div className="animate-drift-b absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-[20%] rounded-full bg-info/10 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      </div>
       <SoftBackdrop />
 
       <div className="relative mb-5">
@@ -250,7 +260,10 @@ function DownloadFlow() {
         </p>
 
         {/* Flow stepper - the pill glides as you move forward */}
-        <div className="mt-5 flex items-center justify-center gap-1.5" aria-hidden="true">
+        <div
+          className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2"
+          aria-hidden="true"
+        >
           {FLOW_STEPS.map((label, i) => (
             <span key={label} className="relative rounded-full px-3 py-1 text-xs font-medium">
               {i === activeStep && (
@@ -407,7 +420,7 @@ function DownloadFlow() {
         )}
       </AnimatePresence>
 
-      {/* Idle tips - gentle guidance before the first paste */}
+      {/* Idle tips - home trust-row style, no cards */}
       <AnimatePresence>
         {phase === 'idle' && !analysis && !error && (
           <motion.div
@@ -416,19 +429,19 @@ function DownloadFlow() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-6 grid gap-2 sm:grid-cols-3"
+            className="relative mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground"
           >
             {IDLE_TIPS.map((tip, i) => (
-              <motion.div
+              <motion.span
                 key={tip.text}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + i * 0.08, duration: 0.4 }}
-                className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-surface/60 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground"
+                className="inline-flex items-center gap-1.5"
               >
-                <tip.icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                <tip.icon className="size-4 text-primary" aria-hidden="true" />
                 {tip.text}
-              </motion.div>
+              </motion.span>
             ))}
           </motion.div>
         )}

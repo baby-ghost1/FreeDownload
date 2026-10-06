@@ -136,7 +136,7 @@ export default function MyDownloadsPage() {
   const hasFilters = query.trim() !== '' || filter !== 'all';
 
   return (
-    <div className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-20 sm:px-6 sm:pt-28">
+    <div className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-10 sm:px-6 sm:pt-12">
       <SoftBackdrop tone="info" />
 
       <div className="relative mb-5">

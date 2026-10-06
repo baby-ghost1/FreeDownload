@@ -20,7 +20,7 @@ export function AuthShell({
   testId?: string;
 }) {
   return (
-    <div className="relative mx-auto flex w-full max-w-md flex-col justify-center px-4 pb-14 pt-20 sm:px-6 sm:pt-24">
+    <div className="relative mx-auto flex w-full max-w-md flex-col justify-center px-4 pb-14 pt-10 sm:px-6 sm:pt-12">
       <SoftBackdrop />
       <Enter className="relative">
         <Link
