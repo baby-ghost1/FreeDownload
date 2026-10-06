@@ -47,6 +47,9 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/backend/dist ./dist
 COPY backend/package.json ./package.json
+# Local file storage must be writable by the unprivileged user, otherwise
+# every finished download dies with EACCES on mkdir.
+RUN mkdir -p /app/.storage && chown app:app /app/.storage
 USER app
 
 # ---------------------------------------------------------------------------
