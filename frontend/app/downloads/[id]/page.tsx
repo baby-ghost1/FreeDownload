@@ -334,14 +334,18 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="relative overflow-hidden rounded-2xl border border-success/25 bg-success/10 p-3.5 text-left"
+                className="glass relative overflow-hidden rounded-2xl border border-border bg-surface/80 p-3.5 text-left shadow-3"
               >
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-success/15 blur-2xl"
+                  className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-primary/10 blur-2xl"
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
                 />
                 <div className="relative flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success text-white shadow-2">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2">
                     <Check className="size-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
