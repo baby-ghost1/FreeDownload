@@ -62,11 +62,13 @@ function FormatOption({
   format,
   onSelect,
   busy,
+  spinning,
   index = 0,
 }: {
   format: AnalyzeFormat;
   onSelect: (f: AnalyzeFormat) => void;
   busy: boolean;
+  spinning: boolean;
   index?: number;
 }) {
   const size = formatBytes(format.filesizeBytes);
@@ -109,7 +111,7 @@ function FormatOption({
           {size ? ` · ${size}` : ''}
         </span>
       </span>
-      {busy ? (
+      {spinning ? (
         <Spinner className="size-4 shrink-0" aria-hidden="true" />
       ) : (
         <Download
@@ -130,6 +132,7 @@ function DownloadFlow() {
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [concurrentBlocked, setConcurrentBlocked] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const autoRan = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // The exact link string that was analyzed (backend returns a redacted URL,
@@ -189,6 +192,7 @@ function DownloadFlow() {
       setPhase('creating');
       setError(null);
       setConcurrentBlocked(false);
+      setSelectedKey(format.key);
       try {
         const job = await createJob({
           url: normalizeUrl(url),
@@ -198,6 +202,7 @@ function DownloadFlow() {
         router.push(`/downloads/${job.id}`);
       } catch (err) {
         setPhase('analyzed');
+        setSelectedKey(null);
         if (
           err instanceof ApiError &&
           err.code === 'RATE_LIMITED' &&
@@ -529,6 +534,7 @@ function DownloadFlow() {
                           format={f}
                           index={i}
                           busy={phase === 'creating' || stale}
+                          spinning={selectedKey === f.key}
                           onSelect={(fmt) => void selectFormat(fmt)}
                         />
                       ))
@@ -551,6 +557,7 @@ function DownloadFlow() {
                           format={f}
                           index={i}
                           busy={phase === 'creating' || stale}
+                          spinning={selectedKey === f.key}
                           onSelect={(fmt) => void selectFormat(fmt)}
                         />
                       ))
