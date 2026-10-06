@@ -3,18 +3,25 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 
 /**
- * Load `.env` if present - no dotenv dependency, Node's built-in loader.
- * Checked in the workspace directory first, then the monorepo root.
+ * Load env files if present - no dotenv dependency, Node's built-in loader.
+ * `.env.{NODE_ENV}` wins when it exists (e.g. `.env.production`), `.env`
+ * is the local-development fallback. Real environments (Render) inject
+ * variables directly, so missing files are fine.
  */
 function loadDotEnv(): void {
-  for (const candidate of [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')]) {
-    if (existsSync(candidate)) {
-      try {
-        process.loadEnvFile(candidate);
-      } catch {
-        // A malformed .env must not crash startup silently - surface below via schema.
+  const names = [`.env.${process.env.NODE_ENV ?? ''}`, '.env'];
+  for (const base of [process.cwd(), resolve(process.cwd(), '..')]) {
+    for (const name of names) {
+      if (!name || name === '.env.') continue;
+      const candidate = resolve(base, name);
+      if (existsSync(candidate)) {
+        try {
+          process.loadEnvFile(candidate);
+        } catch {
+          // A malformed .env must not crash startup silently - surface below via schema.
+        }
+        return;
       }
-      return;
     }
   }
 }
