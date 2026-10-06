@@ -4,10 +4,9 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Download, Timer, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Download, FileVideo, Timer, XCircle } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
@@ -19,23 +18,6 @@ import { formatBytes, isTerminalStatus, stageLabel } from '@/lib/format';
 import { detectPlatform } from '@/lib/platform';
 import { useJob } from '@/lib/use-job';
 import { cn } from '@/lib/utils/cn';
-
-const STATUS_TONE: Record<string, BadgeTone> = {
-  completed: 'success',
-  failed: 'danger',
-  dead_letter: 'danger',
-  policy_restricted: 'danger',
-  cancelled: 'muted',
-  expired: 'muted',
-  retrying: 'warning',
-  ready: 'info',
-  processing: 'info',
-  uploading: 'info',
-  analyzing: 'info',
-  queued: 'default',
-  created: 'default',
-  validating: 'default',
-};
 
 const STEPS = [
   { key: 'analyzing', label: 'Analyze' },
@@ -230,6 +212,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       data-platform={platform.id}
       className="relative mx-auto w-full max-w-2xl px-4 py-10 sm:px-6"
     >
+      {/* Home-style hero wash */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_70%)]" />
+        <div className="animate-drift-a absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-[70%] rounded-full bg-primary/10 blur-3xl" />
+        <div className="animate-drift-b absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-[20%] rounded-full bg-info/10 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      </div>
       <SoftBackdrop />
 
       <div className="relative mb-5 flex items-center justify-between gap-2">
@@ -259,8 +248,59 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         )}
       </div>
 
-      <Enter delay={0.05}>
-        <Card className="overflow-hidden">
+      <Enter className="relative text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-full"
+            style={{ background: platform.accent }}
+          />
+          {platform.id !== 'default' ? `via ${platform.label}` : 'Your download'}
+        </span>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.05]">
+          {done ? (
+            <>
+              Ready to{' '}
+              <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
+                save.
+              </span>
+            </>
+          ) : (
+            <>
+              Fetching your{' '}
+              <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
+                file…
+              </span>
+            </>
+          )}
+        </h1>
+        <span data-testid="job-status" className="sr-only">
+          {stageLabel(job.status)}
+        </span>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          {job.requestedFormat && (
+            <span className="inline-flex items-center gap-1.5">
+              <FileVideo className="size-4 text-primary" aria-hidden="true" />
+              {job.requestedFormat}
+            </span>
+          )}
+          {active && (
+            <span className="inline-flex items-center gap-1.5 tabular-nums">
+              <Timer className="size-4 text-primary" aria-hidden="true" />
+              {elapsed} elapsed
+            </span>
+          )}
+          {done && size && (
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="size-4 text-primary" aria-hidden="true" />
+              {size}
+            </span>
+          )}
+        </div>
+      </Enter>
+
+      <Enter delay={0.08}>
+        <Card className="mt-8 overflow-hidden">
           <div
             aria-hidden="true"
             className={cn(
@@ -271,39 +311,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             )}
           />
           <CardContent className="space-y-6 px-4 pt-8 text-center sm:px-6">
-            {done ? (
-              <span data-testid="job-status" className="sr-only">
-                {stageLabel(job.status)}
-              </span>
-            ) : (
-              <motion.div
-                key={job.status}
-                initial={{ opacity: 0, scale: 0.9, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <Badge
-                  tone={STATUS_TONE[job.status] ?? 'default'}
-                  data-testid="job-status"
-                  className="px-3.5 py-1 text-[13px]"
-                >
-                  {stageLabel(job.status)}
-                </Badge>
-                <p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                  {platform.id !== 'default' && (
-                    <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-                      <span
-                        aria-hidden="true"
-                        className="size-2 rounded-full"
-                        style={{ background: platform.accent }}
-                      />
-                      via {platform.label}
-                    </span>
-                  )}
-                  {job.requestedFormat && <span>· {job.requestedFormat}</span>}
-                </p>
-              </motion.div>
-            )}
 
             {active && (
               <div data-testid="job-progress">
