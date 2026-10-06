@@ -251,12 +251,14 @@ export default function HomePage() {
                     className="btn-shine h-12 shrink-0 px-5 shadow-2"
                     data-testid="hero-go"
                   >
-                    {going ? 'Going…' : 'Download'}
                     {!going && (
-                      <ArrowRight
-                        className="size-4 transition-transform duration-300 group-focus-within:translate-x-0.5"
-                        aria-hidden="true"
-                      />
+                      <>
+                        Download
+                        <ArrowRight
+                          className="size-4 transition-transform duration-300 group-focus-within:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </>
                     )}
                   </Button>
                 </motion.div>
