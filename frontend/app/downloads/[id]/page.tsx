@@ -14,13 +14,11 @@ import {
   History,
   Hourglass,
   Layers,
-  Link2,
   Timer,
   XCircle,
 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
@@ -62,28 +60,6 @@ function formatElapsed(ms: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
-}
-
-const STAGE_HINT: Record<string, string> = {
-  created: 'Reserving your slot...',
-  validating: 'Checking the link...',
-  queued: 'In queue - the worker picks it up in seconds.',
-  analyzing: 'Reading available formats...',
-  ready: 'Ready - starting the download engine...',
-  processing: 'Downloading at source speed...',
-  uploading: 'Finishing and minting your link...',
-  retrying: 'Hit a bump - retrying automatically...',
-};
-
-/** Sub-headline under the big status word - matches the tone of the outcome. */
-function stageSubtitle(status: string): string {
-  if (status === 'completed') return 'Your file is ready - save it before the signed link expires.';
-  if (status === 'failed' || status === 'dead_letter')
-    return 'This download could not be finished - try another link.';
-  if (status === 'policy_restricted') return 'This source does not allow downloads right now.';
-  if (status === 'cancelled') return 'You stopped this download before it finished.';
-  if (status === 'expired') return 'This job expired before it finished.';
-  return STAGE_HINT[status] ?? stageLabel(status);
 }
 
 /** Live "expires in 14:32" chip for the signed download link. */
@@ -285,14 +261,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const platform = detectPlatform(job.url);
   const elapsed = formatElapsed(now - new Date(job.createdAt).getTime());
 
-  const headlineTone = failed || blocked
-    ? 'text-destructive'
-    : done
-      ? 'text-success'
-      : active
-        ? 'text-gradient animate-gradient-pan bg-[length:220%_220%]'
-        : 'text-foreground';
-
   const onCancel = async () => {
     setCancelling(true);
     setCancelError(null);
@@ -347,72 +315,9 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         )}
       </div>
 
-      {/* Status headline - the whole page reads top-down from this one word */}
-      <Enter className="relative text-center">
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <span
-              aria-hidden="true"
-              className="size-2 rounded-full"
-              style={{ background: platform.accent }}
-            />
-            {platform.id !== 'default' ? `${platform.label} link` : 'Your download'}
-          </span>
-          {active && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs text-muted-foreground shadow-1">
-              <span aria-hidden="true" className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-primary" />
-              </span>
-              running for <span className="tabular-nums">{elapsed}</span>
-            </span>
-          )}
-          {done && <Badge tone="success">Ready to save</Badge>}
-        </div>
-
-        <h1
-          data-testid="job-status"
-          className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl"
-        >
-          <motion.span
-            key={job.status}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className={cn('inline-block', headlineTone)}
-          >
-            {stageLabel(job.status)}
-          </motion.span>
-        </h1>
-
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          {stageSubtitle(job.status)}
-        </p>
-
-        <div className="mt-4 flex justify-center">
-          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-1.5 shadow-1">
-            <Link2 className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-            <span
-              className="truncate font-mono text-xs text-muted-foreground"
-              title={job.url ?? ''}
-            >
-              {job.url ?? 'Expired link'}
-            </span>
-          </span>
-        </div>
-
-        {(job.requestedFormat || (done && size)) && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            {job.requestedFormat && (
-              <Badge tone="default">
-                <FileVideo className="size-3" aria-hidden="true" />
-                {job.requestedFormat}
-              </Badge>
-            )}
-            {done && size && <Badge tone="info">{size}</Badge>}
-          </div>
-        )}
-      </Enter>
+      <span data-testid="job-status" className="sr-only">
+        {stageLabel(job.status)}
+      </span>
 
       <Enter delay={0.08}>
         <div className="relative mt-8 space-y-6" data-testid="job-progress">
@@ -452,9 +357,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             )}
 
             <div className="relative">
-              <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Pipeline
-              </p>
               <div className="relative mx-auto max-w-md">
                 <span
                   aria-hidden="true"
