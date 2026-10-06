@@ -245,7 +245,7 @@ export default function HomePage() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="btn-shine h-12 shrink-0 shadow-2"
+                    className="btn-shine h-12 shrink-0 px-5 shadow-2"
                     data-testid="hero-go"
                   >
                     Download
