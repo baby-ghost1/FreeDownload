@@ -177,8 +177,10 @@ export default function HomePage() {
       .catch(() => setConfig(null));
   }, []);
 
+  const [going, setGoing] = useState(false);
   const start = (e: React.FormEvent) => {
     e.preventDefault();
+    setGoing(true);
     const value = url.trim();
     router.push(value ? `/download?url=${encodeURIComponent(value)}` : '/download');
   };
@@ -245,14 +247,17 @@ export default function HomePage() {
                   <Button
                     type="submit"
                     size="lg"
+                    loading={going}
                     className="btn-shine h-12 shrink-0 px-5 shadow-2"
                     data-testid="hero-go"
                   >
-                    Download
-                    <ArrowRight
-                      className="size-4 transition-transform duration-300 group-focus-within:translate-x-0.5"
-                      aria-hidden="true"
-                    />
+                    {going ? 'Going…' : 'Download'}
+                    {!going && (
+                      <ArrowRight
+                        className="size-4 transition-transform duration-300 group-focus-within:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    )}
                   </Button>
                 </motion.div>
               </div>
