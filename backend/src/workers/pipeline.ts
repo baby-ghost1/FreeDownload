@@ -385,15 +385,21 @@ const pipelineRunner: JobRunner = {
       } else {
         await ctx.report(5);
       }
-      if (!job.requestedFormat && !job.targetContainer) {
-        await ctx.report(30, {
-          from: ['analyzing'],
-          to: 'ready',
-          patch: { analyzedAt: new Date() },
-        });
+      // Same lifecycle as a fresh analysis: `analyzing → ready` first, then
+      // download with a freshly loaded row. Skipping the `ready` hop leaves
+      // the row in `analyzing`, and every later `processing → ...`
+      // transition aborts with "job left processing" on every single retry.
+      await ctx.report(30, {
+        from: ['analyzing'],
+        to: 'ready',
+        patch: { analyzedAt: new Date() },
+      });
+      const reloaded = await loadJob(db, ctx.jobId);
+      if (!reloaded) throw new JobAbortedError('job disappeared');
+      if (!reloaded.requestedFormat && !reloaded.targetContainer) {
         return 'awaiting_format';
       }
-      await downloadPhase(db, ctx, job);
+      await downloadPhase(db, ctx, reloaded);
       return 'completed';
     }
 
