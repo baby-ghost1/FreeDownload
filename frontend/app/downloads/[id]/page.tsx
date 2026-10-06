@@ -4,9 +4,23 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Download, FileVideo, Timer, XCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Download,
+  FileVideo,
+  HardDrive,
+  History,
+  Hourglass,
+  Layers,
+  Link2,
+  Timer,
+  XCircle,
+} from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
@@ -61,16 +75,30 @@ const STAGE_HINT: Record<string, string> = {
   retrying: 'Hit a bump - retrying automatically...',
 };
 
-/** Live "expires in 14:32" countdown for the signed download link. */
-function ExpiryCountdown({ expiresAt, size }: { expiresAt: string; size: string | null }) {
+/** Sub-headline under the big status word - matches the tone of the outcome. */
+function stageSubtitle(status: string): string {
+  if (status === 'completed') return 'Your file is ready - save it before the signed link expires.';
+  if (status === 'failed' || status === 'dead_letter')
+    return 'This download could not be finished - try another link.';
+  if (status === 'policy_restricted') return 'This source does not allow downloads right now.';
+  if (status === 'cancelled') return 'You stopped this download before it finished.';
+  if (status === 'expired') return 'This job expired before it finished.';
+  return STAGE_HINT[status] ?? stageLabel(status);
+}
+
+/** Live "expires in 14:32" chip for the signed download link. */
+function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   const now = useNow();
   const diff = new Date(expiresAt).getTime() - now;
   if (!Number.isFinite(diff) || diff <= 0) {
     return (
-      <p className="mt-0.5 text-xs font-medium text-destructive">
-        {size && `${size} · `}
-        This link has expired - start a new download to get a fresh one.
-      </p>
+      <span
+        className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/8 px-2 py-0.5 text-[11px] font-medium text-destructive"
+        title={`Expired ${new Date(expiresAt).toLocaleString()}`}
+      >
+        <Timer className="size-3" aria-hidden="true" />
+        Link expired - start a new download
+      </span>
     );
   }
   const totalSec = Math.floor(diff / 1000);
@@ -83,17 +111,41 @@ function ExpiryCountdown({ expiresAt, size }: { expiresAt: string; size: string 
       : `${m}:${String(s).padStart(2, '0')}`;
   const urgent = diff < 5 * 60000;
   return (
-    <p
-      className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground"
+    <span
       title={`Expires ${new Date(expiresAt).toLocaleString()}`}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+        urgent
+          ? 'border-warning/40 bg-warning/12 text-warning'
+          : 'border-border bg-surface/80 text-muted-foreground',
+      )}
     >
-      {size && `${size} · `}
-      <Timer
-        className={`size-3.5 ${urgent ? 'animate-pulse text-warning' : ''}`}
-        aria-hidden="true"
-      />
+      <Timer className={cn('size-3', urgent && 'animate-pulse')} aria-hidden="true" />
       <span className="tabular-nums">expires in {clock}</span>
-    </p>
+    </span>
+  );
+}
+
+/** Small metric tile used inside the live progress console. */
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Hourglass;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-surface/60 px-2.5 py-2">
+      <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p className="truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
+      </div>
+    </div>
   );
 }
 
@@ -160,11 +212,27 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (loading && !job) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-24 sm:px-6">
-        <div className="shimmer-line h-8 w-48 rounded-lg border border-border bg-surface" />
-        <div className="shimmer-line mt-4 h-40 rounded-xl border border-border bg-surface" />
-        <div className="flex justify-center py-8">
-          <Spinner className="size-8" />
+      <div className="relative mx-auto w-full max-w-2xl px-4 py-24 sm:px-6">
+        <SoftBackdrop />
+        <div className="relative mx-auto max-w-md text-center">
+          <div className="shimmer-line mx-auto h-4 w-28 rounded-full border border-border bg-surface" />
+          <div className="shimmer-line mx-auto mt-4 h-9 w-56 rounded-lg border border-border bg-surface" />
+          <div className="shimmer-line mx-auto mt-3 h-4 w-72 max-w-full rounded-md border border-border bg-surface" />
+          <Card className="mt-8 overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+            />
+            <CardContent className="space-y-3 py-8">
+              <div className="shimmer-line h-10 w-32 rounded-xl border border-border bg-surface-sunken/60" />
+              <div className="shimmer-line h-2.5 w-full rounded-full border border-border bg-surface-sunken/60" />
+              <div className="shimmer-line h-16 w-full rounded-xl border border-border bg-surface-sunken/60" />
+            </CardContent>
+          </Card>
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="size-5" />
+            Loading your download...
+          </div>
         </div>
       </div>
     );
@@ -172,13 +240,36 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (error && !job) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
-        <Alert tone="error">
-          {error.status === 404 ? 'This download does not exist (or is not yours).' : error.message}
-        </Alert>
-        <Button variant="outline" className="mt-4" onClick={() => window.location.assign('/')}>
-          Start a new download
-        </Button>
+      <div className="relative mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
+        <SoftBackdrop />
+        <Enter className="relative mx-auto max-w-md">
+          <Card className="overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="h-1 bg-gradient-to-r from-destructive/50 via-destructive to-destructive/50"
+            />
+            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+              <span className="flex size-12 items-center justify-center rounded-xl bg-destructive/12 text-destructive ring-1 ring-destructive/20">
+                <XCircle className="size-6" aria-hidden="true" />
+              </span>
+              <p className="text-base font-semibold text-foreground">
+                {error.status === 404 ? 'Download not found' : 'Could not load this download'}
+              </p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                {error.status === 404
+                  ? 'This download does not exist (or is not yours).'
+                  : error.message}
+              </p>
+              <Button
+                variant="outline"
+                className="mt-1"
+                onClick={() => window.location.assign('/')}
+              >
+                Start a new download
+              </Button>
+            </CardContent>
+          </Card>
+        </Enter>
       </div>
     );
   }
@@ -190,9 +281,17 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const size = formatBytes(result?.sizeBytes);
   const done = job.status === 'completed';
   const failed = job.status === 'failed' || job.status === 'dead_letter';
+  const blocked = job.status === 'policy_restricted';
   const platform = detectPlatform(job.url);
   const elapsed = formatElapsed(now - new Date(job.createdAt).getTime());
-  const pct = Math.min(100, Math.max(0, Math.round(job.progress)));
+
+  const headlineTone = failed || blocked
+    ? 'text-destructive'
+    : done
+      ? 'text-success'
+      : active
+        ? 'text-gradient animate-gradient-pan bg-[length:220%_220%]'
+        : 'text-foreground';
 
   const onCancel = async () => {
     setCancelling(true);
@@ -210,7 +309,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   return (
     <div
       data-platform={platform.id}
-      className="relative mx-auto w-full max-w-2xl px-4 py-10 sm:px-6"
+      className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-10 sm:px-6"
     >
       {/* Home-style hero wash */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -221,7 +320,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       </div>
       <SoftBackdrop />
 
-      <div className="relative mb-5 flex items-center justify-between gap-2">
+      <div className="relative mb-6 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={goBack}
@@ -248,159 +347,190 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         )}
       </div>
 
-      <Enter className="relative">
-        <div className="flex items-center gap-3.5">
-          <span
-            aria-hidden="true"
-            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-info text-white shadow-2"
-          >
-            <span className="size-2.5 rounded-full bg-white/90" style={{ boxShadow: `0 0 0 4px ${platform.accent}55` }} />
+      {/* Status headline - the whole page reads top-down from this one word */}
+      <Enter className="relative text-center">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-full"
+              style={{ background: platform.accent }}
+            />
+            {platform.id !== 'default' ? `${platform.label} link` : 'Your download'}
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {platform.id !== 'default' ? `via ${platform.label}` : 'Your download'}
-              {active && <span className="tabular-nums">· {elapsed}</span>}
-            </p>
-            <p className="mt-0.5 truncate font-mono text-sm text-foreground" title={job.url ?? ''}>
-              {job.url ?? 'Expired link'}
-            </p>
-            {job.requestedFormat && (
-              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <FileVideo className="size-3.5 text-primary" aria-hidden="true" />
-                {job.requestedFormat}
-                {done && size && ` · ${size}`}
-              </p>
-            )}
-          </div>
+          {active && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs text-muted-foreground shadow-1">
+              <span aria-hidden="true" className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-70" />
+                <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              </span>
+              running for <span className="tabular-nums">{elapsed}</span>
+            </span>
+          )}
+          {done && <Badge tone="success">Ready to save</Badge>}
         </div>
-        <span data-testid="job-status" className="sr-only">
-          {stageLabel(job.status)}
-        </span>
+
+        <h1
+          data-testid="job-status"
+          className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl"
+        >
+          <motion.span
+            key={job.status}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className={cn('inline-block', headlineTone)}
+          >
+            {stageLabel(job.status)}
+          </motion.span>
+        </h1>
+
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          {stageSubtitle(job.status)}
+        </p>
+
+        <div className="mt-4 flex justify-center">
+          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-1.5 shadow-1">
+            <Link2 className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            <span
+              className="truncate font-mono text-xs text-muted-foreground"
+              title={job.url ?? ''}
+            >
+              {job.url ?? 'Expired link'}
+            </span>
+          </span>
+        </div>
+
+        {(job.requestedFormat || (done && size)) && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {job.requestedFormat && (
+              <Badge tone="default">
+                <FileVideo className="size-3" aria-hidden="true" />
+                {job.requestedFormat}
+              </Badge>
+            )}
+            {done && size && <Badge tone="info">{size}</Badge>}
+          </div>
+        )}
       </Enter>
 
       <Enter delay={0.08}>
-        <Card className="mt-8 overflow-hidden">
-          <div
-            aria-hidden="true"
-            className={cn(
-              'h-1 bg-[length:220%_100%] transition-all duration-700',
-              done
-                ? 'bg-gradient-to-r from-success to-info animate-gradient-pan'
-                : 'bg-gradient-to-r from-primary via-info to-primary animate-gradient-pan',
-            )}
-          />
-          <CardContent className="space-y-6 px-4 pt-6 sm:px-6">
-            {active && (
-              <div data-testid="job-progress">
-                <div className="flex items-end justify-between gap-3">
-                  <motion.p
-                    key={pct}
-                    initial={{ opacity: 0.5 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className="text-4xl font-semibold tracking-tight tabular-nums"
-                  >
-                    {pct}
-                    <span className="text-lg text-muted-foreground">%</span>
-                  </motion.p>
-                  <p className="max-w-44 text-right text-xs leading-relaxed text-muted-foreground sm:max-w-xs sm:text-sm">
-                    {STAGE_HINT[job.status] ?? stageLabel(job.status)}
-                  </p>
-                </div>
-                <div
-                  className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  aria-valuenow={pct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Download progress"
-                >
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-                    initial={false}
-                    animate={{ width: `${pct}%` }}
-                    transition={{ type: 'spring', stiffness: 60, damping: 20 }}
-                  />
-                </div>
-              </div>
-            )}
+        <div className="relative mt-8 space-y-6" data-testid="job-progress">
+          {active && (
+            <div className="grid grid-cols-3 gap-2">
+              <StatTile icon={Hourglass} label="Elapsed" value={elapsed} />
+              <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '-'} />
+              <StatTile icon={HardDrive} label="Size" value={size ?? '-'} />
+            </div>
+          )}
 
             {done && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="flex items-center gap-3 rounded-2xl border border-success/25 bg-success/8 p-3.5 text-left"
+                className="relative overflow-hidden rounded-2xl border border-success/25 bg-success/10 p-3.5 text-left"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success text-white shadow-2">
-                  <Check className="size-5" aria-hidden="true" />
-                </span>
-                <p className="min-w-0 text-sm font-medium leading-snug">
-                  Video downloaded - ready to save to your device
-                </p>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-success/15 blur-2xl"
+                />
+                <div className="relative flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success text-white shadow-2">
+                    <Check className="size-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-snug text-foreground">
+                      Video downloaded - ready to save to your device
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      Your signed link is time-limited - grab the file below.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
 
-            <div>
-              <ol className="relative mx-auto flex max-w-md items-start justify-between gap-1 text-xs text-muted-foreground">
+            <div className="relative">
+              <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Pipeline
+              </p>
+              <div className="relative mx-auto max-w-md">
                 <span
                   aria-hidden="true"
-                  className="absolute left-[12.5%] right-[12.5%] top-2.5 h-0.5 rounded-full bg-border"
+                  className="absolute left-[12.5%] right-[12.5%] top-3 h-0.5 rounded-full bg-border"
                 />
                 <motion.span
                   aria-hidden="true"
-                  className="absolute left-[12.5%] top-2.5 h-0.5 rounded-full bg-gradient-to-r from-[#38bdf8] to-[#34d399]"
+                  className="absolute left-[12.5%] top-3 h-0.5 rounded-full bg-gradient-to-r from-primary to-info"
                   initial={false}
                   animate={{
-                    width: `${Math.min(100, (step / (STEPS.length - 1)) * 100) * 0.75}%`,
+                    width: `${Math.max(0, Math.min(100, (step / (STEPS.length - 1)) * 100)) * 0.75}%`,
                   }}
                   transition={{ type: 'spring', stiffness: 70, damping: 22 }}
                 />
-                {STEPS.map((s, i) => {
-                  const reached = i < step;
-                  const current = i === step;
-                  return (
-                    <li
-                      key={s.key}
-                      className={cn(
-                        'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
-                        i <= step ? 'text-foreground' : '',
-                      )}
-                      data-testid={`step-${s.key}`}
-                    >
-                      <motion.span
-                        layout
-                        animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                        transition={
-                          current
-                            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-                            : { type: 'spring', stiffness: 400, damping: 22 }
-                        }
+                <ol className="relative flex items-start justify-between gap-1" aria-label="Download steps">
+                  {STEPS.map((s, i) => {
+                    const reached = i < step;
+                    const current = i === step;
+                    return (
+                      <li
+                        key={s.key}
                         className={cn(
-                          'relative z-10 flex size-5 items-center justify-center rounded-full border text-[10px] font-semibold',
-                          reached
-                            ? 'border-success bg-success text-white shadow-[0_0_8px_-2px_var(--color-success)]'
-                            : current
-                              ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
-                              : 'border-border-strong bg-surface',
+                          'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
+                          i <= step ? 'text-foreground' : 'text-muted-foreground',
                         )}
+                        data-testid={`step-${s.key}`}
                       >
                         <motion.span
-                          key={reached ? 'tick' : 'num'}
-                          initial={{ opacity: 0, scale: 0.6 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.25 }}
-                          className="flex"
+                          layout
+                          animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                          transition={
+                            current
+                              ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                              : { type: 'spring', stiffness: 400, damping: 22 }
+                          }
+                          className={cn(
+                            'relative z-10 flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold',
+                            reached
+                              ? 'border-success bg-success text-white shadow-[0_0_10px_-3px_var(--color-success)]'
+                              : current
+                                ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
+                                : 'border-border-strong bg-surface',
+                          )}
                         >
-                          {reached ? '✓' : i + 1}
+                          <motion.span
+                            key={reached ? 'tick' : 'num'}
+                            initial={{ opacity: 0, scale: 0.6 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex"
+                          >
+                            {reached ? <Check className="size-3.5" aria-hidden="true" /> : i + 1}
+                          </motion.span>
                         </motion.span>
-                      </motion.span>
-                      <span className="text-[11px] font-medium leading-tight">{s.label}</span>
-                    </li>
-                  );
-                })}
-              </ol>
+                        <span className="text-[11px] font-medium leading-tight">{s.label}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
             </div>
+
+            {active && (
+              <div className="flex justify-center pt-1">
+                <Button
+                  variant="outline"
+                  loading={cancelling}
+                  onClick={() => void onCancel()}
+                  data-testid="cancel-job"
+                  className="rounded-full px-8 shadow-1"
+                >
+                  <XCircle className="size-4" aria-hidden="true" />
+                  Cancel download
+                </Button>
+              </div>
+            )}
 
             {job.status === 'failed' && job.errorMessage && (
               <Alert tone="error">
@@ -408,7 +538,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 {job.retryCount > 0 && ` (attempt ${job.retryCount + 1})`}
               </Alert>
             )}
-            {job.status === 'policy_restricted' && (
+            {blocked && (
               <Alert tone="error">
                 {job.errorMessage ?? 'This source does not allow downloads right now.'}
               </Alert>
@@ -446,18 +576,32 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 initial={{ opacity: 0, y: 12, scale: 0.99 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="glass relative mt-2 overflow-hidden rounded-2xl border border-border bg-surface/80 p-2 shadow-3"
+                className="glass relative mt-2 overflow-hidden rounded-2xl border border-border bg-surface/80 p-4 shadow-3"
                 data-testid="result-card"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2">
-                    <Check className="size-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      media.{result.container ?? 'mp4'}
-                    </p>
-                    <ExpiryCountdown expiresAt={result.expiresAt} size={size} />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -left-10 -top-12 size-40 rounded-full bg-primary/10 blur-3xl"
+                />
+                <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
+                      <FileVideo className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 text-left">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        media.{result.container ?? 'mp4'}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {size && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            <HardDrive className="size-3" aria-hidden="true" />
+                            {size}
+                          </span>
+                        )}
+                        <ExpiryCountdown expiresAt={result.expiresAt} />
+                      </div>
+                    </div>
                   </div>
                   {!confirmAgain && (
                     <motion.a
@@ -476,8 +620,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                         markDownloaded();
                       }}
                       className={cn(
-                        buttonClasses({ size: 'md' }),
-                        'btn-shine h-12 shrink-0 px-6',
+                        buttonClasses({ size: 'lg' }),
+                        'btn-shine h-12 w-full shrink-0 px-6 sm:w-auto',
                       )}
                     >
                       {alreadyDownloaded ? (
@@ -493,7 +637,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   <div
                     role="alert"
                     data-testid="redownload-confirm"
-                    className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-warning/30 bg-warning/8 p-3 text-sm"
+                    className="relative mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm"
                   >
                     <span className="min-w-0 flex-1 text-foreground">
                       Already downloaded - download this file again?
@@ -524,39 +668,29 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               </motion.div>
             )}
 
-            <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+            <nav
+              aria-label="More downloads"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-surface/60 px-4 py-3"
+            >
               <Link
                 href="/download"
                 onClick={clearForward}
-                className="link-underline text-sm text-primary underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 transition-colors hover:text-foreground"
               >
+                <Download className="size-4" aria-hidden="true" />
                 New download
               </Link>
-              <div className="flex items-center gap-2">
-                {active && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    loading={cancelling}
-                    onClick={() => void onCancel()}
-                    data-testid="cancel-job"
-                    className="rounded-xl"
-                  >
-                    <XCircle className="size-4" aria-hidden="true" />
-                    Cancel
-                  </Button>
-                )}
-                <Link
-                  href="/downloads"
-                  onClick={clearForward}
-                  className="link-underline text-sm text-muted-foreground underline-offset-2 transition-colors hover:text-primary"
-                >
-                  My downloads
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              <span aria-hidden="true" className="h-4 w-px bg-border" />
+              <Link
+                href="/downloads"
+                onClick={clearForward}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary"
+              >
+                <History className="size-4" aria-hidden="true" />
+                My downloads
+              </Link>
+            </nav>
+          </div>
       </Enter>
     </div>
   );
