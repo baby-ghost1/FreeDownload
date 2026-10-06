@@ -94,7 +94,10 @@ function FloatingBrands() {
       {FLOATERS.map((f) => (
         <span
           key={f.key}
-          className={cn('absolute hidden text-foreground opacity-[0.08] sm:block', f.className)}
+          className={cn(
+            'absolute text-foreground opacity-[0.05] sm:opacity-[0.08]',
+            f.className,
+          )}
         >
           <motion.span
             className="block"

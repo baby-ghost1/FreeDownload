@@ -1,3 +1,14 @@
+import {
+  ArrowBigUp,
+  Clapperboard,
+  Ghost,
+  MessageCircle,
+  Music,
+  Play,
+  Tv,
+  Zap,
+} from 'lucide-react';
+
 import { cn } from '@/lib/utils/cn';
 
 /** Official brand glyphs (decorative only). Paths follow simple-icons geometry. */
@@ -27,6 +38,17 @@ const FILL_PATHS: Record<string, string> = {
   tiktok: TIKTOK_D,
   twitch: TWITCH_D,
   vimeo: VIMEO_D,
+};
+
+const LUCIDE_GLYPHS: Record<string, React.ComponentType<{ size?: number | string }>> = {
+  dailymotion: Clapperboard,
+  snapchat: Ghost,
+  reddit: ArrowBigUp,
+  rumble: Zap,
+  odysee: Play,
+  bitchute: Tv,
+  zedge: Music,
+  default: MessageCircle,
 };
 
 function InstagramGlyph({ size }: { size: number }) {
@@ -62,6 +84,14 @@ export function BrandLogo({
     return (
       <span className={cn('inline-flex', className)} style={style} aria-hidden="true">
         <InstagramGlyph size={size} />
+      </span>
+    );
+  }
+  const LucideIcon = LUCIDE_GLYPHS[id];
+  if (LucideIcon) {
+    return (
+      <span className={cn('inline-flex', className)} style={style} aria-hidden="true">
+        <LucideIcon size={size} />
       </span>
     );
   }
