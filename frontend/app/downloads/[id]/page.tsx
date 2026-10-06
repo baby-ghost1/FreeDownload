@@ -248,55 +248,34 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         )}
       </div>
 
-      <Enter className="relative text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+      <Enter className="relative">
+        <div className="flex items-center gap-3.5">
           <span
             aria-hidden="true"
-            className="size-2 rounded-full"
-            style={{ background: platform.accent }}
-          />
-          {platform.id !== 'default' ? `via ${platform.label}` : 'Your download'}
-        </span>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.05]">
-          {done ? (
-            <>
-              Ready to{' '}
-              <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
-                save.
-              </span>
-            </>
-          ) : (
-            <>
-              Fetching your{' '}
-              <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
-                file…
-              </span>
-            </>
-          )}
-        </h1>
+            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-info text-white shadow-2"
+          >
+            <span className="size-2.5 rounded-full bg-white/90" style={{ boxShadow: `0 0 0 4px ${platform.accent}55` }} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {platform.id !== 'default' ? `via ${platform.label}` : 'Your download'}
+              {active && <span className="tabular-nums">· {elapsed}</span>}
+            </p>
+            <p className="mt-0.5 truncate font-mono text-sm text-foreground" title={job.url ?? ''}>
+              {job.url ?? 'Expired link'}
+            </p>
+            {job.requestedFormat && (
+              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <FileVideo className="size-3.5 text-primary" aria-hidden="true" />
+                {job.requestedFormat}
+                {done && size && ` · ${size}`}
+              </p>
+            )}
+          </div>
+        </div>
         <span data-testid="job-status" className="sr-only">
           {stageLabel(job.status)}
         </span>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-          {job.requestedFormat && (
-            <span className="inline-flex items-center gap-1.5">
-              <FileVideo className="size-4 text-primary" aria-hidden="true" />
-              {job.requestedFormat}
-            </span>
-          )}
-          {active && (
-            <span className="inline-flex items-center gap-1.5 tabular-nums">
-              <Timer className="size-4 text-primary" aria-hidden="true" />
-              {elapsed} elapsed
-            </span>
-          )}
-          {done && size && (
-            <span className="inline-flex items-center gap-1.5">
-              <Check className="size-4 text-primary" aria-hidden="true" />
-              {size}
-            </span>
-          )}
-        </div>
       </Enter>
 
       <Enter delay={0.08}>
@@ -310,51 +289,39 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 : 'bg-gradient-to-r from-primary via-info to-primary animate-gradient-pan',
             )}
           />
-          <CardContent className="space-y-6 px-4 pt-8 text-center sm:px-6">
-
+          <CardContent className="space-y-6 px-4 pt-6 sm:px-6">
             {active && (
               <div data-testid="job-progress">
-                <div
-                  aria-hidden="true"
-                  className="relative mx-auto flex size-20 items-center justify-center"
-                >
-                  <motion.span
-                    className="absolute inset-0 rounded-full border-2 border-[#38bdf8]/30"
-                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
-                  />
-                  <motion.span
-                    className="absolute inset-0 rounded-full border-2 border-[#34d399]/30"
-                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.9 }}
-                  />
-                  <span className="flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-[#38bdf8] to-[#34d399] text-white shadow-2">
-                    <motion.span
-                      animate={{ y: [0, 5, 0] }}
-                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                      className="flex"
-                    >
-                      <Download className="size-6" aria-hidden="true" />
-                    </motion.span>
-                  </span>
+                <div className="flex items-end justify-between gap-3">
+                  <motion.p
+                    key={pct}
+                    initial={{ opacity: 0.5 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-4xl font-semibold tracking-tight tabular-nums"
+                  >
+                    {pct}
+                    <span className="text-lg text-muted-foreground">%</span>
+                  </motion.p>
+                  <p className="max-w-44 text-right text-xs leading-relaxed text-muted-foreground sm:max-w-xs sm:text-sm">
+                    {STAGE_HINT[job.status] ?? stageLabel(job.status)}
+                  </p>
                 </div>
-                <motion.p
-                  key={pct}
-                  initial={{ opacity: 0.5, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="mt-3 text-5xl font-semibold tracking-tight tabular-nums"
+                <div
+                  className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Download progress"
                 >
-                  {pct}
-                  <span className="text-xl text-muted-foreground">%</span>
-                </motion.p>
-                <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
-                  {STAGE_HINT[job.status] ?? stageLabel(job.status)}
-                </p>
-                <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                  <Timer className="size-3" aria-hidden="true" />
-                  {elapsed} elapsed
-                </p>
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+                    initial={false}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ type: 'spring', stiffness: 60, damping: 20 }}
+                  />
+                </div>
               </div>
             )}
 
@@ -363,11 +330,12 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-3 rounded-2xl border border-success/25 bg-success/8 p-3.5 text-left"
               >
-                <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-[#38bdf8] to-[#34d399] text-white shadow-2">
-                  <Check className="size-6" aria-hidden="true" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success text-white shadow-2">
+                  <Check className="size-5" aria-hidden="true" />
                 </span>
-                <p className="mt-3 text-lg font-semibold tracking-tight">
+                <p className="min-w-0 text-sm font-medium leading-snug">
                   Video downloaded - ready to save to your device
                 </p>
               </motion.div>
@@ -478,14 +446,14 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 initial={{ opacity: 0, y: 12, scale: 0.99 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="relative mt-4 overflow-hidden rounded-2xl border border-[#38bdf8]/30 bg-gradient-to-br from-[#38bdf8]/10 to-[#34d399]/10 p-3 shadow-2 sm:p-4"
+                className="glass relative mt-2 overflow-hidden rounded-2xl border border-border bg-surface/80 p-2 shadow-3"
                 data-testid="result-card"
               >
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#38bdf8] to-[#34d399] text-white shadow-2">
-                    <Check className="size-4" aria-hidden="true" />
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2">
+                    <Check className="size-5" aria-hidden="true" />
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-semibold text-foreground">
                       media.{result.container ?? 'mp4'}
                     </p>
@@ -509,7 +477,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       }}
                       className={cn(
                         buttonClasses({ size: 'md' }),
-                        'w-full border-transparent bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_8px_20px_-8px_var(--color-warning)] hover:brightness-110 sm:w-auto',
+                        'btn-shine h-12 shrink-0 px-6',
                       )}
                     >
                       {alreadyDownloaded ? (
@@ -545,10 +513,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                         download
                         onClick={markDownloaded}
                         data-testid="redownload-yes"
-                        className={cn(
-                          buttonClasses({ size: 'sm' }),
-                          'border-transparent bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:brightness-110',
-                        )}
+                        className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
                       >
                         <Download className="size-4" aria-hidden="true" />
                         Yes, download
