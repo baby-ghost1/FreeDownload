@@ -4,24 +4,21 @@ import { z } from 'zod';
 
 /**
  * Load env files if present - no dotenv dependency, Node's built-in loader.
- * `.env.{NODE_ENV}` wins when it exists (e.g. `.env.production`), `.env`
- * is the local-development fallback. Real environments (Render) inject
- * variables directly, so missing files are fine.
+ * Production reads `.env`, local development reads the committed
+ * `.env.example`. Real environments (Render) inject variables directly, so
+ * missing files are fine (injected values always win over file values).
  */
 function loadDotEnv(): void {
-  const names = [`.env.${process.env.NODE_ENV ?? ''}`, '.env'];
+  const name = process.env.NODE_ENV === 'production' ? '.env' : '.env.example';
   for (const base of [process.cwd(), resolve(process.cwd(), '..')]) {
-    for (const name of names) {
-      if (!name || name === '.env.') continue;
-      const candidate = resolve(base, name);
-      if (existsSync(candidate)) {
-        try {
-          process.loadEnvFile(candidate);
-        } catch {
-          // A malformed .env must not crash startup silently - surface below via schema.
-        }
-        return;
+    const candidate = resolve(base, name);
+    if (existsSync(candidate)) {
+      try {
+        process.loadEnvFile(candidate);
+      } catch {
+        // A malformed file must not crash startup silently - surface below via schema.
       }
+      return;
     }
   }
 }
