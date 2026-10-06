@@ -228,7 +228,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   return (
     <div
       data-platform={platform.id}
-      className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-20 sm:px-6 sm:pt-28"
+      className="relative mx-auto w-full max-w-2xl px-4 py-10 sm:px-6"
     >
       <SoftBackdrop />
 
@@ -270,43 +270,73 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 : 'bg-gradient-to-r from-primary via-info to-primary animate-gradient-pan',
             )}
           />
-          <CardContent className="space-y-7 px-4 pt-8 text-center sm:px-8">
-            <motion.div
-              key={job.status}
-              initial={{ opacity: 0, scale: 0.9, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <Badge
-                tone={STATUS_TONE[job.status] ?? 'default'}
-                data-testid="job-status"
-                className="px-3.5 py-1 text-[13px]"
-              >
+          <CardContent className="space-y-6 px-4 pt-8 text-center sm:px-6">
+            {done ? (
+              <span data-testid="job-status" className="sr-only">
                 {stageLabel(job.status)}
-              </Badge>
-              <p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                {platform.id !== 'default' && (
-                  <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-                    <span
-                      aria-hidden="true"
-                      className="size-2 rounded-full"
-                      style={{ background: platform.accent }}
-                    />
-                    via {platform.label}
-                  </span>
-                )}
-                {job.requestedFormat && <span>· {job.requestedFormat}</span>}
-              </p>
-            </motion.div>
+              </span>
+            ) : (
+              <motion.div
+                key={job.status}
+                initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Badge
+                  tone={STATUS_TONE[job.status] ?? 'default'}
+                  data-testid="job-status"
+                  className="px-3.5 py-1 text-[13px]"
+                >
+                  {stageLabel(job.status)}
+                </Badge>
+                <p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  {platform.id !== 'default' && (
+                    <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+                      <span
+                        aria-hidden="true"
+                        className="size-2 rounded-full"
+                        style={{ background: platform.accent }}
+                      />
+                      via {platform.label}
+                    </span>
+                  )}
+                  {job.requestedFormat && <span>· {job.requestedFormat}</span>}
+                </p>
+              </motion.div>
+            )}
 
             {active && (
               <div data-testid="job-progress">
+                <div
+                  aria-hidden="true"
+                  className="relative mx-auto flex size-20 items-center justify-center"
+                >
+                  <motion.span
+                    className="absolute inset-0 rounded-full border-2 border-[#38bdf8]/30"
+                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                  />
+                  <motion.span
+                    className="absolute inset-0 rounded-full border-2 border-[#34d399]/30"
+                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.9 }}
+                  />
+                  <span className="flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-[#38bdf8] to-[#34d399] text-white shadow-2">
+                    <motion.span
+                      animate={{ y: [0, 5, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="flex"
+                    >
+                      <Download className="size-6" aria-hidden="true" />
+                    </motion.span>
+                  </span>
+                </div>
                 <motion.p
                   key={pct}
                   initial={{ opacity: 0.5, scale: 0.97 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-5xl font-semibold tracking-tight tabular-nums"
+                  className="mt-3 text-5xl font-semibold tracking-tight tabular-nums"
                 >
                   {pct}
                   <span className="text-xl text-muted-foreground">%</span>
@@ -340,60 +370,60 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               <ol className="relative mx-auto flex max-w-md items-start justify-between gap-1 text-xs text-muted-foreground">
                 <span
                   aria-hidden="true"
-                  className="absolute left-8 right-8 top-2.5 h-px bg-border"
+                  className="absolute left-[12.5%] right-[12.5%] top-2.5 h-0.5 rounded-full bg-border"
                 />
                 <motion.span
                   aria-hidden="true"
-                  className="absolute left-8 top-2.5 h-px bg-gradient-to-r from-[#38bdf8] to-[#34d399]"
+                  className="absolute left-[12.5%] top-2.5 h-0.5 rounded-full bg-gradient-to-r from-[#38bdf8] to-[#34d399]"
                   initial={false}
                   animate={{
-                    right: `${100 - Math.min(100, (step / (STEPS.length - 1)) * 100)}%`,
+                    width: `${Math.min(100, (step / (STEPS.length - 1)) * 100) * 0.75}%`,
                   }}
                   transition={{ type: 'spring', stiffness: 70, damping: 22 }}
                 />
-              {STEPS.map((s, i) => {
-                const reached = i < step;
-                const current = i === step;
-                return (
-                  <li
-                    key={s.key}
-                    className={cn(
-                      'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
-                      i <= step ? 'text-foreground' : '',
-                    )}
-                    data-testid={`step-${s.key}`}
-                  >
-                    <motion.span
-                      layout
-                      animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                      transition={
-                        current
-                          ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-                          : { type: 'spring', stiffness: 400, damping: 22 }
-                      }
+                {STEPS.map((s, i) => {
+                  const reached = i < step;
+                  const current = i === step;
+                  return (
+                    <li
+                      key={s.key}
                       className={cn(
-                        'relative z-10 flex size-5 items-center justify-center rounded-full border text-[10px] font-semibold',
-                        reached
-                          ? 'border-success bg-success text-white shadow-[0_0_8px_-2px_var(--color-success)]'
-                          : current
-                            ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
-                            : 'border-border-strong bg-surface',
+                        'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
+                        i <= step ? 'text-foreground' : '',
                       )}
+                      data-testid={`step-${s.key}`}
                     >
                       <motion.span
-                        key={reached ? 'tick' : 'num'}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.25 }}
-                        className="flex"
+                        layout
+                        animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                        transition={
+                          current
+                            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                            : { type: 'spring', stiffness: 400, damping: 22 }
+                        }
+                        className={cn(
+                          'relative z-10 flex size-5 items-center justify-center rounded-full border text-[10px] font-semibold',
+                          reached
+                            ? 'border-success bg-success text-white shadow-[0_0_8px_-2px_var(--color-success)]'
+                            : current
+                              ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
+                              : 'border-border-strong bg-surface',
+                        )}
                       >
-                        {reached ? '✓' : i + 1}
+                        <motion.span
+                          key={reached ? 'tick' : 'num'}
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.25 }}
+                          className="flex"
+                        >
+                          {reached ? '✓' : i + 1}
+                        </motion.span>
                       </motion.span>
-                    </motion.span>
-                    <span className="text-[11px] font-medium leading-tight">{s.label}</span>
-                  </li>
-                );
-              })}
+                      <span className="text-[11px] font-medium leading-tight">{s.label}</span>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
 
