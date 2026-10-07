@@ -251,10 +251,10 @@ export default function HomePage() {
         <div className="relative mx-auto w-full max-w-3xl px-4 pb-10 pt-6 text-center sm:px-6 sm:pb-14 sm:pt-10">
           <Enter delay={0.08}>
             <h1 className="text-[1.9rem] font-semibold leading-[1.12] tracking-tight text-foreground sm:text-6xl sm:leading-[1.05]">
-              Paste a link.
+              Download media.
               <br />
               <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
-                Get your file.
+                Fast. Simple. Yours.
               </span>
             </h1>
           </Enter>
