@@ -146,7 +146,7 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
                     alt="Donation QR code"
                     width={168}
                     height={168}
-                    className="rounded-xl bg-white p-3"
+                    className="rounded-lg bg-white p-3"
                   />
                 ) : (
                   <DummyQr />
