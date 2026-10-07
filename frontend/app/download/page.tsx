@@ -265,6 +265,9 @@ function DownloadFlow() {
     analysis !== null &&
     analyzedUrl !== null &&
     normalizeUrl(url) !== analyzedUrl;
+  // Gentle pre-submit hint: non-empty but unparseable input can never
+  // analyze, so say so under the field instead of after a failed roundtrip.
+  const showInvalidHint = url.trim() !== '' && !isValidHttpUrl(normalizeUrl(url)) && !busy;
 
   return (
     <div
@@ -403,7 +406,7 @@ function DownloadFlow() {
               <Button
                 type="submit"
                 loading={phase === 'analyzing'}
-                disabled={phase === 'creating'}
+                disabled={phase === 'creating' || showInvalidHint}
                 className="btn-shine h-12"
                 data-testid="analyze"
               >
@@ -411,6 +414,21 @@ function DownloadFlow() {
               </Button>
             </motion.div>
           </div>
+          <AnimatePresence>
+            {showInvalidHint && (
+              <motion.p
+                key="invalid-hint"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25 }}
+                role="status"
+                className="mt-2 text-center text-xs text-muted-foreground"
+              >
+                That doesn&apos;t look like a link - try https://… or youtube.com/…
+              </motion.p>
+            )}
+          </AnimatePresence>
         </form>
       </Enter>
 
