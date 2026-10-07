@@ -266,7 +266,7 @@ export default function HomePage() {
 
           <Enter delay={0.24}>
             <form onSubmit={start} className="mx-auto mt-8 max-w-xl">
-              <div className="glass group flex gap-2 rounded-2xl border border-border bg-surface/80 p-2 shadow-3 transition-all duration-300 focus-within:border-primary/60 focus-within:shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_14%,transparent),var(--shadow-3)] hover:border-border-strong hover:shadow-3">
+              <div className="glass group flex gap-1.5 rounded-2xl border border-border bg-surface/80 p-2 shadow-3 transition-all duration-300 focus-within:border-primary/60 focus-within:shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_14%,transparent),var(--shadow-3)] hover:border-border-strong hover:shadow-3">
                 <Input
                   ref={inputRef}
                   aria-label="Paste a media link"
