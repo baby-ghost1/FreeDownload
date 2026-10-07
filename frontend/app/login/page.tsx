@@ -96,6 +96,11 @@ export default function LoginPage() {
         title="Welcome back"
         description="Sign in to manage your downloads and account."
         testId="login-page"
+        perks={[
+          'History across all your devices',
+          'Higher daily limits + parallel downloads',
+          'API keys for automation',
+        ]}
         footer={
           <>
             New here? <AuthLink href="/register">Create an account</AuthLink>

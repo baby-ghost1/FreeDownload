@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
+import { Check } from 'lucide-react';
 
 import { Enter } from '@/components/motion/reveal';
 import { BrandMark } from '@/components/brand-icons';
@@ -13,12 +14,15 @@ export function AuthShell({
   children,
   footer,
   testId,
+  perks,
 }: {
   title: string;
   description: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   testId?: string;
+  /** Honest "why sign up" checklist shown above the form. */
+  perks?: string[];
 }) {
   return (
     <div className="relative mx-auto flex w-full max-w-md flex-col justify-center px-4 pb-14 pt-10 sm:px-6 sm:pt-12">
@@ -46,7 +50,19 @@ export function AuthShell({
             <CardTitle className="text-xl">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </CardHeader>
-          <CardContent>{children}</CardContent>
+          <CardContent>
+            {perks && perks.length > 0 && (
+              <ul className="mb-5 space-y-2 rounded-xl border border-border bg-surface-sunken/60 p-3.5">
+                {perks.map((perk) => (
+                  <li key={perk} className="flex items-start gap-2 text-sm text-foreground">
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+                    {perk}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {children}
+          </CardContent>
         </Card>
         {footer && <div className="mt-4 text-center text-sm text-muted-foreground">{footer}</div>}
       </Enter>

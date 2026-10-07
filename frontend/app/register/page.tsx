@@ -42,6 +42,11 @@ export default function RegisterPage() {
       title="Create your account"
       description="Track downloads and manage your links - free to start."
       testId="register-page"
+      perks={[
+        'History across all your devices',
+        'Higher daily limits + parallel downloads',
+        'API keys for automation',
+      ]}
       footer={
         <>
           Already registered? <AuthLink href="/login">Sign in</AuthLink>
