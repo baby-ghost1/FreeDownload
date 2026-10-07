@@ -191,6 +191,15 @@ verification with a 5-minute tolerance; idempotent - subscriptions upsert on
 `provider_ref`, payments `ON CONFLICT DO NOTHING`, replayed events change
 nothing).
 
+Manual UPI billing (no provider needed): `POST
+/subscriptions/upgrade-requests/preview` (price + coupon check) · `POST
+/subscriptions/upgrade-requests` (file a pending request, 409 on duplicate)
+· `GET /subscriptions/upgrade-requests` (mine) · `DELETE
+/subscriptions/upgrade-requests/:id` (cancel own pending) · admin:
+`GET/POST /admin/upgrade-requests` (+ `/:id/approve`, `/:id/reject`),
+`GET/POST/PATCH /admin/coupons`, `PATCH /admin/users/:id/plan` (direct plan,
+no payment), `DELETE /admin/users/:id` (own admin password required).
+
 ### API keys ✅ (Phase 7)
 
 Implemented: `POST /api-keys` (session + CSRF; `fd_live_…` raw value

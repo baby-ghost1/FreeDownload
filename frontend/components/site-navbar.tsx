@@ -20,7 +20,7 @@ import {
 import { SITE_CONFIG } from '@/lib/constants/site';
 import { DonateCoffeeButton } from '@/components/donate-coffee';
 import { useSession } from '@/lib/session';
-import { getPublicConfig } from '@/lib/api/endpoints';
+import { getCurrentSubscription, getPublicConfig } from '@/lib/api/endpoints';
 import type { PublicConfig } from '@/lib/api/types';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { BrandMark } from '@/components/brand-icons';
@@ -77,6 +77,30 @@ function linkVisible(href: Route, navbar: PublicConfig['navbar']): boolean {
   if (href === '/download') return navbar.links.download;
   if (href === '/downloads') return navbar.links.downloads;
   return true;
+}
+
+/** Plan badge next to the signed-in user (paid tiers only, fail-silent). */
+function PlanBadge() {
+  const [plan, setPlan] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void getCurrentSubscription()
+      .then((s) => {
+        if (live && (s.plan.code === 'pro' || s.plan.code === 'business')) {
+          setPlan(s.plan.name);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!plan) return null;
+  return (
+    <span className="shrink-0 rounded-full bg-gradient-to-r from-primary to-info px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+      {plan}
+    </span>
+  );
 }
 
 /** Floating pill navbar - logo left, everything else inside the menu. */
@@ -290,7 +314,10 @@ export function SiteNavbar() {
                           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
                             {user.email.slice(0, 1).toUpperCase()}
                           </span>
-                          <span className="min-w-0 truncate font-medium">{user.email}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium">
+                            {user.email}
+                          </span>
+                          <PlanBadge />
                         </Link>
                       ) : (
                         <Link

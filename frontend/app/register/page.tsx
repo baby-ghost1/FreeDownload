@@ -1,23 +1,34 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Route } from 'next';
+import { Suspense, useState } from 'react';
 
 import { AuthLink, AuthShell } from '@/components/auth/auth-shell';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FieldError, Input, Label, PasswordInput } from '@/components/ui/input';
 import { ApiError } from '@/lib/api/client';
 import { register } from '@/lib/api/endpoints';
 import { useSession } from '@/lib/session';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
-  const { applySession } = useSession();
+  const searchParams = useSearchParams();
+  const { applySession, user } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const next = (() => {
+    const raw = searchParams.get('next');
+    // Same-origin path only - blocks open redirects.
+    if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
+    return '/';
+  })();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,29 +41,26 @@ export default function RegisterPage() {
         ...(displayName.trim() ? { displayName: displayName.trim() } : {}),
       });
       applySession(session);
-      router.push('/');
+      router.push(next as Route);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create the account.');
       setBusy(false);
     }
   };
 
+  if (user) {
+    return (
+      <Alert tone="success">
+        You&apos;re already signed in as {user.email}.{' '}
+        <Link href={next as Route} className="underline">
+          Continue
+        </Link>
+      </Alert>
+    );
+  }
+
   return (
-    <AuthShell
-      title="Create your account"
-      description="Track downloads and manage your links - free to start."
-      testId="register-page"
-      perks={[
-        'History across all your devices',
-        'Higher daily limits + parallel downloads',
-        'API keys for automation',
-      ]}
-      footer={
-        <>
-          Already registered? <AuthLink href="/login">Sign in</AuthLink>
-        </>
-      }
-    >
+    <>
       <form onSubmit={(e) => void submit(e)} className="space-y-4" data-testid="register-form">
         <div>
           <Label htmlFor="reg-email">Email</Label>
@@ -95,10 +103,34 @@ export default function RegisterPage() {
           </p>
         </div>
         {error && <FieldError id="register-error">{error}</FieldError>}
-        <Button type="submit" loading={busy} className="w-full" data-testid="register-submit">
-          Create account
-        </Button>
+      <Button type="submit" loading={busy} className="w-full" data-testid="register-submit">
+        Create account
+      </Button>
       </form>
+    </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <AuthShell
+      title="Create your account"
+      description="Track downloads and manage your links - free to start."
+      testId="register-page"
+      perks={[
+        'History across all your devices',
+        'Higher daily limits + parallel downloads',
+        'API keys for automation',
+      ]}
+      footer={
+        <>
+          Already registered? <AuthLink href="/login">Sign in</AuthLink>
+        </>
+      }
+    >
+      <Suspense fallback={null}>
+        <RegisterForm />
+      </Suspense>
     </AuthShell>
   );
 }

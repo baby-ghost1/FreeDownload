@@ -13,6 +13,8 @@ import { requireAuth } from '../auth/session.js';
 import { getPaymentProvider } from '../../payments/provider.js';
 import { parseStripeEvent, verifyStripeSignature } from '../../payments/webhook.js';
 import { applyStripeEvent } from './events.js';
+import { createUpgradeRequest, getManualPreview } from './manual.js';
+import { upgradeRequests } from '../../database/schema/index.js';
 
 const PlanSchema = z.object({
   code: z.enum(['free', 'pro', 'business']),
@@ -235,6 +237,132 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
       }
 
       return currentFor(auth.user.id);
+    },
+  );
+
+  const UpgradeRequestSchema = z.object({
+    id: z.string(),
+    planCode: z.enum(['pro', 'business']),
+    amountCents: z.number(),
+    currency: z.string(),
+    couponCode: z.string().nullable(),
+    status: z.enum(['pending', 'approved', 'rejected', 'canceled']),
+    reviewedAt: z.coerce.date().nullable(),
+    createdAt: z.coerce.date(),
+  });
+
+  const UpgradeRequestBody = z.object({
+    planCode: z.enum(['pro', 'business']),
+    couponCode: z
+      .string()
+      .trim()
+      .min(1)
+      .max(32)
+      .optional(),
+  });
+
+  app.get(
+    '/subscriptions/upgrade-requests',
+    {
+      schema: {
+        description: 'My manual upgrade requests, newest first.',
+        response: {
+          200: z.object({ data: z.array(UpgradeRequestSchema) }),
+          ...errorResponses(401),
+        },
+      },
+    },
+    async (req) => {
+      const auth = requireAuth(req);
+      const rows = await getDb()
+        .select()
+        .from(upgradeRequests)
+        .where(eq(upgradeRequests.userId, auth.user.id))
+        .orderBy(desc(upgradeRequests.createdAt))
+        .limit(20);
+      return { data: rows };
+    },
+  );
+
+  app.post(
+    '/subscriptions/upgrade-requests/preview',
+    {
+      schema: {
+        description: 'Price preview for a manual upgrade with an optional coupon.',
+        body: UpgradeRequestBody,
+        response: {
+          200: z.object({
+            amountCents: z.number(),
+            currency: z.string(),
+            couponApplied: z.boolean(),
+            percentOff: z.number(),
+          }),
+          ...errorResponses(400, 401),
+        },
+      },
+    },
+    async (req) => {
+      requireAuth(req);
+      return getManualPreview(getDb(), req.body.planCode, req.body.couponCode);
+    },
+  );
+
+  app.post(
+    '/subscriptions/upgrade-requests',
+    {
+      schema: {
+        description:
+          'File a manual upgrade request after paying over UPI (admin verifies).',
+        body: UpgradeRequestBody,
+        response: { 201: UpgradeRequestSchema, ...errorResponses(400, 401, 409) },
+      },
+    },
+    async (req, reply) => {
+      assertCsrf(req);
+      const auth = requireAuth(req);
+      const row = await createUpgradeRequest(
+        getDb(),
+        auth.user.id,
+        req.body.planCode,
+        req.body.couponCode,
+      );
+      return reply.status(201).send(row);
+    },
+  );
+
+  app.delete(
+    '/subscriptions/upgrade-requests/:id',
+    {
+      schema: {
+        description: 'Cancel my pending upgrade request.',
+        params: z.object({ id: z.uuid('A valid id is required.') }),
+        response: {
+          200: z.object({ ok: z.literal(true) }),
+          ...errorResponses(400, 401, 404, 409),
+        },
+      },
+    },
+    async (req) => {
+      assertCsrf(req);
+      const auth = requireAuth(req);
+      const db = getDb();
+      const rows = await db
+        .select()
+        .from(upgradeRequests)
+        .where(eq(upgradeRequests.id, req.params.id))
+        .limit(1);
+      const row = rows[0];
+      if (!row || row.userId !== auth.user.id) {
+        throw new AppError('NOT_FOUND', 'Upgrade request not found.');
+      }
+      if (row.status !== 'pending') {
+        throw new AppError('CONFLICT', `That request is already ${row.status}.`);
+      }
+      await db
+        .update(upgradeRequests)
+        .set({ status: 'canceled', updatedAt: new Date() })
+        .where(eq(upgradeRequests.id, row.id));
+      return { ok: true as const };
     },
   );
 

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { ApiMock } from './api-mock';
 import { businessSubscription, proSubscription } from './fixtures';
 
-test('free plan shows limits and upgrade actions; checkout failure surfaces', async ({ page }) => {
+test('free plan shows limits; UPI modal files an upgrade request', async ({ page }) => {
   const api = new ApiMock(page, { signedIn: true });
   await api.install();
 
@@ -14,7 +14,12 @@ test('free plan shows limits and upgrade actions; checkout failure surfaces', as
   await expect(page.getByTestId('billing-upgrade-pro')).toBeVisible();
 
   await page.getByTestId('billing-upgrade-pro').click();
-  await expect(page.locator('#billing-error')).toContainText('Billing is not configured.');
+  await expect(page.getByTestId('upgrade-title')).toContainText('Pro');
+  await expect(page.getByTestId('upgrade-request')).toBeVisible();
+
+  await page.getByTestId('upgrade-request').click();
+  await expect(page.getByTestId('upgrade-request-item')).toHaveCount(1);
+  await expect(page.getByTestId('upgrade-request-status')).toHaveText('pending');
 });
 
 test('downgrades a provider-less paid plan back to free', async ({ page }) => {

@@ -13,6 +13,7 @@ import { adminSessions, adminUsers } from '../../database/schema/index.js';
 import { errorResponses } from '../../http/error-schema.js';
 import { writeAudit } from './audit.js';
 import { openTotpSecret, sealTotpSecret } from './secret-box.js';
+import { registerAdminBillingRoutes } from './billing.js';
 import { registerAdminResourceRoutes } from './resources.js';
 import {
   clearAdminSessionCookies,
@@ -443,5 +444,6 @@ export async function registerAdminRoutes(app: AppInstance): Promise<void> {
     },
   );
 
+  await registerAdminBillingRoutes(app);
   await registerAdminResourceRoutes(app);
 }

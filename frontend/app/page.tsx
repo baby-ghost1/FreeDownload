@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -23,6 +24,7 @@ import { BrandLogo } from '@/components/brand-icons';
 import { ClipboardToggle } from '@/components/clipboard-toggle';
 import { Enter, Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { getPublicConfig } from '@/lib/api/endpoints';
+import { useSession } from '@/lib/session';
 import { PLATFORM_PILLS } from '@/lib/platform';
 import { formatINR } from '@/lib/format';
 import type { PublicConfig } from '@/lib/api/types';
@@ -204,6 +206,17 @@ export default function HomePage() {
   const [url, setUrl] = useState('');
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { user } = useSession();
+
+  // Paid plan buttons: signed-in users go straight to the upgrade modal,
+  // everyone else registers first and lands back on it.
+  const goPlan = (planCode: string) => {
+    if (user) {
+      router.push(`/account?plan=${planCode}` as Route);
+    } else {
+      router.push(`/register?next=${encodeURIComponent(`/account?plan=${planCode}`)}` as Route);
+    }
+  };
 
   // Long links overflow the field - always show the START of the link
   // (domain + path) instead of the tail.
@@ -543,7 +556,7 @@ export default function HomePage() {
                       {/* Mobile text link / desktop button */}
                       <button
                         type="button"
-                        onClick={() => router.push(paid ? '/register' : '/download')}
+                        onClick={() => (paid ? goPlan(p.code) : router.push('/download'))}
                         className="mx-auto mt-1 w-fit text-xs font-semibold text-primary underline-offset-4 active:underline sm:hidden"
                       >
                         {paid ? 'Get →' : 'Start →'}
@@ -553,7 +566,7 @@ export default function HomePage() {
                           type="button"
                           variant={popular ? 'primary' : 'outline'}
                           size="sm"
-                          onClick={() => router.push(paid ? '/register' : '/download')}
+                          onClick={() => (paid ? goPlan(p.code) : router.push('/download'))}
                           className={cn('w-full', popular && 'btn-shine')}
                         >
                           {paid ? `Get ${p.name}` : 'Start downloading'}

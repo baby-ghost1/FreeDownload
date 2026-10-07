@@ -44,6 +44,7 @@ export class ApiMock {
   private jobPolls = 0;
   private subscription: Subscription;
   private keys: ApiKeyInfo[] = [apiKey];
+  private upgradeRequests: Array<Record<string, unknown>> = [];
   /** Mirrors the real cookie session: auth POSTs flip this on (and off on logout). */
   private signedIn: boolean;
 
@@ -138,6 +139,32 @@ export class ApiMock {
         },
         503,
       );
+    }
+    if (path === '/subscriptions/upgrade-requests/preview' && method === 'POST') {
+      return this.json(route, {
+        amountCents: 999,
+        currency: 'inr',
+        couponApplied: false,
+        percentOff: 0,
+      });
+    }
+    if (path === '/subscriptions/upgrade-requests' && method === 'POST') {
+      this.upgradeRequests = [
+        {
+          id: 'ur-1',
+          planCode: 'pro',
+          amountCents: 999,
+          currency: 'inr',
+          couponCode: null,
+          status: 'pending',
+          reviewedAt: null,
+          createdAt: '2026-10-03T12:00:00.000Z',
+        },
+      ];
+      return this.json(route, this.upgradeRequests[0], 201);
+    }
+    if (path === '/subscriptions/upgrade-requests' && method === 'GET') {
+      return this.json(route, { data: this.upgradeRequests ?? [] });
     }
     if (path === '/api-keys' && method === 'GET') {
       return this.json(route, { data: this.keys });

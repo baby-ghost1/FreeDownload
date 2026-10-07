@@ -6,7 +6,9 @@ import type {
   AdminSessionInfo,
   AdminSource,
   AdminSourcePatch,
+  AdminUpgradeRequest,
   AdminUser,
+  Coupon,
   AnalyzeResult,
   ApiKeyInfo,
   ApiKeyUsage,
@@ -23,6 +25,7 @@ import type {
   Subscription,
   SystemSetting,
   TargetFormat,
+  UpgradeRequest,
   Usage,
   User,
   UserSession,
@@ -170,6 +173,97 @@ export function startCheckout(planCode: string): Promise<{ url: string; provider
   return apiFetch<{ url: string; providerRef: string }>('/payments/checkout', {
     method: 'POST',
     body: { planCode },
+  });
+}
+
+export interface PreviewUpgrade {
+  amountCents: number;
+  currency: string;
+  couponApplied: boolean;
+  percentOff: number;
+}
+
+export function previewUpgradeRequest(input: {
+  planCode: 'pro' | 'business';
+  couponCode?: string;
+}): Promise<PreviewUpgrade> {
+  return apiFetch<PreviewUpgrade>('/subscriptions/upgrade-requests/preview', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export function listMyUpgradeRequests(opts: Opts = {}): Promise<{ data: UpgradeRequest[] }> {
+  return apiFetch<{ data: UpgradeRequest[] }>('/subscriptions/upgrade-requests', opts);
+}
+
+export function createUpgradeRequest(input: {
+  planCode: 'pro' | 'business';
+  couponCode?: string;
+}): Promise<UpgradeRequest> {
+  return apiFetch<UpgradeRequest>('/subscriptions/upgrade-requests', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export function cancelUpgradeRequest(id: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/subscriptions/upgrade-requests/${id}`, { method: 'DELETE' });
+}
+
+export function listAdminUpgradeRequests(
+  status?: 'pending' | 'approved' | 'rejected' | 'canceled',
+  opts: Opts = {},
+): Promise<{ data: AdminUpgradeRequest[] }> {
+  const qs = status ? `?status=${status}` : '';
+  return apiFetch<{ data: AdminUpgradeRequest[] }>(`/admin/upgrade-requests${qs}`, opts);
+}
+
+export function approveUpgradeRequest(id: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/upgrade-requests/${id}/approve`, { method: 'POST' });
+}
+
+export function rejectUpgradeRequest(id: string, reason?: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/upgrade-requests/${id}/reject`, {
+    method: 'POST',
+    body: { reason: reason ?? null },
+  });
+}
+
+export function listAdminCoupons(opts: Opts = {}): Promise<{ data: Coupon[] }> {
+  return apiFetch<{ data: Coupon[] }>('/admin/coupons', opts);
+}
+
+export function createAdminCoupon(input: {
+  code: string;
+  percentOff: number;
+  maxUses?: number | null;
+  expiresAt?: string | null;
+}): Promise<Coupon> {
+  return apiFetch<Coupon>('/admin/coupons', { method: 'POST', body: input });
+}
+
+export function updateAdminCoupon(
+  code: string,
+  patch: { percentOff?: number; maxUses?: number | null; expiresAt?: string | null; active?: boolean },
+): Promise<Coupon> {
+  return apiFetch<Coupon>(`/admin/coupons/${code}`, { method: 'PATCH', body: patch });
+}
+
+export function setAdminUserPlan(
+  id: string,
+  planCode: 'free' | 'pro' | 'business',
+): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/users/${id}/plan`, {
+    method: 'PATCH',
+    body: { planCode },
+  });
+}
+
+export function deleteAdminUser(id: string, password: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/users/${id}`, {
+    method: 'DELETE',
+    body: { password },
   });
 }
 

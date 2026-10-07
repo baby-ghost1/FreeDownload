@@ -13,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   MonitorSmartphone,
+  Receipt,
   ShieldCheck,
   UserRound,
   Users,
@@ -46,6 +47,7 @@ const TABS: Array<{ id: string; href: Route; label: string; icon: React.ReactNod
   { id: 'users', href: '/admin/users', label: 'Users', icon: <Users className="size-4" /> },
   { id: 'flags', href: '/admin/flags', label: 'Flags', icon: <Flag className="size-4" /> },
   { id: 'limits', href: '/admin/limits', label: 'Limits', icon: <Gauge className="size-4" /> },
+  { id: 'billing', href: '/admin/billing', label: 'Billing', icon: <Receipt className="size-4" /> },
   { id: 'site', href: '/admin/site', label: 'Site', icon: <Globe className="size-4" /> },
   {
     id: 'sessions',

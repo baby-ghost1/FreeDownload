@@ -16,8 +16,10 @@ import {
   ListChecks,
   MonitorSmartphone,
   Play,
+  Receipt,
   ScrollText,
   ShieldAlert,
+  Tag,
   UserCheck,
   UserRound,
   Users,
@@ -31,14 +33,22 @@ import { Input, Label } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import {
+  approveUpgradeRequest,
   changeAdminPassword,
+  createAdminCoupon,
+  deleteAdminUser,
   getAdminOverview,
+  listAdminCoupons,
   listAdminFlags,
   listAdminSessions,
   listAdminSettings,
   listAdminSources,
+  listAdminUpgradeRequests,
   listAdminUsers,
+  rejectUpgradeRequest,
   revokeAdminSession,
+  setAdminUserPlan,
+  updateAdminCoupon,
   updateAdminFlag,
   updateAdminSetting,
   updateAdminSource,
@@ -48,7 +58,9 @@ import type {
   AdminOverview,
   AdminSessionInfo,
   AdminSource,
+  AdminUpgradeRequest,
   AdminUser,
+  Coupon,
   FeatureFlag,
   SystemSetting,
 } from '@/lib/api/types';
@@ -472,8 +484,11 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
       onError,
       'users',
     );
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
 
   const toggle = async (user: AdminUser) => {
     setBusyId(user.id);
@@ -485,6 +500,37 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
       reload();
     } catch (err) {
       setActionError(message(err, 'Could not update that user.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const setPlan = async (user: AdminUser, planCode: 'free' | 'pro' | 'business') => {
+    setBusyId(user.id);
+    setActionError(null);
+    try {
+      await setAdminUserPlan(user.id, planCode);
+      toast('Plan updated', 'success');
+      reload();
+    } catch (err) {
+      setActionError(message(err, 'Could not change that plan.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || !deletePassword) return;
+    setBusyId(deleteTarget.id);
+    setActionError(null);
+    try {
+      await deleteAdminUser(deleteTarget.id, deletePassword);
+      toast('User deleted', 'success');
+      setDeleteTarget(null);
+      setDeletePassword('');
+      reload();
+    } catch (err) {
+      setActionError(message(err, 'Could not delete that user.'));
     } finally {
       setBusyId(null);
     }
@@ -572,9 +618,87 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
                   )}
                 </Button>
               )}
+              <label className="sr-only" htmlFor={`plan-${user.id}`}>
+                Plan for {user.email}
+              </label>
+              <select
+                id={`plan-${user.id}`}
+                defaultValue=""
+                disabled={busyId === user.id}
+                onChange={(e) => {
+                  const v = e.target.value as 'free' | 'pro' | 'business';
+                  e.target.value = '';
+                  if (v) void setPlan(user, v);
+                }}
+                data-testid="user-plan"
+                title="Set plan (no payment)"
+                className="h-9 rounded-xl border border-border bg-background px-2 text-xs font-medium"
+              >
+                <option value="">Set plan…</option>
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+                <option value="business">Business</option>
+              </select>
+              <Button
+                size="sm"
+                variant="ghost"
+                loading={busyId === user.id}
+                onClick={() => {
+                  setDeleteTarget(user);
+                  setDeletePassword('');
+                }}
+                data-testid="user-delete"
+                className="rounded-xl text-destructive hover:text-destructive"
+              >
+                Delete
+              </Button>
             </li>
           ))}
           </ul>
+          {deleteTarget && (
+            <div
+              role="alertdialog"
+              aria-label={`Delete ${deleteTarget.email}`}
+              className="flex flex-wrap items-center gap-2 border-t border-border bg-destructive/5 px-4 py-3.5"
+              data-testid="user-delete-confirm"
+            >
+              <p className="min-w-0 flex-1 text-sm">
+                Delete <strong>{deleteTarget.email}</strong> forever? Enter{' '}
+                <strong>your admin password</strong> to confirm.
+              </p>
+              <Input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Admin password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                data-testid="user-delete-password"
+                className="h-9 max-w-52 rounded-xl"
+              />
+              <Button
+                size="sm"
+                variant="destructive"
+                loading={busyId === deleteTarget.id}
+                disabled={!deletePassword}
+                onClick={() => void confirmDelete()}
+                data-testid="user-delete-confirm-btn"
+                className="rounded-xl"
+              >
+                Confirm delete
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePassword('');
+                }}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
           <PaginationBar
             page={page}
             hasPrev={hasPrev}
@@ -1038,6 +1162,276 @@ export function SiteTab({ onError }: { onError: (msg: string | null) => void }) 
             Served through public config (cached ~60s) - visitors pick it up within about a
             minute, no deploy.
           </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function money(cents: number, currency: string): string {
+  return currency.toLowerCase() === 'inr'
+    ? `₹${(cents / 100).toLocaleString('en-IN', { maximumFractionDigits: cents % 100 === 0 ? 0 : 2 })}`
+    : `${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)} ${currency.toUpperCase()}`;
+}
+
+export function BillingTab({ onError }: { onError: (msg: string | null) => void }) {
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const { data, reload } = useTabData<{ data: AdminUpgradeRequest[] }>(
+    () => listAdminUpgradeRequests(filter === 'pending' ? 'pending' : undefined),
+    onError,
+    [filter],
+  );
+  const { data: couponData, reload: reloadCoupons } = useTabData<{ data: Coupon[] }>(
+    () => listAdminCoupons(),
+    onError,
+  );
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [percentOff, setPercentOff] = useState('20');
+  const [maxUses, setMaxUses] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const decide = async (id: string, approve: boolean) => {
+    setBusyId(id);
+    setActionError(null);
+    try {
+      if (approve) await approveUpgradeRequest(id);
+      else await rejectUpgradeRequest(id);
+      reload();
+    } catch (err) {
+      setActionError(message(err, 'Could not decide that request.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleCoupon = async (c: Coupon) => {
+    setBusyId(c.id);
+    setActionError(null);
+    try {
+      await updateAdminCoupon(c.code, { active: !c.active });
+      reloadCoupons();
+    } catch (err) {
+      setActionError(message(err, 'Could not update that coupon.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const createCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setActionError(null);
+    try {
+      await createAdminCoupon({
+        code,
+        percentOff: Number(percentOff),
+        ...(maxUses.trim() ? { maxUses: Number(maxUses) } : {}),
+      });
+      setCode('');
+      setPercentOff('20');
+      setMaxUses('');
+      reloadCoupons();
+    } catch (err) {
+      setActionError(message(err, 'Could not create that coupon.'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader
+        icon={<Receipt className="size-5" />}
+        title="Manual billing"
+        sub="Verify UPI payments, mint coupons, manage plans"
+        right={
+          <Badge tone="info" data-testid="billing-pending-count">
+            {data?.data.filter((r) => r.status === 'pending').length ?? 0} pending
+          </Badge>
+        }
+      />
+      {actionError && (
+        <Alert tone="error" role="alert" className="rounded-2xl">
+          {actionError}
+        </Alert>
+      )}
+
+      <Card className="overflow-hidden rounded-2xl">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>Upgrade requests</CardTitle>
+            <div className="flex gap-1.5">
+              {(['pending', 'all'] as const).map((f) => (
+                <Button
+                  key={f}
+                  size="sm"
+                  variant={filter === f ? 'primary' : 'ghost'}
+                  onClick={() => setFilter(f)}
+                  data-testid={`billing-filter-${f}`}
+                  className="rounded-xl capitalize"
+                >
+                  {f}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!data ? (
+            <Spinner className="mx-auto block size-6" />
+          ) : data.data.length === 0 ? (
+            <EmptyState text="No upgrade requests." />
+          ) : (
+            <ul className="space-y-2">
+              {data.data.map((r) => (
+                <li
+                  key={r.id}
+                  data-testid="billing-request-row"
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {r.userEmail ?? r.userId.slice(0, 8)}
+                      <span className="ml-2 font-normal capitalize text-muted-foreground">
+                        {r.planCode}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {money(r.amountCents, r.currency)}
+                      {r.couponCode ? ` · ${r.couponCode}` : ''} ·{' '}
+                      {new Date(r.createdAt).toLocaleString()}
+                    </span>
+                  </span>
+                  <Badge
+                    tone={
+                      r.status === 'approved'
+                        ? 'success'
+                        : r.status === 'pending'
+                          ? 'warning'
+                          : 'muted'
+                    }
+                  >
+                    {r.status}
+                  </Badge>
+                  {r.status === 'pending' && (
+                    <span className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={busyId === r.id}
+                        onClick={() => void decide(r.id, false)}
+                        data-testid="billing-request-reject"
+                        className="rounded-xl"
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        loading={busyId === r.id}
+                        onClick={() => void decide(r.id, true)}
+                        data-testid="billing-request-approve"
+                        className="rounded-xl"
+                      >
+                        Approve
+                      </Button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden rounded-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="size-4 text-muted-foreground" aria-hidden="true" />
+            Coupons
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <form onSubmit={(e) => void createCoupon(e)} className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label htmlFor="coupon-code">Code</Label>
+              <Input
+                id="coupon-code"
+                placeholder="LAUNCH20"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                data-testid="coupon-code"
+                className="mt-1.5 h-10 w-36 rounded-xl uppercase"
+              />
+            </div>
+            <div>
+              <Label htmlFor="coupon-off">% off</Label>
+              <Input
+                id="coupon-off"
+                inputMode="numeric"
+                value={percentOff}
+                onChange={(e) => setPercentOff(e.target.value)}
+                data-testid="coupon-off"
+                className="mt-1.5 h-10 w-20 rounded-xl text-center"
+              />
+            </div>
+            <div>
+              <Label htmlFor="coupon-uses">Max uses</Label>
+              <Input
+                id="coupon-uses"
+                inputMode="numeric"
+                placeholder="∞"
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)}
+                data-testid="coupon-uses"
+                className="mt-1.5 h-10 w-24 rounded-xl text-center"
+              />
+            </div>
+            <Button
+              size="sm"
+              type="submit"
+              loading={creating}
+              data-testid="coupon-create"
+              className="h-10 rounded-xl"
+            >
+              Generate
+            </Button>
+          </form>
+          {!couponData ? (
+            <Spinner className="mx-auto block size-6" />
+          ) : couponData.data.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No coupons yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {couponData.data.map((c) => (
+                <li
+                  key={c.id}
+                  data-testid="coupon-row"
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm"
+                >
+                  <code className="font-mono font-semibold">{c.code}</code>
+                  <span className="text-muted-foreground">{c.percentOff}% off</span>
+                  <span className="text-xs text-muted-foreground">
+                    {c.usedCount}
+                    {c.maxUses != null ? `/${c.maxUses}` : ''} used
+                  </span>
+                  <Badge tone={c.active ? 'success' : 'muted'}>{c.active ? 'On' : 'Off'}</Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    loading={busyId === c.id}
+                    onClick={() => void toggleCoupon(c)}
+                    data-testid="coupon-toggle"
+                    className="ml-auto rounded-xl"
+                  >
+                    {c.active ? 'Disable' : 'Enable'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>

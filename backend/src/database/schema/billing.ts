@@ -121,3 +121,55 @@ export const usageRecords = pgTable(
 );
 
 export type Plan = typeof plans.$inferSelect;
+
+/**
+ * Manual-billing coupons (contract §Billing): admin-generated percent-off
+ * codes applied to UPI upgrade requests. `usedCount` is bumped when an
+ * upgrade request carrying the code is approved.
+ */
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: id(),
+    code: text('code').notNull(),
+    percentOff: integer('percent_off').notNull(),
+    maxUses: integer('max_uses'),
+    usedCount: integer('used_count').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    active: boolean('active').notNull().default(true),
+    createdBy: text('created_by'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('coupons_code_unique').on(t.code)],
+);
+
+/**
+ * Manual UPI upgrade requests: the user pays via QR, then asks an admin to
+ * verify and activate the plan. One pending request per user at a time.
+ */
+export const upgradeRequests = pgTable(
+  'upgrade_requests',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    planCode: text('plan_code', { enum: ['pro', 'business'] }).notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: text('currency').notNull().default('inr'),
+    couponCode: text('coupon_code'),
+    status: text('status', { enum: ['pending', 'approved', 'rejected', 'canceled'] })
+      .notNull()
+      .default('pending'),
+    note: text('note'),
+    reviewedBy: text('reviewed_by'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('upgrade_requests_user_id_idx').on(t.userId),
+    index('upgrade_requests_status_idx').on(t.status),
+  ],
+);

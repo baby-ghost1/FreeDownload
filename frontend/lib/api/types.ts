@@ -178,6 +178,34 @@ export interface Subscription {
   plan: PlanInfo;
 }
 
+export interface UpgradeRequest {
+  id: string;
+  planCode: 'pro' | 'business';
+  amountCents: number;
+  currency: string;
+  couponCode: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'canceled';
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminUpgradeRequest extends UpgradeRequest {
+  userId: string;
+  userEmail: string | null;
+  reviewedBy: string | null;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  percentOff: number;
+  maxUses: number | null;
+  usedCount: number;
+  expiresAt: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface ApiKeyInfo {
   id: string;
   name: string;

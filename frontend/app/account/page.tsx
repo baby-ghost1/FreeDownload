@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { Check, Copy, CreditCard, KeyRound, LogOut, Monitor, ShieldCheck } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -19,6 +19,7 @@ import { Enter, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { ApiError } from '@/lib/api/client';
 import {
   cancelSubscription,
+  cancelUpgradeRequest,
   createApiKey,
   downgradeToFree,
   getApiKeyUsage,
@@ -26,10 +27,10 @@ import {
   getUsage,
   listApiKeys,
   listMySessions,
+  listMyUpgradeRequests,
   listPlans,
   revokeApiKey,
   revokeMySession,
-  startCheckout,
   updateProfile,
 } from '@/lib/api/endpoints';
 import type {
@@ -37,9 +38,11 @@ import type {
   ApiKeyUsage,
   PlanInfo,
   Subscription,
+  UpgradeRequest,
   Usage,
   UserSession,
 } from '@/lib/api/types';
+import { UpgradeModal } from '@/components/billing/upgrade-modal';
 import { useSession } from '@/lib/session';
 import { formatINR } from '@/lib/format';
 
@@ -104,6 +107,8 @@ export default function AccountPage() {
   const [availablePlans, setAvailablePlans] = useState<PlanInfo[]>([]);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [upgradePlan, setUpgradePlan] = useState<PlanInfo | null>(null);
+  const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[] | null>(null);
 
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null);
   const [keyName, setKeyName] = useState('');
@@ -131,6 +136,9 @@ export default function AccountPage() {
     getCurrentSubscription()
       .then(setSubscription)
       .catch(() => setSubscription(null));
+    listMyUpgradeRequests()
+      .then((r) => setUpgradeRequests(r.data))
+      .catch(() => setUpgradeRequests([]));
     listPlans()
       .then((r) => setAvailablePlans(r.data))
       .catch(() => setAvailablePlans([]));
@@ -176,14 +184,28 @@ export default function AccountPage() {
     }
   };
 
-  const upgrade = async (planCode: string) => {
+  const refreshBilling = async () => {
+    try {
+      setSubscription(await getCurrentSubscription());
+    } catch {
+      // Keep the last known plan on transient failures.
+    }
+    try {
+      setUpgradeRequests((await listMyUpgradeRequests()).data);
+    } catch {
+      setUpgradeRequests([]);
+    }
+  };
+
+  const cancelRequest = async (id: string) => {
     setBillingBusy(true);
     setBillingError(null);
     try {
-      const checkout = await startCheckout(planCode);
-      window.location.assign(checkout.url);
+      await cancelUpgradeRequest(id);
+      await refreshBilling();
     } catch (err) {
-      setBillingError(err instanceof ApiError ? err.message : 'Could not start checkout.');
+      setBillingError(err instanceof ApiError ? err.message : 'Could not cancel the request.');
+    } finally {
       setBillingBusy(false);
     }
   };
@@ -378,7 +400,7 @@ export default function AccountPage() {
                             key={p.code}
                             size="sm"
                             loading={billingBusy}
-                            onClick={() => void upgrade(p.code)}
+                            onClick={() => setUpgradePlan(p)}
                             data-testid={`billing-upgrade-${p.code}`}
                           >
                             Upgrade to {p.name} - {price(p.priceCents)}/{p.interval}
@@ -413,6 +435,53 @@ export default function AccountPage() {
                       </>
                     )}
                   </div>
+
+                  {upgradeRequests && upgradeRequests.length > 0 && (
+                    <div className="space-y-2" data-testid="upgrade-requests">
+                      <p className="text-sm font-medium">Upgrade requests</p>
+                      <ul className="space-y-2">
+                        {upgradeRequests.map((r) => (
+                          <li
+                            key={r.id}
+                            className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-sm"
+                            data-testid="upgrade-request-item"
+                          >
+                            <span className="font-medium capitalize">{r.planCode}</span>
+                            <span className="text-muted-foreground">
+                              {price(r.amountCents)} {r.currency.toUpperCase()}
+                              {r.couponCode ? ` · ${r.couponCode}` : ''}
+                            </span>
+                            <Badge
+                              tone={
+                                r.status === 'approved'
+                                  ? 'success'
+                                  : r.status === 'pending'
+                                    ? 'warning'
+                                    : 'muted'
+                              }
+                              data-testid="upgrade-request-status"
+                            >
+                              {r.status}
+                            </Badge>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {new Date(r.createdAt).toLocaleDateString()}
+                            </span>
+                            {r.status === 'pending' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                loading={billingBusy}
+                                onClick={() => void cancelRequest(r.id)}
+                                data-testid="upgrade-request-cancel"
+                              >
+                                Cancel request
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -704,6 +773,53 @@ export default function AccountPage() {
           </Card>
         </StaggerItem>
       </Stagger>
+
+      <PlanQueryOpener
+        plans={availablePlans}
+        onPick={(p) => setUpgradePlan(p)}
+      />
+      <AnimatePresence>
+        {upgradePlan && (
+          <UpgradeModal
+            plan={upgradePlan}
+            onClose={() => setUpgradePlan(null)}
+            onRequested={() => void refreshBilling()}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+/** Opens the upgrade modal from `?plan=pro|business` (home page deep link). */
+function PlanQueryOpener({
+  plans,
+  onPick,
+}: {
+  plans: PlanInfo[];
+  onPick: (p: PlanInfo) => void;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PlanQueryOpenerInner plans={plans} onPick={onPick} />
+    </Suspense>
+  );
+}
+
+function PlanQueryOpenerInner({
+  plans,
+  onPick,
+}: {
+  plans: PlanInfo[];
+  onPick: (p: PlanInfo) => void;
+}) {
+  const searchParams = useSearchParams();
+  const wanted = searchParams.get('plan');
+  useEffect(() => {
+    if (!wanted || plans.length === 0) return;
+    const match = plans.find((p) => p.code === wanted && p.priceCents > 0);
+    if (match) onPick(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link
+  }, [wanted, plans.length]);
+  return null;
 }
