@@ -21,7 +21,6 @@ import { AdSlot } from '@/components/ad-slot';
 import { BrandLogo } from '@/components/brand-icons';
 import { ClipboardToggle } from '@/components/clipboard-toggle';
 import { Enter, Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
-import { SITE_CONFIG } from '@/lib/constants/site';
 import { getPublicConfig } from '@/lib/api/endpoints';
 import { PLATFORM_PILLS } from '@/lib/platform';
 import type { PublicConfig } from '@/lib/api/types';
@@ -252,17 +251,18 @@ export default function HomePage() {
         <div className="relative mx-auto w-full max-w-3xl px-4 pb-10 pt-6 text-center sm:px-6 sm:pb-14 sm:pt-10">
           <Enter delay={0.08}>
             <h1 className="text-[1.9rem] font-semibold leading-[1.12] tracking-tight text-foreground sm:text-6xl sm:leading-[1.05]">
-              Download media.
+              Paste a link.
               <br />
               <span className="text-gradient animate-gradient-pan bg-[length:220%_220%]">
-                Fast. Simple. Yours.
+                Get your file.
               </span>
             </h1>
           </Enter>
 
           <Enter delay={0.16}>
             <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-              {SITE_CONFIG.description}
+              Drop your link below — we&apos;ll show every format available.
+              Pick one, and it&apos;s yours in seconds.
             </p>
           </Enter>
 
