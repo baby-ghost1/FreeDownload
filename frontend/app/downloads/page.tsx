@@ -316,18 +316,26 @@ export default function MyDownloadsPage() {
                                 style={{ background: platform.accent }}
                               />
                               <span
-                                className="break-all text-sm font-medium text-foreground line-clamp-2"
-                                title={job.url ?? undefined}
+                                className="truncate text-sm font-medium text-foreground"
+                                title={job.title ?? job.url ?? undefined}
                               >
-                                {job.url ?? 'Expired link'}
+                                {job.title ?? job.url ?? 'Expired link'}
                               </span>
                             </span>
-                            <span
-                              className="mt-0.5 block text-xs text-muted-foreground"
-                              title={new Date(job.createdAt).toLocaleString()}
-                            >
-                              {timeAgo(job.createdAt)}
-                              {job.requestedFormat ? ` · ${job.requestedFormat}` : ''}
+                            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="shrink-0" title={new Date(job.createdAt).toLocaleString()}>
+                                {timeAgo(job.createdAt)}
+                              </span>
+                              {job.requestedFormat && (
+                                <span className="shrink-0 rounded-full border border-border bg-surface-sunken px-1.5 py-px font-medium">
+                                  {job.requestedFormat}
+                                </span>
+                              )}
+                              {job.url && (
+                                <span className="min-w-0 flex-1 truncate" title={job.url}>
+                                  · {job.url}
+                                </span>
+                              )}
                             </span>
                           </span>
                           <Badge tone={TONE[job.status] ?? 'default'}>

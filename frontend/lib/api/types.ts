@@ -24,6 +24,7 @@ export interface Job {
   status: JobStatus;
   progress: number;
   url: string | null;
+  title: string | null;
   requestedFormat: string | null;
   targetContainer: string | null;
   errorCode: string | null;

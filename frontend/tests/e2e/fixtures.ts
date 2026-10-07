@@ -115,6 +115,7 @@ export function jobFixture(overrides: Partial<Job> = {}): Job {
     status: 'queued',
     progress: 0,
     url: 'https://media.test/watch?v=abc',
+    title: 'Big Buck Bunny',
     requestedFormat: null,
     targetContainer: null,
     errorCode: null,
