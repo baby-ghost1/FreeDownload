@@ -6,6 +6,7 @@ import {
   Ban,
   CheckCircle2,
   Clock3,
+  Copy,
   Database,
   Download,
   Filter,
@@ -23,6 +24,7 @@ import {
   UserCheck,
   UserRound,
   Users,
+  X,
 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -245,6 +247,73 @@ function SectionHeader({
   );
 }
 
+/**
+ * Centered modal over a blurred page: the console behind goes soft while the
+ * dialog stays fully opaque, edged with a glowing danger/success border.
+ */
+function DialogShell({
+  tone = 'danger',
+  title,
+  sub,
+  onClose,
+  closeTestId,
+  testid,
+  children,
+}: {
+  tone?: 'danger' | 'success';
+  title: string;
+  sub?: string;
+  onClose: () => void;
+  closeTestId?: string;
+  testid?: string;
+  children: React.ReactNode;
+}) {
+  const success = tone === 'success';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xl">
+      <div
+        role="alertdialog"
+        aria-label={title}
+        aria-modal="true"
+        data-testid={testid}
+        className={`max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border bg-surface px-5 py-5 ${
+          success
+            ? 'border-emerald-500/70 shadow-[0_0_28px_rgba(16,185,129,0.35)]'
+            : 'border-red-500/80 shadow-[0_0_28px_rgba(239,68,68,0.4)]'
+        }`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${
+                success
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
+                  : 'border-red-500/40 bg-red-500/10 text-red-500'
+              }`}
+            >
+              {success ? <CheckCircle2 className="size-5" /> : <ShieldAlert className="size-5" />}
+            </span>
+            <span>
+              <span className="block text-sm font-semibold">{title}</span>
+              {sub && <span className="block text-xs text-muted-foreground">{sub}</span>}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            data-testid={closeTestId}
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ icon, text }: { icon?: React.ReactNode; text: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-surface/60 px-4 py-10 text-center">
@@ -448,9 +517,7 @@ export function SourcesTab({ onError }: { onError: (msg: string | null) => void 
                 id={`mode-${source.slug}`}
                 value={source.mode}
                 disabled={busyId === source.id}
-                onChange={(e) =>
-                  void changeMode(source, e.target.value as AdminSource['mode'])
-                }
+                onChange={(e) => void changeMode(source, e.target.value as AdminSource['mode'])}
                 data-testid={`source-mode-${source.slug}`}
                 className="h-10 rounded-xl border border-border bg-background px-2.5 text-[13px] font-medium shadow-1 transition-colors hover:border-border-strong focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-focus-ring disabled:opacity-50"
               >
@@ -490,6 +557,7 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -498,7 +566,37 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deleteAllBusy, setDeleteAllBusy] = useState(false);
   const [deleteAllText, setDeleteAllText] = useState('');
-  const DELETE_ALL_PHRASE = 'delete all the users';
+  const [deleteAllStep, setDeleteAllStep] = useState<1 | 2>(1);
+  const [deleteAllDone, setDeleteAllDone] = useState<number | null>(null);
+  const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const DELETE_ALL_PHRASE = 'DELETE ALL USERS';
+
+  const resetDeleteAll = () => {
+    setDeleteAllOpen(false);
+    setDeleteAllDone(null);
+    setDeleteAllStep(1);
+    setDeletePassword('');
+    setDeleteAllText('');
+    setDeleteAllError(null);
+    setCopied(false);
+  };
+
+  const openDeleteAll = () => {
+    resetDeleteAll();
+    setDeleteAllOpen(true);
+  };
+
+  const copyDeleteAllPhrase = async () => {
+    try {
+      await navigator.clipboard.writeText(DELETE_ALL_PHRASE);
+      setCopied(true);
+      toast('Confirmation phrase copied', 'success');
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast('Could not copy - select the text manually', 'error');
+    }
+  };
 
   const toggle = async (user: AdminUser) => {
     setBusyId(user.id);
@@ -529,18 +627,29 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
     }
   };
 
+  const openDeleteTarget = (user: AdminUser) => {
+    setDeleteTarget(user);
+    setDeletePassword('');
+    setDeleteError(null);
+  };
+
+  const closeDeleteTarget = () => {
+    setDeleteTarget(null);
+    setDeletePassword('');
+    setDeleteError(null);
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget || !deletePassword) return;
     setBusyId(deleteTarget.id);
-    setActionError(null);
+    setDeleteError(null);
     try {
       await deleteAdminUser(deleteTarget.id, deletePassword);
       toast('User deleted', 'success');
-      setDeleteTarget(null);
-      setDeletePassword('');
+      closeDeleteTarget();
       reload();
     } catch (err) {
-      setActionError(message(err, 'Could not delete that user.'));
+      setDeleteError(message(err, 'Could not delete that user.'));
     } finally {
       setBusyId(null);
     }
@@ -565,18 +674,18 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const confirmDeleteAll = async () => {
     if (!deletePassword || deleteAllText.trim() !== DELETE_ALL_PHRASE) return;
     setDeleteAllBusy(true);
-    setActionError(null);
+    setDeleteAllError(null);
     try {
       const r = await deleteAllAdminUsers(deletePassword, deleteAllText.trim());
-      toast(`Deleted all ${r.deleted} users`, 'success');
-      setDeleteAllOpen(false);
+      setDeleteAllDone(r.deleted);
+      setDeleteAllStep(1);
       setDeletePassword('');
       setDeleteAllText('');
       setSelected(new Set());
       setBulkOpen(false);
       reload();
     } catch (err) {
-      setActionError(message(err, 'Could not delete all users.'));
+      setDeleteAllError(message(err, 'Could not delete all users.'));
     } finally {
       setDeleteAllBusy(false);
     }
@@ -609,46 +718,45 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         title="Users"
         sub="Suspend abuse, reactivate genuine accounts"
         right={
-          <span className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={loading}
-              onClick={() => {
-                setDeleteAllOpen((v) => !v);
-                setDeletePassword('');
-              }}
-              data-testid="users-delete-all"
-              className="rounded-full border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 hover:text-destructive"
-            >
-              Delete All Users
-            </Button>
-            <Button
-              size="sm"
-              variant={multiMode ? 'primary' : 'outline'}
-              disabled={loading || items.length === 0}
-              onClick={() => {
-                if (multiMode) {
-                  setMultiMode(false);
-                  setSelected(new Set());
-                  setBulkOpen(false);
-                } else {
-                  setMultiMode(true);
-                  setSelected(new Set(items.map((u) => u.id)));
-                }
-              }}
-              data-testid="users-multi-delete"
-              className="rounded-full px-3 py-1 text-xs"
-            >
-              Delete Multiple
-            </Button>
+          <div className="ml-auto flex items-center gap-2">
             <span
               className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1"
               data-testid="users-count"
             >
               {loading ? '…' : `${items.length} on page ${page + 1}`}
             </span>
-          </span>
+            {!loading && items.length > 0 && (
+              <>
+                <Button
+                  size="sm"
+                  variant={multiMode ? 'primary' : 'outline'}
+                  onClick={() => {
+                    if (multiMode) {
+                      setMultiMode(false);
+                      setSelected(new Set());
+                      setBulkOpen(false);
+                    } else {
+                      setMultiMode(true);
+                      setSelected(new Set(items.map((u) => u.id)));
+                    }
+                  }}
+                  data-testid="users-multi-delete"
+                  className="rounded-full px-3 py-1 text-xs"
+                >
+                  Delete Multiple
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openDeleteAll}
+                  data-testid="users-delete-all"
+                  className="rounded-full border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 hover:text-destructive"
+                >
+                  Delete All Users
+                </Button>
+              </>
+            )}
+          </div>
         }
       />
       {actionError && (
@@ -656,68 +764,189 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
           {actionError}
         </Alert>
       )}
-      {deleteAllOpen && (
-        <div
-          role="alertdialog"
-          aria-label="Delete all users"
-          className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-4"
-          data-testid="users-delete-all-confirm"
+      {(deleteAllOpen || deleteAllDone !== null) && (
+        <DialogShell
+          tone={deleteAllDone !== null ? 'success' : 'danger'}
+          title={deleteAllDone !== null ? 'All users deleted' : 'Delete all users'}
+          sub={
+            deleteAllDone !== null
+              ? 'Every account was removed from the platform.'
+              : 'This action cannot be undone.'
+          }
+          onClose={resetDeleteAll}
+          closeTestId="users-delete-all-close"
+          testid="users-delete-all-confirm"
         >
-          <p className="text-sm font-medium">
-            Are you sure you want to delete all the users? This cannot be undone.
-          </p>
-          <div>
-            <Label htmlFor="delete-all-password">Your admin password</Label>
-            <Input
-              id="delete-all-password"
-              type="password"
-              autoComplete="current-password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              data-testid="users-delete-all-password"
-              className="mt-1.5 h-10 max-w-64 rounded-xl"
-            />
+          {deleteAllDone !== null ? (
+            <div className="space-y-4">
+              <p className="text-sm">
+                Deleted <strong>{deleteAllDone}</strong> {deleteAllDone === 1 ? 'user' : 'users'}{' '}
+                along with their sessions, keys and subscriptions.
+              </p>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={resetDeleteAll}
+                  data-testid="users-delete-all-done-close"
+                  className="rounded-xl"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : deleteAllStep === 1 ? (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">Are you sure you want to delete all the users?</p>
+              <div>
+                <Label htmlFor="delete-all-password">Enter your admin password</Label>
+                <Input
+                  id="delete-all-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  data-testid="users-delete-all-password"
+                  className="mt-1.5 h-10 rounded-xl"
+                />
+              </div>
+              {deleteAllError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {deleteAllError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" onClick={resetDeleteAll} className="rounded-xl">
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={!deletePassword}
+                  onClick={() => setDeleteAllStep(2)}
+                  data-testid="users-delete-all-next"
+                  className="rounded-xl"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label
+                  htmlFor="delete-all-text"
+                  className="mb-1.5 flex flex-wrap items-center gap-1.5"
+                >
+                  <span>
+                    Type{' '}
+                    <code className="rounded bg-muted px-1 font-mono">{DELETE_ALL_PHRASE}</code>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void copyDeleteAllPhrase()}
+                    aria-label={`Copy ${DELETE_ALL_PHRASE}`}
+                    title="Copy to clipboard"
+                    data-testid="users-delete-all-copy"
+                    className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    {copied ? (
+                      <CheckCircle2 className="size-3.5 text-success" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </button>
+                  <span className="font-normal text-muted-foreground">to confirm</span>
+                </Label>
+                <Input
+                  id="delete-all-text"
+                  placeholder={DELETE_ALL_PHRASE}
+                  value={deleteAllText}
+                  onChange={(e) => setDeleteAllText(e.target.value)}
+                  data-testid="users-delete-all-text"
+                  className="h-10 rounded-xl font-mono"
+                />
+              </div>
+              {deleteAllError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {deleteAllError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={deleteAllBusy}
+                  onClick={() => setDeleteAllStep(1)}
+                  data-testid="users-delete-all-back"
+                  className="rounded-xl"
+                >
+                  Back
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  loading={deleteAllBusy}
+                  disabled={!deletePassword || deleteAllText.trim() !== DELETE_ALL_PHRASE}
+                  onClick={() => void confirmDeleteAll()}
+                  data-testid="users-delete-all-confirm-btn"
+                  className="rounded-xl"
+                >
+                  Delete all users
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogShell>
+      )}
+      {deleteTarget && (
+        <DialogShell
+          title={`Delete ${deleteTarget.email}`}
+          sub="This action cannot be undone."
+          onClose={closeDeleteTarget}
+          closeTestId="user-delete-close"
+          testid="user-delete-confirm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm">
+              Delete <strong>{deleteTarget.email}</strong> forever? Enter{' '}
+              <strong>your admin password</strong> to confirm.
+            </p>
+            <div>
+              <Label htmlFor="user-delete-password">Your admin password</Label>
+              <Input
+                id="user-delete-password"
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                data-testid="user-delete-password"
+                className="mt-1.5 h-10 rounded-xl"
+              />
+            </div>
+            {deleteError && (
+              <p className="text-sm text-destructive" role="alert">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={closeDeleteTarget} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                loading={busyId === deleteTarget.id}
+                disabled={!deletePassword}
+                onClick={() => void confirmDelete()}
+                data-testid="user-delete-confirm-btn"
+                className="rounded-xl"
+              >
+                Delete user
+              </Button>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="delete-all-text">
-              Type <code className="rounded bg-muted px-1 font-mono">delete all the users</code> to
-              confirm
-            </Label>
-            <Input
-              id="delete-all-text"
-              placeholder="delete all the users"
-              value={deleteAllText}
-              onChange={(e) => setDeleteAllText(e.target.value)}
-              data-testid="users-delete-all-text"
-              className="mt-1.5 h-10 max-w-64 rounded-xl"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="destructive"
-              loading={deleteAllBusy}
-              disabled={!deletePassword || deleteAllText.trim() !== DELETE_ALL_PHRASE}
-              onClick={() => void confirmDeleteAll()}
-              data-testid="users-delete-all-confirm-btn"
-              className="rounded-xl"
-            >
-              Delete all users
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setDeleteAllOpen(false);
-                setDeletePassword('');
-                setDeleteAllText('');
-              }}
-              className="rounded-xl"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+        </DialogShell>
       )}
       {selected.size > 0 && !bulkOpen && (
         <div
@@ -788,163 +1017,118 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2">
           <ul className="divide-y divide-border">
-          {items.map((user) => (
-            <li
-              key={user.id}
-              data-testid="admin-user-row"
-              onClick={() => {
-                if (multiMode) toggleSelect(user.id);
-              }}
-              className={
-                'flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 ' +
-                (multiMode ? 'cursor-pointer' : '')
-              }
-              >
-              {multiMode && (
-                <input
-                  type="checkbox"
-                  checked={selected.has(user.id)}
-                  onChange={() => toggleSelect(user.id)}
-                  aria-label={`Select ${user.email}`}
-                  data-testid="user-select"
-                  className="size-4 shrink-0 accent-primary"
-                />
-              )}
-              <span
-                className={`flex size-10 shrink-0 items-center justify-center rounded-xl font-semibold ${
-                  user.status === 'suspended'
-                    ? 'bg-destructive/10 text-destructive'
-                    : 'bg-gradient-to-br from-primary/15 to-info/10 text-primary'
-                }`}
-              >
-                {user.email.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{user.email}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  joined {new Date(user.createdAt).toLocaleDateString()}
-                  {user.lastLoginAt
-                    ? ` · last login ${new Date(user.lastLoginAt).toLocaleDateString()}`
-                    : ' · never logged in'}
-                </span>
-              </span>
-              <Badge
-                tone={
-                  user.status === 'active'
-                    ? 'success'
-                    : user.status === 'suspended'
-                      ? 'danger'
-                      : 'muted'
+            {items.map((user) => (
+              <li
+                key={user.id}
+                data-testid="admin-user-row"
+                onClick={() => {
+                  if (multiMode) toggleSelect(user.id);
+                }}
+                className={
+                  'flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 ' +
+                  (multiMode ? 'cursor-pointer' : '')
                 }
               >
-                {user.status}
-              </Badge>
-              {(user.status === 'active' || user.status === 'suspended') && (
+                {multiMode && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(user.id)}
+                    onChange={() => toggleSelect(user.id)}
+                    aria-label={`Select ${user.email}`}
+                    data-testid="user-select"
+                    className="size-4 shrink-0 accent-primary"
+                  />
+                )}
+                <span
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl font-semibold ${
+                    user.status === 'suspended'
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-gradient-to-br from-primary/15 to-info/10 text-primary'
+                  }`}
+                >
+                  {user.email.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{user.email}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    joined {new Date(user.createdAt).toLocaleDateString()}
+                    {user.lastLoginAt
+                      ? ` · last login ${new Date(user.lastLoginAt).toLocaleDateString()}`
+                      : ' · never logged in'}
+                  </span>
+                </span>
+                <Badge
+                  tone={
+                    user.status === 'active'
+                      ? 'success'
+                      : user.status === 'suspended'
+                        ? 'danger'
+                        : 'muted'
+                  }
+                >
+                  {user.status}
+                </Badge>
+                {(user.status === 'active' || user.status === 'suspended') && (
+                  <Button
+                    size="sm"
+                    variant={user.status === 'suspended' ? 'primary' : 'ghost'}
+                    loading={busyId === user.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void toggle(user);
+                    }}
+                    data-testid="user-toggle"
+                    className="rounded-xl"
+                  >
+                    {user.status === 'suspended' ? (
+                      <>
+                        <CheckCircle2 className="size-3.5" /> Activate
+                      </>
+                    ) : (
+                      <>
+                        <Ban className="size-3.5" /> Suspend
+                      </>
+                    )}
+                  </Button>
+                )}
+                <label className="sr-only" htmlFor={`plan-${user.id}`}>
+                  Plan for {user.email}
+                </label>
+                <select
+                  id={`plan-${user.id}`}
+                  defaultValue=""
+                  disabled={busyId === user.id}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    const v = e.target.value as 'free' | 'pro' | 'business';
+                    e.target.value = '';
+                    if (v) void setPlan(user, v);
+                  }}
+                  data-testid="user-plan"
+                  title="Set plan (no payment)"
+                  className="h-9 rounded-xl border border-border bg-background px-2 text-xs font-medium"
+                >
+                  <option value="">Set plan…</option>
+                  <option value="free">Free</option>
+                  <option value="pro">Pro</option>
+                  <option value="business">Business</option>
+                </select>
                 <Button
                   size="sm"
-                  variant={user.status === 'suspended' ? 'primary' : 'ghost'}
+                  variant="ghost"
                   loading={busyId === user.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    void toggle(user);
+                    openDeleteTarget(user);
                   }}
-                  data-testid="user-toggle"
-                  className="rounded-xl"
+                  data-testid="user-delete"
+                  className="rounded-xl text-destructive hover:text-destructive"
                 >
-                  {user.status === 'suspended' ? (
-                    <>
-                      <CheckCircle2 className="size-3.5" /> Activate
-                    </>
-                  ) : (
-                    <>
-                      <Ban className="size-3.5" /> Suspend
-                    </>
-                  )}
+                  Delete
                 </Button>
-              )}
-              <label className="sr-only" htmlFor={`plan-${user.id}`}>
-                Plan for {user.email}
-              </label>
-              <select
-                id={`plan-${user.id}`}
-                defaultValue=""
-                disabled={busyId === user.id}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  const v = e.target.value as 'free' | 'pro' | 'business';
-                  e.target.value = '';
-                  if (v) void setPlan(user, v);
-                }}
-                data-testid="user-plan"
-                title="Set plan (no payment)"
-                className="h-9 rounded-xl border border-border bg-background px-2 text-xs font-medium"
-              >
-                <option value="">Set plan…</option>
-                <option value="free">Free</option>
-                <option value="pro">Pro</option>
-                <option value="business">Business</option>
-              </select>
-              <Button
-                size="sm"
-                variant="ghost"
-                loading={busyId === user.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(user);
-                  setDeletePassword('');
-                }}
-                data-testid="user-delete"
-                className="rounded-xl text-destructive hover:text-destructive"
-              >
-                Delete
-              </Button>
-            </li>
-          ))}
+              </li>
+            ))}
           </ul>
-          {deleteTarget && (
-            <div
-              role="alertdialog"
-              aria-label={`Delete ${deleteTarget.email}`}
-              className="flex flex-wrap items-center gap-2 border-t border-border bg-destructive/5 px-4 py-3.5"
-              data-testid="user-delete-confirm"
-            >
-              <p className="min-w-0 flex-1 text-sm">
-                Delete <strong>{deleteTarget.email}</strong> forever? Enter{' '}
-                <strong>your admin password</strong> to confirm.
-              </p>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                placeholder="Admin password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                data-testid="user-delete-password"
-                className="h-9 max-w-52 rounded-xl"
-              />
-              <Button
-                size="sm"
-                variant="destructive"
-                loading={busyId === deleteTarget.id}
-                disabled={!deletePassword}
-                onClick={() => void confirmDelete()}
-                data-testid="user-delete-confirm-btn"
-                className="rounded-xl"
-              >
-                Confirm delete
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setDeleteTarget(null);
-                  setDeletePassword('');
-                }}
-                className="rounded-xl"
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
           <PaginationBar
             page={page}
             hasPrev={hasPrev}
@@ -1006,7 +1190,11 @@ export function FlagsTab({ onError }: { onError: (msg: string | null) => void })
         icon={<Filter className="size-5" />}
         title="Feature flags"
         sub="Kill-switches and gradual rollouts"
-        right={<Badge tone="info">{data.data.filter((f) => f.enabled).length}/{data.data.length} on</Badge>}
+        right={
+          <Badge tone="info">
+            {data.data.filter((f) => f.enabled).length}/{data.data.length} on
+          </Badge>
+        }
       />
       {actionError && (
         <Alert tone="error" role="alert" className="rounded-2xl">
@@ -1052,7 +1240,10 @@ export function FlagsTab({ onError }: { onError: (msg: string | null) => void })
                 </Button>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-                <Label htmlFor={`rollout-${flag.key}`} className="mb-0 text-xs text-muted-foreground">
+                <Label
+                  htmlFor={`rollout-${flag.key}`}
+                  className="mb-0 text-xs text-muted-foreground"
+                >
                   Rollout %
                 </Label>
                 <Input
@@ -1264,8 +1455,7 @@ const NAVBAR_LINK_META: Array<{ key: keyof NavbarLinks; label: string; hint: str
 ];
 
 function normalizeNavbarLinks(raw: unknown): NavbarLinks {
-  const record =
-    typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   const links =
     typeof record.links === 'object' && record.links !== null
       ? (record.links as Record<string, unknown>)
@@ -1293,8 +1483,7 @@ export function SiteTab({ onError }: { onError: (msg: string | null) => void }) 
   useEffect(() => {
     if (!data) return;
     const raw = data.data.find((s) => s.key === NAVBAR_SETTING_KEY)?.value;
-    const record =
-      typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+    const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
     // eslint-disable-next-line react-hooks/set-state-in-effect -- form drafts mirror the loaded setting
     setVisible(typeof record.visible === 'boolean' ? record.visible : true);
     setLinks(normalizeNavbarLinks(raw));
@@ -1405,8 +1594,8 @@ export function SiteTab({ onError }: { onError: (msg: string | null) => void }) 
             Save navbar
           </Button>
           <p className="text-xs text-muted-foreground">
-            Served through public config (cached ~60s) - visitors pick it up within about a
-            minute, no deploy.
+            Served through public config (cached ~60s) - visitors pick it up within about a minute,
+            no deploy.
           </p>
         </CardContent>
       </Card>

@@ -375,7 +375,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
     },
   );
 
-  const DELETE_ALL_CONFIRM_TEXT = 'delete all the users';
+  const DELETE_ALL_CONFIRM_TEXT = 'DELETE ALL USERS';
 
   const DeleteAllBody = z.object({
     password: z.string().min(1).max(256),
