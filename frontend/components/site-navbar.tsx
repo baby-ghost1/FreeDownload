@@ -163,7 +163,7 @@ export function SiteNavbar() {
         initial={false}
         animate={{ y: '0%', opacity: 1 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-8"
+        className="pointer-events-none relative z-50 px-4 pt-3 sm:px-8"
       >
         <nav
           ref={navRef}
