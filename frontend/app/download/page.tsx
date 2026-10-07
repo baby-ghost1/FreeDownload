@@ -108,7 +108,14 @@ function FormatOption({
           {format.container.toUpperCase()}
           {format.height ? ` · ${format.height}p` : ''}
           {format.fps ? ` · ${format.fps}fps` : ''}
-          {size ? ` · ${size}` : ''}
+          {size ? (
+            <>
+              {' · '}
+              <span className="font-semibold text-foreground">{size}</span>
+            </>
+          ) : (
+            ''
+          )}
         </span>
       </span>
       {spinning ? (
