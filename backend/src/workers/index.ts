@@ -21,6 +21,14 @@ export async function startWorkers(
   };
   await scheduleCleanup();
   logger.info({ concurrency: downloadConcurrency }, 'workers started (download, cleanup)');
+  if (config.cobalt.apiUrl) {
+    logger.info('cobalt fallback enabled for downloads');
+  } else {
+    // Env-gap trap: the API and worker are separate processes - COBALT_API_URL
+    // must be set in BOTH terminals, or analyze falls back while downloads
+    // stay yt-dlp-only and fail the same way as before.
+    logger.warn('COBALT_API_URL unset - downloads run yt-dlp-only (no fallback)');
+  }
   return handles;
 }
 
