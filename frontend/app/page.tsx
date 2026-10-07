@@ -9,6 +9,7 @@ import {
   FileDown,
   Link2,
   MousePointerClick,
+  ShieldCheck,
   Timer,
   Zap,
 } from 'lucide-react';
@@ -48,6 +49,30 @@ const TRUST = [
   { icon: Zap, label: 'No sign-up needed' },
   { icon: AudioLines, label: 'HD video + MP3 audio' },
   { icon: Timer, label: 'Links auto-expire' },
+];
+
+/* Mobile-first: single column on phones, 2-col from sm. Honest claims only. */
+const FORMATS = [
+  {
+    icon: FileDown,
+    title: 'Video up to source quality',
+    body: 'Pick the resolution that suits you — what you choose is what you get.',
+  },
+  {
+    icon: AudioLines,
+    title: 'Audio-only MP3 / M4A',
+    body: 'Just need the sound? Grab a lightweight audio file in one tap.',
+  },
+  {
+    icon: Zap,
+    title: 'No software to install',
+    body: 'Everything runs in your browser. Paste, pick, download — done.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Private by default',
+    body: 'For media you own or have permission to download. Links expire automatically.',
+  },
 ];
 
 /* Faded brand glyphs that drift gently behind the hero. Deliberately faint -
@@ -335,6 +360,42 @@ export default function HomePage() {
                   <CardContent className="text-sm leading-relaxed text-muted-foreground">
                     {step.body}
                   </CardContent>
+                </Card>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
+      </section>
+
+      {/* What you get - answers quality/safety objections, mobile stacks first */}
+      <section aria-label="What you get" className="relative overflow-hidden">
+        <div className="relative mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-14">
+          <Reveal>
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Why FreeDownload
+            </p>
+            <h2 className="mt-2 text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              Made for quick, clean downloads
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
+              No toolbars, no installers — just the file you asked for.
+            </p>
+          </Reveal>
+          <Stagger className="mt-8 grid gap-3 sm:grid-cols-2">
+            {FORMATS.map((f) => (
+              <StaggerItem key={f.title}>
+                <Card className="flex h-full items-start gap-3 p-4 sm:p-5">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-info/15 text-primary ring-1 ring-primary/20">
+                    <f.icon className="size-5" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-foreground sm:text-base">
+                      {f.title}
+                    </span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                      {f.body}
+                    </span>
+                  </span>
                 </Card>
               </StaggerItem>
             ))}
