@@ -136,6 +136,7 @@ Job payload - no raw URL, hash, IP or lease ever crosses the wire:
   "status": "queued",
   "progress": 0,
   "url": "https://example.com/watch",
+  "title": "Example video title",
   "requestedFormat": null,
   "targetContainer": null,
   "errorCode": null,
