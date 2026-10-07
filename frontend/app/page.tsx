@@ -24,6 +24,7 @@ import { ClipboardToggle } from '@/components/clipboard-toggle';
 import { Enter, Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { getPublicConfig } from '@/lib/api/endpoints';
 import { PLATFORM_PILLS } from '@/lib/platform';
+import { formatINR } from '@/lib/format';
 import type { PublicConfig } from '@/lib/api/types';
 import { cn } from '@/lib/utils/cn';
 
@@ -275,7 +276,7 @@ export default function HomePage() {
                 <Input
                   ref={inputRef}
                   aria-label="Paste a media link"
-                  placeholder="Paste a YouTube, TikTok or Instagram link…"
+                    placeholder="Paste a Facebook, Instagram or YouTube link…"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onBlur={scrollToStart}
@@ -510,11 +511,7 @@ export default function HomePage() {
                     Math.min(
                       ...config.plans.filter((q) => q.priceCents > 0).map((q) => q.priceCents),
                     );
-                const price = `${new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: p.currency.toUpperCase(),
-                  minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
-                }).format(p.priceCents / 100)}/${p.interval}`;
+                const price = `${formatINR(p.priceCents)}/${p.interval}`;
                 return (
                   <StaggerItem key={p.code} className="h-full min-w-0">
                     <Card

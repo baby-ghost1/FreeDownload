@@ -41,14 +41,10 @@ import type {
   UserSession,
 } from '@/lib/api/types';
 import { useSession } from '@/lib/session';
+import { formatINR } from '@/lib/format';
 
-function price(cents: number, currency: string): string {
-  const value = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
-  }).format(value);
+function price(cents: number): string {
+  return formatINR(cents);
 }
 
 function limitsText(sub: Subscription): string {
@@ -385,7 +381,7 @@ export default function AccountPage() {
                             onClick={() => void upgrade(p.code)}
                             data-testid={`billing-upgrade-${p.code}`}
                           >
-                            Upgrade to {p.name} - {price(p.priceCents, p.currency)}/{p.interval}
+                            Upgrade to {p.name} - {price(p.priceCents)}/{p.interval}
                           </Button>
                         ))
                     ) : (

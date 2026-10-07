@@ -1,5 +1,11 @@
 /** Human-friendly formatting for job/analyzer payloads (client-side only). */
 
+/** Plan pricing as INR text ("INR 499") - DB stores paise (49900 = Rs 499). */
+export function formatINR(cents: number): string {
+  const rupees = cents / 100;
+  return `INR ${Number.isInteger(rupees) ? String(rupees) : rupees.toFixed(2)}`;
+}
+
 export function formatDuration(totalSeconds: number | null | undefined): string | null {
   if (totalSeconds === null || totalSeconds === undefined || !Number.isFinite(totalSeconds)) {
     return null;
