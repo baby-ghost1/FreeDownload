@@ -521,15 +521,16 @@ export default function HomePage() {
                       className={cn(
                         'flex h-full flex-col border-transparent bg-transparent p-2 text-center shadow-none',
                         'sm:border-border sm:bg-surface sm:p-5 sm:shadow-2',
-                        popular && 'sm:border-primary/50 sm:shadow-3 sm:ring-1 sm:ring-primary/30',
+                        popular &&
+                          'sm:relative sm:border-primary/50 sm:shadow-3 sm:ring-1 sm:ring-primary/30',
                       )}
                     >
-                      {/* Mobile label line / desktop pill */}
+                      {/* Mobile label line / desktop border badge */}
                       <p className="min-h-4 text-[10px] font-bold uppercase tracking-wider text-primary sm:hidden">
                         {popular ? 'Popular' : ' '}
                       </p>
                       {popular && (
-                        <span className="mx-auto mb-2 hidden w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary ring-1 ring-primary/25 sm:block">
+                        <span className="absolute -top-3 left-1/2 hidden -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-info px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap text-white shadow-2 sm:block">
                           Most popular
                         </span>
                       )}
