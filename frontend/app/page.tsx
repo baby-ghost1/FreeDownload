@@ -447,6 +447,62 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Plans teaser - real data from public config only, no invented claims */}
+      {config && config.plans.length > 0 && (
+        <section aria-label="Plans" className="relative overflow-hidden">
+          <div className="relative mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-14">
+            <Reveal>
+              <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Plans
+              </p>
+              <h2 className="mt-2 text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+                Free to start, Pro when you need more
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
+                Higher daily limits, more parallel downloads, bigger files.
+              </p>
+            </Reveal>
+            <Stagger className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
+              {config.plans.map((p) => {
+                const paid = p.priceCents > 0;
+                const price =
+                  paid &&
+                  ` ${new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: p.currency.toUpperCase(),
+                    minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
+                  }).format(p.priceCents / 100)}/${p.interval}`;
+                return (
+                  <StaggerItem key={p.code}>
+                    <Card
+                      className={
+                        paid
+                          ? 'h-full border-primary/40 p-5 text-center shadow-2'
+                          : 'h-full p-5 text-center'
+                      }
+                    >
+                      <p className="text-sm font-semibold text-foreground">{p.name}</p>
+                      <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+                        {paid ? price : 'Free'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant={paid ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => router.push(paid ? '/register' : '/download')}
+                        className="mt-4 w-full"
+                      >
+                        {paid ? `Get ${p.name}` : 'Start downloading'}
+                      </Button>
+                    </Card>
+                  </StaggerItem>
+                );
+              })}
+            </Stagger>
+          </div>
+        </section>
+      )}
+
       {/* Ad slot - rendered only when the `ads` flag is on for this subject */}
       {config?.flags.ads === true && (
         <section>
