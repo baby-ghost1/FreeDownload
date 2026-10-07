@@ -1,11 +1,12 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   AudioLines,
+  ChevronRight,
   FileDown,
   Link2,
   MousePointerClick,
@@ -226,6 +227,8 @@ export default function HomePage() {
   }, []);
 
   const [going, setGoing] = useState(false);
+  // FAQ accordion: one open at a time, same question toggles shut.
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const start = (e: React.FormEvent) => {
     e.preventDefault();
     setGoing(true);
@@ -427,22 +430,58 @@ export default function HomePage() {
             </h2>
           </Reveal>
           <div className="mt-8 space-y-2.5">
-            {FAQS.map((f) => (
-              <Reveal key={f.q}>
-                <details className="group rounded-xl border border-border bg-surface px-4 py-1 shadow-1 transition-colors open:border-primary/40">
-                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    {f.q}
-                    <span
-                      aria-hidden="true"
-                      className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-transform duration-300 group-open:rotate-45 group-open:border-primary/40 group-open:text-primary"
+            {FAQS.map((f, i) => {
+              const open = openFaq === i;
+              return (
+                <Reveal key={f.q}>
+                  <div
+                    className={cn(
+                      'rounded-xl border bg-surface px-4 py-1 shadow-1 transition-colors',
+                      open ? 'border-primary/40' : 'border-border',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(open ? null : i)}
+                      aria-expanded={open}
+                      aria-controls={`faq-panel-${i}`}
+                      className="flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground"
                     >
-                      +
-                    </span>
-                  </summary>
-                  <p className="pb-4 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
-                </details>
-              </Reveal>
-            ))}
+                      {f.q}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'flex size-7 shrink-0 items-center justify-center rounded-full border transition-all duration-300',
+                          open
+                            ? 'rotate-90 border-primary/40 text-primary'
+                            : 'border-border text-muted-foreground',
+                        )}
+                      >
+                        <ChevronRight className="size-4" aria-hidden="true" />
+                      </span>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {open && (
+                        <motion.div
+                          key="panel"
+                          id={`faq-panel-${i}`}
+                          role="region"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <p className="pb-4 text-sm leading-relaxed text-muted-foreground">
+                            {f.a}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
