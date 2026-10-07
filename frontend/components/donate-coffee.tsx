@@ -8,12 +8,8 @@ import { useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils/cn';
 
-/**
- * Replace with your real payment QR image path (e.g. `/donate-qr.png` in
- * `frontend/public/`) whenever ready. While null, a clearly-marked dummy
- * pattern renders so the layout can be reviewed.
- */
-export const DONATE_QR_SRC: string | null = null;
+/** Payment QR image served from `frontend/public`. */
+export const DONATE_QR_SRC: string | null = '/donate-qr.png';
 
 /** Deterministic dummy QR-lookalike (NOT scannable) for layout review. */
 function DummyQr({ size = 168 }: { size?: number }) {
@@ -153,12 +149,7 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
                     className="rounded-xl border border-border"
                   />
                 ) : (
-                  <div className="text-center">
-                    <DummyQr />
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">
-                      Sample QR - real code coming soon
-                    </p>
-                  </div>
+                  <DummyQr />
                 )}
               </div>
               <div className="mt-4">
