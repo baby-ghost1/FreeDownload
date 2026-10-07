@@ -309,39 +309,6 @@ export default function AccountPage() {
 
       <Stagger className="relative space-y-6">
         <StaggerItem>
-          <Card data-testid="account-page" className="overflow-hidden">
-            <div aria-hidden="true" className="h-px bg-border/70" />
-            <CardHeader>
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>{user.email}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={(e) => void saveProfile(e)}
-                className="space-y-4"
-                data-testid="profile-form"
-              >
-                <div>
-                  <Label htmlFor="profile-name">Display name</Label>
-                  <Input
-                    id="profile-name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    maxLength={80}
-                    placeholder="How should we greet you?"
-                  />
-                </div>
-                {profileError && <FieldError id="profile-error">{profileError}</FieldError>}
-                {profileSaved && <Alert tone="success">Profile saved.</Alert>}
-                <Button type="submit" loading={profileBusy} data-testid="profile-submit">
-                  Save profile
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </StaggerItem>
-
-        <StaggerItem>
           <Card className="overflow-hidden">
             <div
               aria-hidden="true"
@@ -440,6 +407,39 @@ export default function AccountPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </StaggerItem>
+
+        <StaggerItem>
+          <Card data-testid="account-page" className="overflow-hidden">
+            <div aria-hidden="true" className="h-px bg-border/70" />
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>{user.email}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => void saveProfile(e)}
+                className="space-y-4"
+                data-testid="profile-form"
+              >
+                <div>
+                  <Label htmlFor="profile-name">Display name</Label>
+                  <Input
+                    id="profile-name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    maxLength={80}
+                    placeholder="How should we greet you?"
+                  />
+                </div>
+                {profileError && <FieldError id="profile-error">{profileError}</FieldError>}
+                {profileSaved && <Alert tone="success">Profile saved.</Alert>}
+                <Button type="submit" loading={profileBusy} data-testid="profile-submit">
+                  Save profile
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </StaggerItem>
