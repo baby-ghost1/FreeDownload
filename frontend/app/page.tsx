@@ -266,44 +266,38 @@ export default function HomePage() {
 
           <Enter delay={0.24}>
             <form onSubmit={start} className="mx-auto mt-8 max-w-xl">
-              <div className="glass group flex flex-col gap-2 rounded-2xl border border-border bg-surface/80 p-2 shadow-3 transition-all duration-300 focus-within:border-primary/60 focus-within:shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_14%,transparent),var(--shadow-3)] hover:border-border-strong hover:shadow-3 sm:flex-row sm:items-center">
-                <div className="flex flex-1 items-center gap-1">
-                  <Input
-                    ref={inputRef}
-                    aria-label="Paste a media link"
-                    placeholder="Paste a YouTube, TikTok or Instagram link…"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    onBlur={scrollToStart}
-                    onPaste={() => {
-                      // Browser drops the caret at the end after paste (tail
-                      // visible) - pull the view back to the start of the link.
-                      setTimeout(scrollToStart, 0);
-                    }}
-                    type="url"
-                    inputMode="url"
-                    className={`h-12 flex-1 border-0 bg-transparent text-left shadow-none focus-visible:outline-none ${url.trim() ? 'mask-input-r' : ''}`}
-                    data-testid="hero-url"
-                  />
-                  <ClipboardToggle
-                    value={url}
-                    onPaste={(v) => {
-                      setUrl(v);
-                      scrollToStart();
-                    }}
-                    onClear={() => setUrl('')}
-                  />
-                </div>
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="w-full shrink-0 sm:w-auto"
-                >
+              <div className="glass group flex gap-2 rounded-2xl border border-border bg-surface/80 p-2 shadow-3 transition-all duration-300 focus-within:border-primary/60 focus-within:shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_14%,transparent),var(--shadow-3)] hover:border-border-strong hover:shadow-3">
+                <Input
+                  ref={inputRef}
+                  aria-label="Paste a media link"
+                  placeholder="Paste a YouTube, TikTok or Instagram link…"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onBlur={scrollToStart}
+                  onPaste={() => {
+                    // Browser drops the caret at the end after paste (tail
+                    // visible) - pull the view back to the start of the link.
+                    setTimeout(scrollToStart, 0);
+                  }}
+                  type="url"
+                  inputMode="url"
+                  className={`h-12 flex-1 border-0 bg-transparent text-left shadow-none focus-visible:outline-none ${url.trim() ? 'mask-input-r' : ''}`}
+                  data-testid="hero-url"
+                />
+                <ClipboardToggle
+                  value={url}
+                  onPaste={(v) => {
+                    setUrl(v);
+                    scrollToStart();
+                  }}
+                  onClear={() => setUrl('')}
+                />
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}>
                   <Button
                     type="submit"
                     size="lg"
                     loading={going}
-                    className="btn-shine h-12 w-full px-5 shadow-2 sm:w-auto"
+                    className="btn-shine h-12 shrink-0 px-5 shadow-2"
                     data-testid="hero-go"
                   >
                     {!going && (
