@@ -27,6 +27,7 @@ const JobSchema = z.object({
   status: JobStatusSchema,
   progress: z.number(),
   url: z.string().nullable(),
+  title: z.string().nullable(),
   requestedFormat: z.string().nullable(),
   targetContainer: z.string().nullable(),
   errorCode: z.string().nullable(),
@@ -129,12 +130,13 @@ function actorOf(req: {
 }
 
 /** Only `toJobResponse` output ever reaches a client - no hashes, IPs, leases. */
-function toJobResponse(job: DownloadJob) {
+function toJobResponse(job: DownloadJob & { title?: string | null }) {
   return {
     id: job.id,
     status: job.status,
     progress: job.progress,
     url: job.urlRedacted,
+    title: job.title ?? null,
     requestedFormat: job.requestedFormat,
     targetContainer: job.targetContainer,
     errorCode: job.errorCode,

@@ -9,6 +9,7 @@ import {
   downloadSources,
   files,
   mediaFormats,
+  mediaMetadata,
   type DownloadJob,
 } from '../../database/schema/index.js';
 import { sha256 } from '../../utils/crypto.js';
@@ -271,7 +272,7 @@ export async function listOwnJobs(
   actor: DownloadActor,
   input: { limit: number; cursor?: string | undefined },
   db: Database = getDb(),
-): Promise<{ data: DownloadJob[]; nextCursor: string | null }> {
+): Promise<{ data: Array<DownloadJob & { title: string | null }>; nextCursor: string | null }> {
   if (!actor.userId && !actor.anonKey) {
     throw new AppError('UNAUTHORIZED', 'Authentication is required.');
   }
@@ -284,14 +285,16 @@ export async function listOwnJobs(
     input.cursor ? lt(downloadJobs.createdAt, decodeJobsCursor(input.cursor)) : undefined,
   ].filter((c) => c !== undefined);
 
+  // History rows show the media title first - one cheap join, no N+1.
   const rows = await db
-    .select()
+    .select({ job: downloadJobs, title: mediaMetadata.title })
     .from(downloadJobs)
+    .leftJoin(mediaMetadata, eq(mediaMetadata.jobId, downloadJobs.id))
     .where(and(...conditions))
     .orderBy(desc(downloadJobs.createdAt))
     .limit(limit + 1);
 
-  const page = rows.slice(0, limit);
+  const page = rows.slice(0, limit).map((r) => ({ ...r.job, title: r.title }));
   const last = page[page.length - 1];
   return {
     data: page,
