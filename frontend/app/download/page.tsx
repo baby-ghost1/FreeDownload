@@ -224,6 +224,17 @@ function DownloadFlow() {
 
   const videoFormats = analysis?.formats.filter((f) => f.kind === 'video') ?? [];
   const audioFormats = analysis?.formats.filter((f) => f.kind === 'audio') ?? [];
+  // One-tap pick: backend recommendation first, else highest video
+  // resolution, else first audio. List below stays for manual choice.
+  const bestFormat =
+    analysis?.formats.find((f) => f.isDefault) ??
+    videoFormats.reduce<AnalyzeFormat | null>(
+      (best, f) => (!best || (f.height ?? 0) > (best.height ?? 0) ? f : best),
+      null,
+    ) ??
+    audioFormats[0] ??
+    null;
+  const bestSize = bestFormat ? formatBytes(bestFormat.filesizeBytes) : '';
   const duration = formatDuration(analysis?.durationSec);
   const activeStep = phase === 'idle' ? 0 : phase === 'analyzing' ? 1 : 2;
   const busy = phase === 'analyzing' || phase === 'creating';
@@ -521,6 +532,26 @@ function DownloadFlow() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5 pt-4">
+                {bestFormat && (
+                  <div className="space-y-1.5">
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={phase === 'creating' || stale}
+                      loading={selectedKey === bestFormat.key}
+                      onClick={() => void selectFormat(bestFormat)}
+                      data-testid="format-best"
+                      className="btn-shine h-12 w-full"
+                    >
+                      <Download className="size-4" aria-hidden="true" />
+                      Download {bestFormat.label}
+                      {bestSize ? ` • ${bestSize}` : ''}
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      Best available — or pick another format below
+                    </p>
+                  </div>
+                )}
                 <section>
                   <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Clapperboard className="size-4 text-muted-foreground" aria-hidden="true" />
