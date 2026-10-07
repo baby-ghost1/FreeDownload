@@ -62,6 +62,26 @@ function formatElapsed(ms: number): string {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Unique on-device filename: FreeDownload_07-10-2026_Tue_143022_a1b2.mp4.
+ * Date + weekday + time come from the job; the trailing job-id slice stands
+ * in for a day-serial (no backend counter yet) and guarantees no two
+ * platform downloads ever share a name - phones stop warning
+ * "download again" on first-time saves.
+ */
+function buildFileName(jobId: string, createdAt: string, container: string): string {
+  const d = new Date(createdAt);
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const date = `${p2(d.getDate())}-${p2(d.getMonth() + 1)}-${d.getFullYear()}`;
+  const day = WEEKDAYS[d.getDay()] ?? '';
+  const time = `${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+  const serial = (jobId.replace(/[^a-zA-Z0-9]/g, '').slice(-4) || '0000').toLowerCase();
+  const ext = (container || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4';
+  return `FreeDownload_${date}_${day}_${time}_${serial}.${ext}`;
+}
+
 /** Live "expires in 14:32" chip for the signed download link. */
 function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   const now = useNow();
@@ -260,6 +280,9 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const blocked = job.status === 'policy_restricted';
   const platform = detectPlatform(job.url);
   const elapsed = formatElapsed(now - new Date(job.createdAt).getTime());
+  const fileName = result
+    ? buildFileName(job.id, job.createdAt, result.container ?? 'mp4')
+    : null;
 
   const onCancel = async () => {
     setCancelling(true);
@@ -483,7 +506,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                     </span>
                     <div className="min-w-0 text-left">
                       <p className="truncate text-sm font-semibold text-foreground">
-                        media.{result.container ?? 'mp4'}
+                        {fileName}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         {size && (
@@ -501,7 +524,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.96 }}
                       href={result.url}
-                      download
+                      download={fileName ?? undefined}
                       data-testid="download-link"
                       onClick={(e) => {
                         if (alreadyDownloaded && !confirmAgain) {
@@ -547,7 +570,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       <motion.a
                         whileTap={{ scale: 0.96 }}
                         href={result.url}
-                        download
+                        download={fileName ?? undefined}
                         onClick={markDownloaded}
                         data-testid="redownload-yes"
                         className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
