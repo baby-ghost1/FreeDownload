@@ -142,6 +142,17 @@ const EnvSchema = z.object({
   SMTP_FROM: z.string().default('FreeDownload <no-reply@example.com>'),
   MAIL_TRANSPORT: z.enum(['console', 'smtp']).default('console'),
 
+  // --- keepalive (Render free tier) ---------------------------------------
+  // Render spins free web services down after 15 idle minutes. When
+  // enabled, the API pings its own /health on a shorter interval, so quiet
+  // stretches never trigger a cold start. Burn note: an always-warm service
+  // consumes ~720 of the 750 free instance-hours per month.
+  SELF_PING_ENABLED: boolish.default(false),
+  SELF_PING_URL: z.string().optional(),
+  SELF_PING_INTERVAL_MIN: z.coerce.number().int().min(1).default(10),
+  // Render injects this automatically - used when SELF_PING_URL is unset.
+  RENDER_EXTERNAL_URL: z.string().optional(),
+
   // --- observability ------------------------------------------------------
   SENTRY_DSN: z.string().optional(),
 });
@@ -328,6 +339,13 @@ export const config = {
   worker: {
     runner: env.WORKER_RUNNER,
     embedded: env.WORKER_IN_API,
+  },
+  /** Self-ping keepalive against Render's 15-minute idle spin-down. */
+  selfPing: {
+    enabled: env.SELF_PING_ENABLED,
+    url: env.SELF_PING_URL,
+    intervalMin: env.SELF_PING_INTERVAL_MIN,
+    renderUrl: env.RENDER_EXTERNAL_URL,
   },
 } as const;
 

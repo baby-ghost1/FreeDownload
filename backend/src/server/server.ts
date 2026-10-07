@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import { config } from './config.js';
+import { resolveSelfPingUrl, startSelfPing, type SelfPingHandle } from '../keepalive/self-ping.js';
 import { logger } from '../logging/logger.js';
 import { closeQueues } from '../queue/queues.js';
 import { closeRedis } from '../redis/client.js';
@@ -14,10 +15,12 @@ async function main(): Promise<void> {
     // one command (and one Render free instance) runs everything.
     workers = await startWorkers();
   }
+  let selfPing: SelfPingHandle | null = null;
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'shutting down');
     try {
+      if (selfPing) selfPing.stop();
       if (workers) {
         await stopWorkers(workers);
         await closeQueues();
@@ -44,6 +47,20 @@ async function main(): Promise<void> {
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
     logger.info({ port: config.port, url: `http://localhost:${config.port}` }, 'api listening');
+    if (config.selfPing.enabled) {
+      const target = resolveSelfPingUrl(config.selfPing.url, config.selfPing.renderUrl);
+      if (!target) {
+        logger.warn(
+          'SELF_PING_ENABLED without SELF_PING_URL or RENDER_EXTERNAL_URL - keepalive stays off',
+        );
+      } else {
+        selfPing = startSelfPing({ url: target, intervalMs: config.selfPing.intervalMin * 60_000 });
+        logger.info(
+          { target, intervalMin: config.selfPing.intervalMin },
+          'self-ping keepalive on',
+        );
+      }
+    }
   } catch (err) {
     logger.fatal({ err }, 'failed to start api');
     process.exit(1);
