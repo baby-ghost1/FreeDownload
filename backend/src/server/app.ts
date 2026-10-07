@@ -81,26 +81,57 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     hsts: config.isProduction ? { maxAge: 31_536_000, includeSubDomains: true } : false,
   });
 
+  // Weather-API model for third-party sites: any browser origin may call
+  // `/api/v1/downloads*`, but WITHOUT credentials - browsers then refuse
+  // to attach session cookies, so only Bearer API keys work cross-origin.
+  // Everything else keeps the strict origin allowlist WITH credentials.
+  // Preflights never carry Authorization, so the decision is made on the
+  // request path, never on headers.
+  const thirdPartyPrefixes = ['/api/v1/downloads'];
+  const corsMethods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'];
+  const corsAllowedHeaders = [
+    'Content-Type',
+    'Authorization',
+    'Idempotency-Key',
+    'X-Anon-Key',
+    'X-CSRF-Token',
+    'X-Request-Id',
+    'X-Turnstile-Token',
+  ];
+  const corsExposedHeaders = [
+    'X-Request-Id',
+    'RateLimit-Limit',
+    'RateLimit-Remaining',
+    'RateLimit-Reset',
+  ];
   await app.register(cors, {
-    origin(origin, cb) {
-      // Same-origin / server-to-server callers send no Origin header.
-      if (!origin) return cb(null, true);
-      if (config.corsOrigins.includes(origin)) return cb(null, true);
-      cb(null, false);
+    delegator: (req, cb) => {
+      const path = (req.url ?? '').split('?')[0] ?? '';
+      if (thirdPartyPrefixes.some((p) => path === p || path.startsWith(`${p}/`))) {
+        cb(null, {
+          origin: '*',
+          credentials: false,
+          methods: corsMethods,
+          allowedHeaders: corsAllowedHeaders,
+          exposedHeaders: corsExposedHeaders,
+          maxAge: 600,
+        });
+        return;
+      }
+      cb(null, {
+        origin(origin, originCb) {
+          // Same-origin / server-to-server callers send no Origin header.
+          if (!origin) return originCb(null, true);
+          if (config.corsOrigins.includes(origin)) return originCb(null, true);
+          originCb(null, false);
+        },
+        credentials: true,
+        methods: corsMethods,
+        allowedHeaders: corsAllowedHeaders,
+        exposedHeaders: corsExposedHeaders,
+        maxAge: 600,
+      });
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Idempotency-Key',
-      'X-Anon-Key',
-      'X-CSRF-Token',
-      'X-Request-Id',
-      'X-Turnstile-Token',
-    ],
-    exposedHeaders: ['X-Request-Id', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
-    maxAge: 600,
   });
 
   // Signed when COOKIE_SECRET is configured â€” the token itself is
