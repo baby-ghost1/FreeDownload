@@ -9,6 +9,7 @@ import {
   adminMfaSetup,
   bulkDeleteAdminUsers,
   changeAdminPassword,
+  deleteAllAdminUsers,
   listAdminSessions,
   revokeAdminSession,
   adminRetryJob,
@@ -194,6 +195,11 @@ const CASES: Case[] = [
     path: '/admin/users/bulk-delete',
     init: { method: 'POST', body: { ids: ['u1', 'u2'], password: 'pw' } },
     call: () => bulkDeleteAdminUsers(['u1', 'u2'], 'pw'),
+  },
+  {
+    path: '/admin/users/delete-all',
+    init: { method: 'POST', body: { password: 'pw', confirmText: 'delete all the users' } },
+    call: () => deleteAllAdminUsers('pw', 'delete all the users'),
   },
 
   // admin resources - query builders called empty (all branches false) and

@@ -375,6 +375,72 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
     },
   );
 
+  const DELETE_ALL_CONFIRM_TEXT = 'delete all the users';
+
+  const DeleteAllBody = z.object({
+    password: z.string().min(1).max(256),
+    confirmText: z.string().min(1).max(64),
+  });
+
+  app.post(
+    '/admin/users/delete-all',
+    {
+      schema: {
+        description:
+          'Delete every user on the platform (owner/admin only, own password plus typed confirmation).',
+        body: DeleteAllBody,
+        response: {
+          200: z.object({ deleted: z.number() }),
+          ...errorResponses(400, 401, 403),
+        },
+      },
+    },
+    async (req) => {
+      assertCsrf(req);
+      const context = requireAdmin(req);
+      assertMutatorRole(context);
+      if (req.body.confirmText !== DELETE_ALL_CONFIRM_TEXT) {
+        throw new AppError(
+          'VALIDATION_ERROR',
+          `Type "${DELETE_ALL_CONFIRM_TEXT}" to confirm.`,
+        );
+      }
+      const ok = await verifyPassword(context.admin.passwordHash, req.body.password);
+      if (!ok) {
+        throw new AppError('UNAUTHORIZED', 'Your admin password is incorrect.');
+      }
+      const db = getDb();
+      let deleted = 0;
+      // Batched so a huge user base cannot wedge the request.
+      for (let round = 0; round < 25; round++) {
+        const batch = await db
+          .select({ id: users.id })
+          .from(users)
+          .limit(200);
+        if (batch.length === 0) break;
+        for (const row of batch) {
+          try {
+            await deleteUser(db, row.id);
+            deleted += 1;
+          } catch (err) {
+            if (err instanceof AppError && err.code === 'NOT_FOUND') continue;
+            throw err;
+          }
+        }
+        if (batch.length < 200) break;
+      }
+      await writeAudit(db, {
+        adminId: context.admin.id,
+        action: 'user.delete_all',
+        resource: 'users',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] ?? null,
+        metadata: { deleted },
+      });
+      return { deleted };
+    },
+  );
+
   app.delete(
     '/admin/users/:id',
     {

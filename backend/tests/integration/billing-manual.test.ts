@@ -195,6 +195,20 @@ describeInfra('manual UPI billing (integration)', () => {
     expect(done.json()).toMatchObject({ deleted: 2, requested: 3 });
   });
 
+  it('refuses delete-all without exact phrase and correct password', async () => {
+    const wrongText = await admin('POST', '/api/v1/admin/users/delete-all', {
+      password: OWNER_PASSWORD,
+      confirmText: 'delete everything',
+    });
+    expect(wrongText.statusCode).toBe(400);
+
+    const wrongPassword = await admin('POST', '/api/v1/admin/users/delete-all', {
+      password: 'not-the-password',
+      confirmText: 'delete all the users',
+    });
+    expect(wrongPassword.statusCode).toBe(401);
+  });
+
   it('sets plans directly and deletes users with password confirmation', async () => {
     const setPlan = await admin('PATCH', `/api/v1/admin/users/${userId}/plan`, {
       planCode: 'business',

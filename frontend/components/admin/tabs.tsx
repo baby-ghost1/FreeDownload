@@ -38,6 +38,7 @@ import {
   changeAdminPassword,
   createAdminCoupon,
   deleteAdminUser,
+  deleteAllAdminUsers,
   getAdminOverview,
   listAdminCoupons,
   listAdminFlags,
@@ -494,6 +495,10 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [multiMode, setMultiMode] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [deleteAllBusy, setDeleteAllBusy] = useState(false);
+  const [deleteAllText, setDeleteAllText] = useState('');
+  const DELETE_ALL_PHRASE = 'delete all the users';
 
   const toggle = async (user: AdminUser) => {
     setBusyId(user.id);
@@ -557,6 +562,26 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
     setBulkOpen(false);
   }, [page]);
 
+  const confirmDeleteAll = async () => {
+    if (!deletePassword || deleteAllText.trim() !== DELETE_ALL_PHRASE) return;
+    setDeleteAllBusy(true);
+    setActionError(null);
+    try {
+      const r = await deleteAllAdminUsers(deletePassword, deleteAllText.trim());
+      toast(`Deleted all ${r.deleted} users`, 'success');
+      setDeleteAllOpen(false);
+      setDeletePassword('');
+      setDeleteAllText('');
+      setSelected(new Set());
+      setBulkOpen(false);
+      reload();
+    } catch (err) {
+      setActionError(message(err, 'Could not delete all users.'));
+    } finally {
+      setDeleteAllBusy(false);
+    }
+  };
+
   const confirmBulkDelete = async () => {
     if (selected.size === 0 || !deletePassword) return;
     setBulkBusy(true);
@@ -585,6 +610,19 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         sub="Suspend abuse, reactivate genuine accounts"
         right={
           <span className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={loading}
+              onClick={() => {
+                setDeleteAllOpen((v) => !v);
+                setDeletePassword('');
+              }}
+              data-testid="users-delete-all"
+              className="rounded-full border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 hover:text-destructive"
+            >
+              Delete All Users
+            </Button>
             <Button
               size="sm"
               variant={multiMode ? 'primary' : 'outline'}
@@ -617,6 +655,69 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         <Alert tone="error" role="alert" className="rounded-2xl">
           {actionError}
         </Alert>
+      )}
+      {deleteAllOpen && (
+        <div
+          role="alertdialog"
+          aria-label="Delete all users"
+          className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-4"
+          data-testid="users-delete-all-confirm"
+        >
+          <p className="text-sm font-medium">
+            Are you sure you want to delete all the users? This cannot be undone.
+          </p>
+          <div>
+            <Label htmlFor="delete-all-password">Your admin password</Label>
+            <Input
+              id="delete-all-password"
+              type="password"
+              autoComplete="current-password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              data-testid="users-delete-all-password"
+              className="mt-1.5 h-10 max-w-64 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label htmlFor="delete-all-text">
+              Type <code className="rounded bg-muted px-1 font-mono">delete all the users</code> to
+              confirm
+            </Label>
+            <Input
+              id="delete-all-text"
+              placeholder="delete all the users"
+              value={deleteAllText}
+              onChange={(e) => setDeleteAllText(e.target.value)}
+              data-testid="users-delete-all-text"
+              className="mt-1.5 h-10 max-w-64 rounded-xl"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="destructive"
+              loading={deleteAllBusy}
+              disabled={!deletePassword || deleteAllText.trim() !== DELETE_ALL_PHRASE}
+              onClick={() => void confirmDeleteAll()}
+              data-testid="users-delete-all-confirm-btn"
+              className="rounded-xl"
+            >
+              Delete all users
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDeleteAllOpen(false);
+                setDeletePassword('');
+                setDeleteAllText('');
+              }}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       )}
       {selected.size > 0 && !bulkOpen && (
         <div
