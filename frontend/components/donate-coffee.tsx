@@ -29,7 +29,7 @@ function DummyQr({ size = 168 }: { size?: number }) {
       height={size}
       role="img"
       aria-label="Placeholder donation QR (coming soon)"
-      className="rounded-xl border border-border bg-white p-2"
+      className="rounded-xl bg-white p-2"
     >
       {cells.map((on, i) => {
         const x = i % 21;
@@ -146,7 +146,7 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
                     alt="Donation QR code"
                     width={168}
                     height={168}
-                    className="rounded-xl border border-border"
+                    className="rounded-xl"
                   />
                 ) : (
                   <DummyQr />
