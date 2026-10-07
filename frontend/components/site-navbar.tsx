@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { SITE_CONFIG } from '@/lib/constants/site';
+import { DonateCoffeeButton } from '@/components/donate-coffee';
 import { useSession } from '@/lib/session';
 import { getPublicConfig } from '@/lib/api/endpoints';
 import type { PublicConfig } from '@/lib/api/types';
@@ -198,10 +199,12 @@ export function SiteNavbar() {
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
           >
             <BrandMark size={32} />
-            <span className="text-sm font-semibold tracking-tight">{SITE_CONFIG.name}</span>
-          </Link>
+          <span className="text-sm font-semibold tracking-tight">{SITE_CONFIG.name}</span>
+        </Link>
 
-          <button
+        <DonateCoffeeButton className="hidden shrink-0 min-[500px]:inline-flex" />
+
+        <button
             ref={buttonRef}
             type="button"
             onClick={() => setOpen((v) => !v)}

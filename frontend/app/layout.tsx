@@ -3,6 +3,7 @@ import { SITE_CONFIG } from '@/lib/constants/site';
 import { Providers } from '@/components/providers';
 import { HomeFooter } from '@/components/home-footer';
 import { SiteNavbar } from '@/components/site-navbar';
+import { DonateCoffeeFloat } from '@/components/donate-coffee';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <SiteNavbar />
             <main className="flex-1">{children}</main>
             <HomeFooter />
+            <DonateCoffeeFloat />
           </div>
         </Providers>
       </body>

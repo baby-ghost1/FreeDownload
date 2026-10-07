@@ -594,6 +594,14 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               </motion.div>
             )}
 
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              FreeDownload is free because people help -{' '}
+              <span className="font-medium text-foreground">enjoying it? Tap the coffee button to support us.</span>
+              <span className="mt-0.5 block">
+                FreeDownload muft hai kyunki log madad karte hain - achha laga to coffee button dabakar support karo.
+              </span>
+            </p>
+
             <nav
               aria-label="More downloads"
               className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-surface/60 px-4 py-3"
