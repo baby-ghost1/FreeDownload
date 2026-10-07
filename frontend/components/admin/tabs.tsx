@@ -618,7 +618,7 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
           {actionError}
         </Alert>
       )}
-      {selected.size > 0 && (
+      {selected.size > 0 && !bulkOpen && (
         <div
           className="flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3"
           data-testid="users-bulk-bar"
@@ -696,12 +696,19 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
               }}
               className={
                 'flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 ' +
-                (multiMode ? 'cursor-pointer' : '') +
-                (multiMode && selected.has(user.id)
-                  ? ' bg-destructive/5 ring-1 ring-inset ring-destructive/30'
-                  : '')
+                (multiMode ? 'cursor-pointer' : '')
               }
               >
+              {multiMode && (
+                <input
+                  type="checkbox"
+                  checked={selected.has(user.id)}
+                  onChange={() => toggleSelect(user.id)}
+                  aria-label={`Select ${user.email}`}
+                  data-testid="user-select"
+                  className="size-4 shrink-0 accent-primary"
+                />
+              )}
               <span
                 className={`flex size-10 shrink-0 items-center justify-center rounded-xl font-semibold ${
                   user.status === 'suspended'
