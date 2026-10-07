@@ -85,6 +85,7 @@ export function SiteNavbar() {
   const [open, setOpen] = useState(false);
   const [navbar, setNavbar] = useState<PublicConfig['navbar']>(DEFAULT_NAVBAR);
   const navRef = useRef<HTMLElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Admin-owned visibility (system_settings `navbar_config`, fail-open to
   // fully visible when the row or request is missing). The last known value
@@ -120,14 +121,34 @@ export function SiteNavbar() {
     };
   }, []);
 
-  // Close the menu on outside tap and Escape.
+  // Close the menu on outside tap and Escape; trap Tab inside while open
+  // and hand focus back to the toggle on close.
   useEffect(() => {
     if (!open) return;
+    navRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const onDown = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        buttonRef.current?.focus();
+        return;
+      }
+      if (e.key !== 'Tab' || !navRef.current) return;
+      const focusables = navRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -181,12 +202,13 @@ export function SiteNavbar() {
           </Link>
 
           <button
+            ref={buttonRef}
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="site-nav-menu"
             aria-label={open ? 'Close menu' : 'Open menu'}
-            className="glass flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-foreground shadow-2 transition-colors hover:text-foreground"
+            className="glass flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-foreground shadow-2 transition-colors hover:text-foreground"
           >
             <motion.span
               key={open ? 'x' : 'menu'}
