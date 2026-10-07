@@ -151,7 +151,17 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(() => {
+  // Elapsed clock freezes the moment the job completes (100% + button).
+  const [frozenElapsed, setFrozenElapsed] = useState<string | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot latch: freezes the elapsed clock on the first completed poll
+    setFrozenElapsed((prev) => {
+      if (job?.status !== 'completed') return null;
+      return (
+        prev ?? formatElapsed(Date.now() - new Date(job?.createdAt ?? Date.now()).getTime())
+      );
+    });
+  }, [job?.status, job?.id, job?.createdAt]);  const [canGoForward, setCanGoForward] = useState(() => {
     try {
       return sessionStorage.getItem('fd_can_forward') === '1';
     } catch {
@@ -364,7 +374,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
           {(active || done) && (
             <div className="grid grid-cols-3 gap-2">
-              <StatTile icon={Hourglass} label="Elapsed" value={elapsed} />
+              <StatTile icon={Hourglass} label="Elapsed" value={frozenElapsed ?? elapsed} />
               <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '…'} />
               <StatTile icon={HardDrive} label="Size" value={size ?? '…'} />
             </div>
