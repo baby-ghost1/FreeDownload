@@ -324,14 +324,6 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
-            <div className="mt-3 text-sm">
-              <a
-                href="#how-it-works"
-                className="link-underline font-medium text-primary underline-offset-4"
-              >
-                See how it works ↓
-              </a>
-            </div>
           </Enter>
         </div>
       </section>
@@ -450,28 +442,6 @@ export default function HomePage() {
               </Reveal>
             ))}
           </div>
-
-          {/* Final CTA - one thumb-friendly button on mobile */}
-          <Reveal className="mt-10 text-center">
-            <div className="glass mx-auto max-w-xl rounded-2xl border border-border bg-surface/80 p-4 shadow-3 sm:p-6">
-              <p className="text-base font-semibold text-foreground sm:text-lg">
-                Have a link ready?
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Paste it now — you&apos;ll see formats in seconds.
-              </p>
-              <Button
-                type="button"
-                size="lg"
-                onClick={() => router.push('/download')}
-                className="btn-shine mt-4 h-12 w-full px-6 sm:w-auto"
-                data-testid="landing-final-cta"
-              >
-                Start downloading
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </Reveal>
         </div>
       </section>
 
