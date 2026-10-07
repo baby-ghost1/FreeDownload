@@ -511,13 +511,28 @@ export default function AccountPage() {
               </CardTitle>
               <CardDescription>
                 Programmatic access: send the key as Authorization: Bearer.
-                {subscription !== null && subscription.plan.limits?.apiPerHour !== undefined && (
-                  <>
-                    {' '}
-                    Your {subscription.plan.name} plan allows{' '}
-                    {subscription.plan.limits.apiPerHour} API calls per hour.
-                  </>
-                )}
+                {subscription !== null &&
+                  (subscription.plan.code === 'free' ? (
+                    <>
+                      {' '}
+                      API keys unlock on Pro and Business — up to{' '}
+                      {Math.max(
+                        0,
+                        ...availablePlans
+                          .filter((p) => p.priceCents > 0)
+                          .map((p) => p.limits?.apiPerHour ?? 0),
+                      )}{' '}
+                      API calls per hour.
+                    </>
+                  ) : (
+                    subscription.plan.limits?.apiPerHour !== undefined && (
+                      <>
+                        {' '}
+                        Your {subscription.plan.name} plan allows{' '}
+                        {subscription.plan.limits.apiPerHour} API calls per hour.
+                      </>
+                    )
+                  ))}
               </CardDescription>
             </CardHeader>
             <CardContent>
