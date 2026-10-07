@@ -315,10 +315,7 @@ export default function AccountPage() {
       <Stagger className="relative space-y-6">
         <StaggerItem>
           <Card data-testid="account-page" className="overflow-hidden">
-            <div
-              aria-hidden="true"
-              className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-            />
+            <div aria-hidden="true" className="h-px bg-border/70" />
             <CardHeader>
               <CardTitle>Profile</CardTitle>
               <CardDescription>{user.email}</CardDescription>
@@ -454,10 +451,7 @@ export default function AccountPage() {
 
         <StaggerItem>
           <Card className="overflow-hidden">
-            <div
-              aria-hidden="true"
-              className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-            />
+            <div aria-hidden="true" className="h-px bg-border/70" />
             <CardHeader>
               <CardTitle>Usage - last 30 days</CardTitle>
               <CardDescription>Your download activity at a glance.</CardDescription>
@@ -502,10 +496,7 @@ export default function AccountPage() {
 
         <StaggerItem>
           <Card className="overflow-hidden">
-            <div
-              aria-hidden="true"
-              className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-            />
+            <div aria-hidden="true" className="h-px bg-border/70" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -620,10 +611,7 @@ export default function AccountPage() {
 
         <StaggerItem>
           <Card className="overflow-hidden">
-            <div
-              aria-hidden="true"
-              className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-            />
+            <div aria-hidden="true" className="h-px bg-border/70" />
             <CardHeader>
               <CardTitle>Active sessions</CardTitle>
               <CardDescription>Devices currently signed in to your account.</CardDescription>
