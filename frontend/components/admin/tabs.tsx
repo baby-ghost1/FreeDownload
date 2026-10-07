@@ -493,6 +493,7 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [multiMode, setMultiMode] = useState(false);
 
   const toggle = async (user: AdminUser) => {
     setBusyId(user.id);
@@ -584,27 +585,25 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         sub="Suspend abuse, reactivate genuine accounts"
         right={
           <span className="flex items-center gap-2">
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1">
-              <input
-                type="checkbox"
-                ref={(el) => {
-                  if (el) {
-                    el.indeterminate =
-                      selected.size > 0 && selected.size < items.length && !loading;
-                  }
-                }}
-                checked={!loading && items.length > 0 && selected.size === items.length}
-                disabled={loading || items.length === 0}
-                onChange={(e) => {
-                  if (e.target.checked) setSelected(new Set(items.map((u) => u.id)));
-                  else setSelected(new Set());
-                }}
-                aria-label="Select all users on this page"
-                data-testid="users-select-all"
-                className="size-3.5 accent-primary"
-              />
-              All
-            </label>
+            <Button
+              size="sm"
+              variant={multiMode ? 'primary' : 'outline'}
+              disabled={loading || items.length === 0}
+              onClick={() => {
+                if (multiMode) {
+                  setMultiMode(false);
+                  setSelected(new Set());
+                  setBulkOpen(false);
+                } else {
+                  setMultiMode(true);
+                  setSelected(new Set(items.map((u) => u.id)));
+                }
+              }}
+              data-testid="users-multi-delete"
+              className="rounded-full px-3 py-1 text-xs"
+            >
+              Delete Multiple
+            </Button>
             <span
               className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1"
               data-testid="users-count"
@@ -692,16 +691,17 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
             <li
               key={user.id}
               data-testid="admin-user-row"
-              className="flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
+              onClick={() => {
+                if (multiMode) toggleSelect(user.id);
+              }}
+              className={
+                'flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 ' +
+                (multiMode ? 'cursor-pointer' : '') +
+                (multiMode && selected.has(user.id)
+                  ? ' bg-destructive/5 ring-1 ring-inset ring-destructive/30'
+                  : '')
+              }
               >
-              <input
-                type="checkbox"
-                checked={selected.has(user.id)}
-                onChange={() => toggleSelect(user.id)}
-                aria-label={`Select ${user.email}`}
-                data-testid="user-select"
-                className="size-4 shrink-0 accent-primary"
-              />
               <span
                 className={`flex size-10 shrink-0 items-center justify-center rounded-xl font-semibold ${
                   user.status === 'suspended'
@@ -736,7 +736,10 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
                   size="sm"
                   variant={user.status === 'suspended' ? 'primary' : 'ghost'}
                   loading={busyId === user.id}
-                  onClick={() => void toggle(user)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void toggle(user);
+                  }}
                   data-testid="user-toggle"
                   className="rounded-xl"
                 >
@@ -758,6 +761,7 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
                 id={`plan-${user.id}`}
                 defaultValue=""
                 disabled={busyId === user.id}
+                onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   const v = e.target.value as 'free' | 'pro' | 'business';
                   e.target.value = '';
@@ -776,7 +780,8 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
                 size="sm"
                 variant="ghost"
                 loading={busyId === user.id}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setDeleteTarget(user);
                   setDeletePassword('');
                 }}
