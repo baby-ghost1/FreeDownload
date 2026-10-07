@@ -95,7 +95,7 @@ function FloatingBrands() {
         <span
           key={f.key}
           className={cn(
-            'absolute text-foreground opacity-[0.05] sm:opacity-[0.08]',
+            'absolute text-foreground opacity-[0.10] sm:opacity-[0.14] dark:opacity-[0.12] dark:sm:opacity-[0.16]',
             f.className,
           )}
         >
