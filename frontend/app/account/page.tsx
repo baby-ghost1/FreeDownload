@@ -114,6 +114,7 @@ export default function AccountPage() {
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [keyBusy, setKeyBusy] = useState(false);
+  const [needsUpgrade, setNeedsUpgrade] = useState(false);
   const [usageByKey, setUsageByKey] = useState<Record<string, ApiKeyUsage>>({});
 
   useEffect(() => {
@@ -209,6 +210,7 @@ export default function AccountPage() {
     if (!name) return;
     setKeyBusy(true);
     setKeyError(null);
+    setNeedsUpgrade(false);
     setRawKey(null);
     try {
       const created = await createApiKey(name);
@@ -216,7 +218,17 @@ export default function AccountPage() {
       setKeyName('');
       setApiKeys((await listApiKeys()).data);
     } catch (err) {
-      setKeyError(err instanceof ApiError ? err.message : 'Could not create the key.');
+      if (
+        err instanceof ApiError &&
+        err.code === 'FORBIDDEN' &&
+        (err.details as { upgradeRequired?: boolean } | undefined)?.upgradeRequired === true
+      ) {
+        // Free plan: the section stays visible, creation points at an upgrade.
+        setNeedsUpgrade(true);
+        setKeyError(null);
+      } else {
+        setKeyError(err instanceof ApiError ? err.message : 'Could not create the key.');
+      }
     } finally {
       setKeyBusy(false);
     }
@@ -309,7 +321,7 @@ export default function AccountPage() {
 
       <Stagger className="relative space-y-6">
         <StaggerItem>
-          <Card className="overflow-hidden">
+          <Card id="billing-card" className="overflow-hidden scroll-mt-6">
             <div
               aria-hidden="true"
               className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
@@ -499,10 +511,32 @@ export default function AccountPage() {
               </CardTitle>
               <CardDescription>
                 Programmatic access: send the key as Authorization: Bearer.
+                {subscription !== null && subscription.plan.limits?.apiPerHour !== undefined && (
+                  <>
+                    {' '}
+                    Your {subscription.plan.name} plan allows{' '}
+                    {subscription.plan.limits.apiPerHour} API calls per hour.
+                  </>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {keyError && <FieldError id="api-key-error">{keyError}</FieldError>}
+              {needsUpgrade && (
+                <Alert tone="info" className="mb-3" data-testid="api-key-upgrade">
+                  API keys need a Pro or Business plan - your key quota starts the moment
+                  you upgrade.{' '}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document.getElementById('billing-card')?.scrollIntoView({ behavior: 'smooth' })
+                    }
+                    className="link-underline font-medium text-primary underline-offset-2"
+                  >
+                    View plans →
+                  </button>
+                </Alert>
+              )}
               {rawKey && (
                 <Alert tone="info" className="mb-3" data-testid="api-key-raw">
                   <span className="flex items-start justify-between gap-3">
