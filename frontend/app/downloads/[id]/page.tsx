@@ -321,81 +321,31 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
       <Enter delay={0.08}>
         <div className="relative mt-8 space-y-6" data-testid="job-progress">
-          {active && (
+          {(active || done) && (
+            <div className="text-center">
+              <p
+                className="text-4xl font-bold tabular-nums tracking-tight text-foreground sm:text-5xl"
+                role="progressbar"
+                aria-label="Download progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={done ? 100 : Math.round(job.progress)}
+              >
+                {done ? 100 : Math.round(job.progress)}%
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {done ? 'ready to save to your device' : stageLabel(job.status)}
+              </p>
+            </div>
+          )}
+
+          {(active || done) && (
             <div className="grid grid-cols-3 gap-2">
               <StatTile icon={Hourglass} label="Elapsed" value={elapsed} />
               <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '-'} />
               <StatTile icon={HardDrive} label="Size" value={size ?? '-'} />
             </div>
           )}
-
-          {active && (
-            <div className="glass rounded-2xl border border-border bg-surface/80 p-4 shadow-2">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-medium text-foreground">
-                  {stageLabel(job.status)}
-                </p>
-                {Math.round(job.progress) > 0 && (
-                  <p className="shrink-0 text-sm font-semibold tabular-nums text-primary">
-                    {Math.round(job.progress)}%
-                  </p>
-                )}
-              </div>
-              <div
-                className="mt-2.5 h-2 overflow-hidden rounded-full bg-surface-sunken"
-                role="progressbar"
-                aria-label="Download progress"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(job.progress) > 0 ? Math.round(job.progress) : undefined}
-              >
-                {Math.round(job.progress) > 0 ? (
-                  <motion.span
-                    className="block h-full rounded-full bg-gradient-to-r from-primary to-info"
-                    initial={false}
-                    animate={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }}
-                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className="progress-stripes block h-full w-full rounded-full bg-primary/60"
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-            {done && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="glass relative overflow-hidden rounded-2xl border border-border bg-surface/80 p-3.5 text-left shadow-3"
-              >
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-primary/10 blur-2xl"
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-                />
-                <div className="relative flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2">
-                    <Check className="size-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-snug text-foreground">
-                      Video downloaded - ready to save to your device
-                    </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                      Your signed link is time-limited - grab the file below.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
 
             <div className="relative">
               <div className="relative mx-auto max-w-md">
