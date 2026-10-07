@@ -84,7 +84,10 @@ export function buildFormats(raw: RawAnalysis): MediaFormatInfo[] {
 
   type Cand = { fmt: RawFormat; tbr: number };
   const videoBest = new Map<string, Cand>();
-  let audioBest: Cand | null = null;
+  // Audio grouped by container, best bitrate wins per group - mirrors the
+  // video logic so every rendition the source offers (m4a, opus, mp3…)
+  // shows up instead of a single "best" row.
+  const audioBest = new Map<string, Cand>();
 
   for (const fmt of formats) {
     const ext = str(fmt.ext);
@@ -99,7 +102,8 @@ export function buildFormats(raw: RawAnalysis): MediaFormatInfo[] {
       const prev = videoBest.get(key);
       if (!prev || tbr > prev.tbr) videoBest.set(key, { fmt, tbr });
     } else if (acodec !== 'none' && vcodec === 'none') {
-      if (!audioBest || tbr > audioBest.tbr) audioBest = { fmt, tbr };
+      const prev = audioBest.get(ext);
+      if (!prev || tbr > prev.tbr) audioBest.set(ext, { fmt, tbr });
     }
   }
 
@@ -134,17 +138,25 @@ export function buildFormats(raw: RawAnalysis): MediaFormatInfo[] {
     });
   });
 
-  if (audioBest) {
-    const ext = str(audioBest.fmt.ext) ?? 'm4a';
+  // Highest bitrate first; the bitrate in the label keeps same-container
+  // rows distinguishable (e.g. two opus renditions collapse to one row,
+  // best wins - same rule as video).
+  const audioList = [...audioBest.entries()].sort((a, b) => b[1].tbr - a[1].tbr);
+
+  for (const [audioExt, { fmt }] of audioList) {
+    const bitrate = num(fmt.tbr) !== null ? Math.round(num(fmt.tbr)!) : null;
     out.push({
-      key: uniqueKey(`audio.${ext}`),
-      label: `Audio only (${ext.toUpperCase()})`,
+      key: uniqueKey(`audio.${audioExt}`),
+      label:
+        bitrate !== null
+          ? `Audio only (${audioExt.toUpperCase()} · ${bitrate}k)`
+          : `Audio only (${audioExt.toUpperCase()})`,
       kind: 'audio',
-      container: ext,
+      container: audioExt,
       vcodec: null,
-      acodec: str(audioBest.fmt.acodec),
-      bitrateKbps: num(audioBest.fmt.tbr) !== null ? Math.round(num(audioBest.fmt.tbr)!) : null,
-      filesizeBytes: num(audioBest.fmt.filesize) ?? num(audioBest.fmt.filesize_approx),
+      acodec: str(fmt.acodec),
+      bitrateKbps: bitrate,
+      filesizeBytes: num(fmt.filesize) ?? num(fmt.filesize_approx),
       isDefault: out.length === 0,
       sortOrder: out.length,
     });

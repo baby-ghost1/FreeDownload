@@ -64,6 +64,52 @@ describe('buildFormats', () => {
     }
   });
 
+  it('lists every audio rendition the source offers, best bitrate first', () => {
+    const formats = buildFormats({
+      formats: [
+        {
+          ext: 'mp4',
+          height: 720,
+          width: 1280,
+          vcodec: 'avc1',
+          acodec: 'mp4a',
+          tbr: 2500,
+        },
+        { ext: 'm4a', vcodec: 'none', acodec: 'mp4a', tbr: 48, filesize: 100 },
+        { ext: 'm4a', vcodec: 'none', acodec: 'mp4a', tbr: 128, filesize: 300 },
+        { ext: 'webm', vcodec: 'none', acodec: 'opus', tbr: 160, filesize: 400 },
+      ],
+    });
+
+    const audio = formats.filter((f) => f.kind === 'audio');
+    // One row per container (best bitrate wins inside a container…
+    expect(audio.map((f) => f.key)).toEqual(['audio.webm', 'audio.m4a']);
+    // …highest bitrate first, labels carry the bitrate so rows differ.
+    expect(audio.map((f) => f.label)).toEqual([
+      'Audio only (WEBM · 160k)',
+      'Audio only (M4A · 128k)',
+    ]);
+    expect(audio[0]!.bitrateKbps).toBe(160);
+    expect(audio[1]!.bitrateKbps).toBe(128);
+    expect(audio[1]!.filesizeBytes).toBe(300);
+    for (const a of audio) expect(a.isDefault).toBe(false);
+  });
+
+  it('defaults to the best audio row when the source has no video', () => {
+    const formats = buildFormats({
+      formats: [
+        { ext: 'm4a', vcodec: 'none', acodec: 'mp4a', tbr: 64 },
+        { ext: 'm4a', vcodec: 'none', acodec: 'mp4a', tbr: 256 },
+      ],
+    });
+    expect(formats).toHaveLength(1);
+    expect(formats[0]).toMatchObject({
+      key: 'audio.m4a',
+      kind: 'audio',
+      isDefault: true,
+    });
+  });
+
   it('sorts renditions highest height first', () => {
     const formats = buildFormats({
       formats: [
