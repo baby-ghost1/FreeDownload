@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
-import { Coffee, X } from 'lucide-react';
+import { HeartHandshake, X } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -38,11 +38,13 @@ function DummyQr({ size = 168 }: { size?: number }) {
         if (!on) return null;
         return <rect key={i} x={x * cell} y={y * cell} width={cell} height={cell} fill="#111" />;
       })}
-      {[
-        [0, 0],
-        [14, 0],
-        [0, 14],
-      ].map(([fx = 0, fy = 0]) => (
+      {(
+        [
+          [0, 0],
+          [14, 0],
+          [0, 14],
+        ] as Array<[number, number]>
+      ).map(([fx, fy]) => (
         <g key={`${fx}-${fy}`}>
           <rect x={fx * cell} y={fy * cell} width={7 * cell} height={7 * cell} fill="#111" />
           <rect
@@ -126,9 +128,9 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
               <div className="flex items-start justify-between gap-3">
                 <p className="flex items-center gap-2 text-base font-semibold tracking-tight">
                   <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2">
-                    <Coffee className="size-4" aria-hidden="true" />
+                    <HeartHandshake className="size-4" aria-hidden="true" />
                   </span>
-                  Help me buy a coffee
+                  Help Us
                 </p>
                 <button
                   type="button"
@@ -144,9 +146,9 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
                   <Image
                     src={DONATE_QR_SRC}
                     alt="Donation QR code"
-                    width={168}
-                    height={168}
-                    className="rounded-lg bg-white p-3"
+                    width={577}
+                    height={564}
+                    className="h-auto w-[200px] shrink-0 rounded-xl bg-white object-contain p-4"
                   />
                 ) : (
                   <DummyQr />
@@ -171,14 +173,14 @@ export function DonateCoffeeButton({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        title="Help me buy a coffee"
+        title="Help Us"
         className={cn(
           'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-[13px] font-semibold text-orange-600 transition-all duration-200 hover:bg-orange-500/20 active:scale-95 dark:text-orange-400',
           className,
         )}
       >
-        <Coffee className="size-4" aria-hidden="true" />
-        Help me buy a coffee
+        <HeartHandshake className="size-4" aria-hidden="true" />
+        Help Us
       </button>
       <DonateModal open={open} onClose={() => setOpen(false)} />
     </>
@@ -196,11 +198,11 @@ export function DonateCoffeeFloat() {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label="Help me buy a coffee"
-        title="Help me buy a coffee"
+        aria-label="Help Us"
+        title="Help Us"
         className="fixed bottom-4 right-4 z-50 flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-3 transition-transform duration-200 hover:scale-105 active:scale-95"
       >
-        <Coffee className="size-5" aria-hidden="true" />
+        <HeartHandshake className="size-5" aria-hidden="true" />
       </button>
       <DonateModal open={open} onClose={() => setOpen(false)} />
     </>
