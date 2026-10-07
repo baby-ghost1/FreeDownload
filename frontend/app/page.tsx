@@ -501,7 +501,7 @@ export default function HomePage() {
                 Higher daily limits, more parallel downloads, bigger files.
               </p>
             </Reveal>
-            <Stagger className="mx-auto mt-8 grid max-w-3xl items-stretch gap-3 sm:grid-cols-3">
+            <Stagger className="mx-auto mt-8 grid max-w-3xl grid-cols-3 items-stretch gap-1 sm:gap-3">
               {config.plans.map((p) => {
                 const paid = p.priceCents > 0;
                 const popular =
@@ -518,26 +518,41 @@ export default function HomePage() {
                     }).format(p.priceCents / 100)
                   : null;
                 return (
-                  <StaggerItem key={p.code} className="h-full">
+                  <StaggerItem key={p.code} className="h-full min-w-0">
                     <Card
                       className={cn(
-                        'flex h-full flex-col p-5 text-center',
-                        popular && 'border-primary/50 shadow-3 ring-1 ring-primary/30',
+                        'flex h-full flex-col border-transparent bg-transparent p-2 text-center shadow-none',
+                        'sm:border-border sm:bg-surface sm:p-5 sm:shadow-2',
+                        popular && 'sm:border-primary/50 sm:shadow-3 sm:ring-1 sm:ring-primary/30',
                       )}
                     >
+                      {/* Mobile label line / desktop pill */}
+                      <p className="min-h-4 text-[10px] font-bold uppercase tracking-wider text-primary sm:hidden">
+                        {popular ? 'Popular' : ' '}
+                      </p>
                       {popular && (
-                        <span className="mx-auto mb-2 w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary ring-1 ring-primary/25">
+                        <span className="mx-auto mb-2 hidden w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary ring-1 ring-primary/25 sm:block">
                           Most popular
                         </span>
                       )}
-                      <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                      <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">
+                      <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                        {p.name}
+                      </p>
+                      <p className="mt-0.5 truncate text-lg font-bold tracking-tight text-foreground sm:mt-1 sm:text-3xl">
                         {price ?? 'Free'}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
                         {paid ? `per ${p.interval}` : 'free forever'}
                       </p>
-                      <div className="mt-auto pt-4">
+                      {/* Mobile text link / desktop button */}
+                      <button
+                        type="button"
+                        onClick={() => router.push(paid ? '/register' : '/download')}
+                        className="mx-auto mt-1 w-fit text-xs font-semibold text-primary underline-offset-4 active:underline sm:hidden"
+                      >
+                        {paid ? 'Get →' : 'Start →'}
+                      </button>
+                      <div className="mt-auto hidden pt-4 sm:block">
                         <Button
                           type="button"
                           variant={popular ? 'primary' : 'outline'}
