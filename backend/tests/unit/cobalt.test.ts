@@ -146,7 +146,32 @@ describe('cobaltAdapter mapping', () => {
       container: 'mp4',
       isDefault: true,
     });
-    expect(analysis.sourceUrls).toEqual(['https://cobalt.test/tunnel/abc']);
+    expect(analysis.sourceUrls).toEqual([]);
+  });
+
+  it('keeps third-party file urls in the SSRF sweep list', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'redirect',
+        url: 'https://cdn.example.com/video.mp4',
+        filename: 'video.mp4',
+      }),
+    });
+    const analysis = await cobaltAdapter.analyze('https://example.com/v', {
+      signal: AbortSignal.timeout(5000),
+      timeoutMs: 5000,
+    });
+    expect(analysis.sourceUrls).toEqual(['https://cdn.example.com/video.mp4']);
+  });
+
+  it('isInstanceUrl matches only the configured instance origin', async () => {
+    const { isInstanceUrl } = await import(
+      '../../src/downloader/executors/cobalt.js'
+    );
+    expect(isInstanceUrl('https://cobalt.test/tunnel/abc')).toBe(true);
+    expect(isInstanceUrl('https://cdn.example.com/video.mp4')).toBe(false);
+    expect(isInstanceUrl('not a url')).toBe(false);
   });
 
   it('maps picker responses to per-item rows plus audio', async () => {

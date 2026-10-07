@@ -123,6 +123,22 @@ function pickVideoLabel(index: number, total: number): string {
 }
 
 /**
+ * First-party check: tunnel URLs live on our own configured instance, so
+ * they are deployment-internal by construction. Everything else (CDN file
+ * links, picker thumbs, redirects) goes through the SSRF sweep like any
+ * extractor-reported URL.
+ */
+export function isInstanceUrl(rawUrl: string): boolean {
+  try {
+    const instance = config.cobalt.apiUrl;
+    if (!instance) return false;
+    return new URL(rawUrl).origin === new URL(instance).origin;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Admin-console gate: the `cobalt` source row (enabled/mode/formats) applies
  * here exactly like yt-dlp's `generic` row. Missing or disabled row fails
  * closed with SourcePolicyError - which the fallback wrapper never retries
@@ -171,9 +187,10 @@ export const cobaltAdapter: SourceAdapter = {
         isDefault: true,
         sortOrder: 0,
       });
-      sourceUrls.push(fileUrl);
-    } else if (json.status === 'picker' && Array.isArray(json.picker)) {
-      const items = (json.picker as CobaltPickerItem[]).filter(
+      // Instance tunnels are first-party (checked by origin at download);
+      // only third-party URLs enter the SSRF sweep lists.
+      if (!isInstanceUrl(fileUrl)) sourceUrls.push(fileUrl);
+    } else if (json.status === 'picker' && Array.isArray(json.picker)) {      const items = (json.picker as CobaltPickerItem[]).filter(
         (it) => (it.type === 'video' || it.type === 'gif') && str(it.url),
       );
       items.forEach((it, i) => {
@@ -192,7 +209,7 @@ export const cobaltAdapter: SourceAdapter = {
           isDefault: i === 0,
           sortOrder: i,
         });
-        sourceUrls.push(str(it.url)!);
+        sourceUrls.push(...[str(it.url)!].filter((u) => !isInstanceUrl(u)));
       });
       const audioUrl = str(json.audio);
       if (audioUrl) {
@@ -211,7 +228,7 @@ export const cobaltAdapter: SourceAdapter = {
           isDefault: formats.length === 0,
           sortOrder: formats.length,
         });
-        sourceUrls.push(audioUrl);
+        sourceUrls.push(...[audioUrl].filter((u) => !isInstanceUrl(u)));
       }
       if (formats.length === 0) {
         throw new SourceError(
@@ -279,7 +296,7 @@ export const cobaltAdapter: SourceAdapter = {
         'The fallback finished without a file. Try another format.',
       );
     }
-    await assertSafeUrl(fileUrl);
+    if (!isInstanceUrl(fileUrl)) await assertSafeUrl(fileUrl);
 
     // Stream to disk with a hard size cap - cobalt tunnels rarely send
     // content-length, so the cap (not the header) is the guard.
