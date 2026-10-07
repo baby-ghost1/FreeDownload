@@ -20,7 +20,7 @@
   --border: oklch(0.91 0.006 260);
   --border-strong: oklch(0.83 0.01 260);
 
-  /* Lightness tuned for WCAG AA: badge/alert text sits on 8–15% tints of
+  /* Lightness tuned for WCAG AA: badge/alert text sits on 8-15% tints of
    * these same colors, so L must clear 4.5:1 against its own tint (axe). */
   --primary: oklch(0.52 0.19 265);
   --primary-foreground: oklch(0.99 0.005 265);

@@ -183,7 +183,7 @@ export async function registerDownloadRoutes(app: AppInstance): Promise<void> {
       if (rawKey !== undefined && !IDEMPOTENCY_KEY_PATTERN.test(rawKey)) {
         throw new AppError(
           'VALIDATION_ERROR',
-          'Idempotency-Key must be 8–200 characters of [A-Za-z0-9._:-].',
+          'Idempotency-Key must be 8-200 characters of [A-Za-z0-9._:-].',
         );
       }
 

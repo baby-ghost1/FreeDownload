@@ -58,7 +58,7 @@ export interface DownloadOptions {
   signal: AbortSignal;
   selection: FormatSelection;
   maxFileSizeMb: number;
-  /** 0–100 download progress from the extractor. */
+  /** 0-100 download progress from the extractor. */
   onProgress(percent: number): void;
 }
 

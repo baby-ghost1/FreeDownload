@@ -20,7 +20,7 @@ export function Progress({
   className,
   label,
 }: {
-  /** 0–100. */
+  /** 0-100. */
   value: number;
   className?: string;
   label?: string;

@@ -65,7 +65,7 @@ const ChangePasswordBody = z.object({
 });
 
 /**
- * Authentication endpoints (contract §35–§37).
+ * Authentication endpoints (contract §35-§37).
  *
  * All cookie-authenticated mutations require the double-submit CSRF header;
  * registration and recovery also verify the Turnstile token in production.

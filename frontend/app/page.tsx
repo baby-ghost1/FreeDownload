@@ -56,7 +56,7 @@ const FORMATS = [
   {
     icon: FileDown,
     title: 'Video up to source quality',
-    body: 'Pick the resolution that suits you — what you choose is what you get.',
+    body: 'Pick the resolution that suits you - what you choose is what you get.',
   },
   {
     icon: AudioLines,
@@ -66,7 +66,7 @@ const FORMATS = [
   {
     icon: Zap,
     title: 'No software to install',
-    body: 'Everything runs in your browser. Paste, pick, download — done.',
+    body: 'Everything runs in your browser. Paste, pick, download - done.',
   },
   {
     icon: ShieldCheck,
@@ -83,7 +83,7 @@ const FAQS = [
   },
   {
     q: 'Which links work?',
-    a: 'Links from your favourite platforms — paste one and we list the formats that are actually available for it.',
+    a: 'Links from your favourite platforms - paste one and we list the formats that are actually available for it.',
   },
   {
     q: 'What quality will I get?',
@@ -91,7 +91,7 @@ const FAQS = [
   },
   {
     q: 'How long do download links last?',
-    a: 'Files arrive through short-lived signed links that expire automatically — download promptly once your file is ready.',
+    a: 'Files arrive through short-lived signed links that expire automatically - download promptly once your file is ready.',
   },
   {
     q: 'What may I download?',
@@ -264,7 +264,7 @@ export default function HomePage() {
 
           <Enter delay={0.16}>
             <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-              Drop your link below — we&apos;ll show every format available.
+              Drop your link below - we&apos;ll show every format available.
               Pick one, and it&apos;s yours in seconds.
             </p>
           </Enter>
@@ -393,7 +393,7 @@ export default function HomePage() {
               Made for quick, clean downloads
             </h2>
             <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
-              No toolbars, no installers — just the file you asked for.
+              No toolbars, no installers - just the file you asked for.
             </p>
           </Reveal>
           <Stagger className="mt-8 grid gap-3 sm:grid-cols-2">

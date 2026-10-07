@@ -21,6 +21,8 @@
     "test:coverage": "turbo run test:coverage",
     "test:e2e": "turbo run e2e",
     "load": "k6 run load/catalog.js && k6 run load/auth.js && k6 run load/downloads.js && k6 run load/api-quota.js",
+    "load:site": "k6 run load/site.js",
+    "load:site:node": "node load/site-node.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yml,yaml}\"",
     "docker:up": "docker compose up -d postgres redis",

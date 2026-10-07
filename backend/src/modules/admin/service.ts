@@ -22,7 +22,7 @@ function defined(filters: Array<SQL | undefined>): SQL[] {
 }
 
 /**
- * Admin read/write queries (§76–§79). Every mutation in routes.ts is wrapped
+ * Admin read/write queries (§76-§79). Every mutation in routes.ts is wrapped
  * with an audit entry; cache-sensitive writes also invalidate in-process
  * state here so a disable takes effect without a redeploy.
  */

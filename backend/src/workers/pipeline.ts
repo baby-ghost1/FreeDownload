@@ -38,8 +38,8 @@ import {
  *
  *   queued → analyzing   policy + SSRF + extract metadata   (30%)
  *          → ready       format chosen? else park here
- *          → processing  yt-dlp download + verify + convert  (50–85%)
- *          → uploading   storage.put + files row             (88–95%)
+ *          → processing  yt-dlp download + verify + convert  (50-85%)
+ *          → uploading   storage.put + files row             (88-95%)
  *          → completed   (finishSuccess in the worker)
  */
 

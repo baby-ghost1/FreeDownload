@@ -48,7 +48,7 @@ describe('feature flag rollout', () => {
     expect(isFlagEnabled({ enabled: true, rollout: 50 }, undefined)).toBe(false);
   });
 
-  it('buckets subjects deterministically into 0–99', () => {
+  it('buckets subjects deterministically into 0-99', () => {
     const a = rolloutBucket('user-aaaaaaaaaaaaaaaa');
     expect(a).toBe(rolloutBucket('user-aaaaaaaaaaaaaaaa'));
     expect(a).toBeGreaterThanOrEqual(0);

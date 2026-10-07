@@ -613,7 +613,7 @@ export function FlagsTab({ onError }: { onError: (msg: string | null) => void })
   const saveRollout = async (flag: FeatureFlag) => {
     const raw = (drafts[flag.key] ?? String(flag.rollout)).trim();
     if (!/^\d+$/.test(raw) || Number(raw) < 0 || Number(raw) > 100) {
-      setActionError(`Rollout for ${flag.key} must be a whole number 0–100.`);
+      setActionError(`Rollout for ${flag.key} must be a whole number 0-100.`);
       return;
     }
     setRolloutBusyKey(flag.key);

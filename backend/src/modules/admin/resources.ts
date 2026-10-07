@@ -175,7 +175,7 @@ const OverviewSchema = z.object({
 });
 
 /**
- * Admin resources (§76–§79): every route requires an MFA-verified session;
+ * Admin resources (§76-§79): every route requires an MFA-verified session;
  * mutations additionally require an owner/admin role and leave an audit row.
  */
 export async function registerAdminResourceRoutes(app: AppInstance): Promise<void> {

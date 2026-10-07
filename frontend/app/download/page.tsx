@@ -570,7 +570,7 @@ function DownloadFlow() {
                       {bestSize ? ` • ${bestSize}` : ''}
                     </Button>
                     <p className="text-center text-xs text-muted-foreground">
-                      Best available — or pick another format below
+                      Best available - or pick another format below
                     </p>
                   </div>
                 )}

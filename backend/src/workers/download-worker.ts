@@ -130,7 +130,7 @@ async function waitForLeaseExpiry(db: Database, jobId: string): Promise<void> {
 /**
  * Lease acquisition doubles as work election: only the first worker to flip
  * `queued|retrying → analyzing` proceeds, everyone else skips, so duplicate
- * enqueues are harmless (contract invariants 1–2).
+ * enqueues are harmless (contract invariants 1-2).
  *
  * A delivery can also arrive for a job that is already `analyzing`:
  * - the previous attempt crashed → its lease lapses, we reclaim and rerun;

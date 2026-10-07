@@ -515,7 +515,7 @@ export default function AccountPage() {
                   (subscription.plan.code === 'free' ? (
                     <>
                       {' '}
-                      API keys unlock on Pro and Business — up to{' '}
+                      API keys unlock on Pro and Business - up to{' '}
                       {Math.max(
                         0,
                         ...availablePlans
