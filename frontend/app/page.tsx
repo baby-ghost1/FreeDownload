@@ -501,7 +501,7 @@ export default function HomePage() {
                 Higher daily limits, more parallel downloads, bigger files.
               </p>
             </Reveal>
-            <Stagger className="mx-auto mt-8 grid max-w-3xl grid-cols-3 items-stretch gap-1 sm:gap-3">
+            <Stagger className="mx-auto mt-8 grid max-w-3xl grid-cols-3 items-stretch gap-1 divide-x divide-border/40 rounded-2xl border border-border/40 bg-surface/50 sm:gap-3 sm:divide-x-0 sm:rounded-none sm:border-transparent sm:bg-transparent">
               {config.plans.map((p) => {
                 const paid = p.priceCents > 0;
                 const popular =
@@ -510,13 +510,11 @@ export default function HomePage() {
                     Math.min(
                       ...config.plans.filter((q) => q.priceCents > 0).map((q) => q.priceCents),
                     );
-                const price = paid
-                  ? new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: p.currency.toUpperCase(),
-                      minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
-                    }).format(p.priceCents / 100)
-                  : null;
+                const price = `${new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: p.currency.toUpperCase(),
+                  minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
+                }).format(p.priceCents / 100)}/${p.interval}`;
                 return (
                   <StaggerItem key={p.code} className="h-full min-w-0">
                     <Card
@@ -539,7 +537,7 @@ export default function HomePage() {
                         {p.name}
                       </p>
                       <p className="mt-0.5 truncate text-lg font-bold tracking-tight text-foreground sm:mt-1 sm:text-3xl">
-                        {price ?? 'Free'}
+                        {price}
                       </p>
                       <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
                         {paid ? `per ${p.interval}` : 'free forever'}
