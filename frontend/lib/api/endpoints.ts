@@ -267,6 +267,16 @@ export function deleteAdminUser(id: string, password: string): Promise<{ ok: tru
   });
 }
 
+export function bulkDeleteAdminUsers(
+  ids: string[],
+  password: string,
+): Promise<{ deleted: number; requested: number }> {
+  return apiFetch<{ deleted: number; requested: number }>('/admin/users/bulk-delete', {
+    method: 'POST',
+    body: { ids, password },
+  });
+}
+
 export function listApiKeys(opts: Opts = {}): Promise<{ data: ApiKeyInfo[] }> {
   return apiFetch<{ data: ApiKeyInfo[] }>('/api-keys', opts);
 }

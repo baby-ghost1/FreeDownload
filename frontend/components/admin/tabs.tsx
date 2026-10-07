@@ -34,6 +34,7 @@ import { Spinner } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import {
   approveUpgradeRequest,
+  bulkDeleteAdminUsers,
   changeAdminPassword,
   createAdminCoupon,
   deleteAdminUser,
@@ -489,6 +490,9 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const toggle = async (user: AdminUser) => {
     setBusyId(user.id);
@@ -536,6 +540,40 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Page changes invalidate the selection (ids belong to the old page).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- selection reset on page navigation
+    setSelected(new Set());
+    setBulkOpen(false);
+  }, [page]);
+
+  const confirmBulkDelete = async () => {
+    if (selected.size === 0 || !deletePassword) return;
+    setBulkBusy(true);
+    setActionError(null);
+    try {
+      const r = await bulkDeleteAdminUsers([...selected], deletePassword);
+      toast(`Deleted ${r.deleted} of ${r.requested} users`, 'success');
+      setSelected(new Set());
+      setBulkOpen(false);
+      setDeletePassword('');
+      reload();
+    } catch (err) {
+      setActionError(message(err, 'Could not delete those users.'));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   if (loading) return <LoadingBlock />;
 
   return (
@@ -545,11 +583,34 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         title="Users"
         sub="Suspend abuse, reactivate genuine accounts"
         right={
-          <span
-            className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1"
-            data-testid="users-count"
-          >
-            {loading ? '…' : `${items.length} on page ${page + 1}`}
+          <span className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1">
+              <input
+                type="checkbox"
+                ref={(el) => {
+                  if (el) {
+                    el.indeterminate =
+                      selected.size > 0 && selected.size < items.length && !loading;
+                  }
+                }}
+                checked={!loading && items.length > 0 && selected.size === items.length}
+                disabled={loading || items.length === 0}
+                onChange={(e) => {
+                  if (e.target.checked) setSelected(new Set(items.map((u) => u.id)));
+                  else setSelected(new Set());
+                }}
+                aria-label="Select all users on this page"
+                data-testid="users-select-all"
+                className="size-3.5 accent-primary"
+              />
+              All
+            </label>
+            <span
+              className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground shadow-1"
+              data-testid="users-count"
+            >
+              {loading ? '…' : `${items.length} on page ${page + 1}`}
+            </span>
           </span>
         }
       />
@@ -557,6 +618,70 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
         <Alert tone="error" role="alert" className="rounded-2xl">
           {actionError}
         </Alert>
+      )}
+      {selected.size > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3"
+          data-testid="users-bulk-bar"
+        >
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => {
+              setBulkOpen(true);
+              setDeletePassword('');
+            }}
+            data-testid="users-bulk-delete"
+            className="ml-auto rounded-xl"
+          >
+            Delete selected
+          </Button>
+        </div>
+      )}
+      {bulkOpen && selected.size > 0 && (
+        <div
+          role="alertdialog"
+          aria-label={`Delete ${selected.size} users`}
+          className="flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3.5"
+          data-testid="users-bulk-confirm"
+        >
+          <p className="min-w-0 flex-1 text-sm">
+            Delete <strong>{selected.size} users</strong> forever? Enter{' '}
+            <strong>your admin password</strong> once to confirm.
+          </p>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Admin password"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            data-testid="users-bulk-password"
+            className="h-9 max-w-52 rounded-xl"
+          />
+          <Button
+            size="sm"
+            variant="destructive"
+            loading={bulkBusy}
+            disabled={!deletePassword}
+            onClick={() => void confirmBulkDelete()}
+            data-testid="users-bulk-confirm-btn"
+            className="rounded-xl"
+          >
+            Confirm delete
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setBulkOpen(false);
+              setDeletePassword('');
+            }}
+            className="rounded-xl"
+          >
+            Cancel
+          </Button>
+        </div>
       )}
       {items.length === 0 && !loading ? (
         <EmptyState text="No users yet." />
@@ -569,6 +694,14 @@ export function UsersTab({ onError }: { onError: (msg: string | null) => void })
               data-testid="admin-user-row"
               className="flex flex-wrap items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
               >
+              <input
+                type="checkbox"
+                checked={selected.has(user.id)}
+                onChange={() => toggleSelect(user.id)}
+                aria-label={`Select ${user.email}`}
+                data-testid="user-select"
+                className="size-4 shrink-0 accent-primary"
+              />
               <span
                 className={`flex size-10 shrink-0 items-center justify-center rounded-xl font-semibold ${
                   user.status === 'suspended'

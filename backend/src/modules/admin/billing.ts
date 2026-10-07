@@ -325,6 +325,56 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
     },
   );
 
+  const BulkDeleteBody = z.object({
+    ids: z.array(z.uuid('A valid id is required.')).min(1).max(100),
+    password: z.string().min(1).max(256),
+  });
+
+  app.post(
+    '/admin/users/bulk-delete',
+    {
+      schema: {
+        description:
+          'Delete up to 100 users at once (owner/admin only, own password required once).',
+        body: BulkDeleteBody,
+        response: {
+          200: z.object({ deleted: z.number(), requested: z.number() }),
+          ...errorResponses(400, 401, 403),
+        },
+      },
+    },
+    async (req) => {
+      assertCsrf(req);
+      const context = requireAdmin(req);
+      assertMutatorRole(context);
+      const ok = await verifyPassword(context.admin.passwordHash, req.body.password);
+      if (!ok) {
+        throw new AppError('UNAUTHORIZED', 'Your admin password is incorrect.');
+      }
+      const db = getDb();
+      const unique = [...new Set(req.body.ids)];
+      let deleted = 0;
+      for (const id of unique) {
+        try {
+          await deleteUser(db, id);
+          deleted += 1;
+        } catch (err) {
+          if (err instanceof AppError && err.code === 'NOT_FOUND') continue;
+          throw err;
+        }
+      }
+      await writeAudit(db, {
+        adminId: context.admin.id,
+        action: 'user.bulk_delete',
+        resource: 'users',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] ?? null,
+        metadata: { deleted, requested: unique.length },
+      });
+      return { deleted, requested: unique.length };
+    },
+  );
+
   app.delete(
     '/admin/users/:id',
     {

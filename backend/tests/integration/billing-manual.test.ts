@@ -9,7 +9,7 @@ import { closeQueues } from '../../src/queue/queues.js';
 import { seed } from '../../src/database/seed.js';
 import { config } from '../../src/server/config.js';
 import { hashPassword } from '../../src/security/passwords.js';
-import { adminUsers } from '../../src/database/schema/index.js';
+import { adminUsers, users } from '../../src/database/schema/index.js';
 import type { AppInstance } from '../../src/types/app.js';
 import { infraAvailable, inCi } from '../helpers/infra.js';
 
@@ -163,6 +163,36 @@ describeInfra('manual UPI billing (integration)', () => {
     const current = await user('GET', '/api/v1/subscriptions/current');
     expect(current.statusCode).toBe(200);
     expect((current.json() as { plan: { code: string } }).plan.code).toBe('pro');
+  });
+
+  it('bulk-deletes users with one password confirmation', async () => {
+    const db = getDb();
+    const mkUser = async (tag: string) =>
+      (
+        await db
+          .insert(users)
+          .values({
+            email: `bulk-${tag}-${suffix}@example.com`,
+            passwordHash: await hashPassword(USER_PASSWORD),
+            status: 'active',
+          })
+          .returning({ id: users.id })
+      )[0]!.id;
+    const a = await mkUser('a');
+    const b = await mkUser('b');
+
+    const denied = await admin('POST', '/api/v1/admin/users/bulk-delete', {
+      ids: [a, b],
+      password: 'not-the-password',
+    });
+    expect(denied.statusCode).toBe(401);
+
+    const done = await admin('POST', '/api/v1/admin/users/bulk-delete', {
+      ids: [a, b, '00000000-0000-0000-0000-000000000000'],
+      password: OWNER_PASSWORD,
+    });
+    expect(done.statusCode).toBe(200);
+    expect(done.json()).toMatchObject({ deleted: 2, requested: 3 });
   });
 
   it('sets plans directly and deletes users with password confirmation', async () => {
