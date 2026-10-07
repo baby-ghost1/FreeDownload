@@ -1,4 +1,6 @@
 import { SourcePolicyError } from './errors.js';
+import { getCobaltAdapter } from './executors/cobalt.js';
+import { withFallback } from './executors/fallback.js';
 import { ytdlpAdapter } from './executors/ytdlp.js';
 import type { SourceAdapter } from './types.js';
 
@@ -20,6 +22,14 @@ export function getAdapterForUrl(url: URL): SourceAdapter {
     throw new SourcePolicyError('No adapter can handle this URL.');
   }
   return adapter;
+}
+
+/**
+ * Primary adapter with the cobalt fallback attached when COBALT_API_URL is
+ * set. All analyze/download call sites go through here.
+ */
+export function getAdapterWithFallback(url: URL): SourceAdapter {
+  return withFallback(getAdapterForUrl(url), getCobaltAdapter());
 }
 
 export function listAdapters(): ReadonlyArray<{ key: string }> {

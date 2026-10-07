@@ -481,6 +481,24 @@ export function buildSelector(selection: {
   return `bv*${height}[ext=${selection.container}]+ba${audio}/bv*${height}/b${height}/best`;
 }
 
+/**
+ * yt-dlp fetch arguments for a validated selection. `--merge-output-format`
+ * only accepts muxer containers (mp4/mkv/webm...) - audio targets like mp3
+ * are rejected and yt-dlp exits immediately, so audio fetches omit it.
+ * Container fixups for audio happen later in `ensureContainer`.
+ */
+export function buildFetchArgs(selection: {
+  container: string;
+  maxHeight?: number | null;
+  audioOnly?: boolean;
+}): string[] {
+  const container = assertContainer(selection.container);
+  const selector = buildSelector(selection);
+  return selection.audioOnly
+    ? ['-f', selector]
+    : ['-f', selector, '--merge-output-format', container];
+}
+
 const PROGRESS_RE = /\]\s+(\d+(?:\.\d+)?)%/;
 
 export const ytdlpAdapter: SourceAdapter = {
@@ -573,7 +591,7 @@ export const ytdlpAdapter: SourceAdapter = {
   },
 
   async download(url: string, opts: DownloadOptions): Promise<DownloadedArtifact> {
-    const selector = buildSelector(opts.selection);
+    const fetchArgs = buildFetchArgs(opts.selection);
     const container = assertContainer(opts.selection.container);
 
     const controller = new AbortController();
@@ -646,7 +664,7 @@ export const ytdlpAdapter: SourceAdapter = {
     };
 
     try {
-      let filePath = await runFetcher(url, ['-f', selector, '--merge-output-format', container]);
+      let filePath = await runFetcher(url, fetchArgs);
 
       if (!filePath && !controller.signal.aborted) {
         // The page gave yt-dlp nothing playable (artwork-only pages like

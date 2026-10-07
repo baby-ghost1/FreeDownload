@@ -50,6 +50,8 @@ export interface FormatSelection {
   maxHeight?: number | null;
   /** Audio-only rendition. */
   audioOnly?: boolean;
+  /** Cobalt picker index chosen at analyze time; unset = first item. */
+  cobaltIndex?: number | null;
 }
 
 export interface DownloadOptions {

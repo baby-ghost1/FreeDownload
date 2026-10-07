@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertContainer, buildSelector } from '../../src/downloader/executors/ytdlp.js';
+import { assertContainer, buildFetchArgs, buildSelector } from '../../src/downloader/executors/ytdlp.js';
+import { audioEncoderFor } from '../../src/media/ffmpeg.js';
 import { sniffContainer } from '../../src/media/ffmpeg.js';
 import { presignRequest } from '../../src/storage/r2.js';
 import { assertSourceUsable, type SourcePolicy } from '../../src/downloader/policy.js';
@@ -62,6 +63,38 @@ describe('buildSelector', () => {
     expect(() => buildSelector({ container: 'mp4;id' })).toThrow(SourceError);
     expect(() => buildSelector({ container: 'MP4' })).toThrow(SourceError);
     expect(() => buildSelector({ container: '' })).toThrow(SourceError);
+  });
+});
+
+describe('buildFetchArgs', () => {
+  it('omits --merge-output-format for audio targets (yt-dlp rejects mp3)', () => {
+    expect(buildFetchArgs({ container: 'mp3', audioOnly: true })).toEqual([
+      '-f',
+      'ba/bestaudio/best',
+    ]);
+    expect(buildFetchArgs({ container: 'm4a', audioOnly: true })).toEqual([
+      '-f',
+      'ba/bestaudio/best',
+    ]);
+  });
+
+  it('keeps --merge-output-format for video targets', () => {
+    const args = buildFetchArgs({ container: 'mp4', maxHeight: 1080 });
+    expect(args).toContain('--merge-output-format');
+    expect(args).toContain('mp4');
+  });
+});
+
+describe('audioEncoderFor', () => {
+  it('matches the encoder to the target container', () => {
+    expect(audioEncoderFor('mp3')).toBe('libmp3lame');
+    expect(audioEncoderFor('m4a')).toBe('aac');
+    expect(audioEncoderFor('webm')).toBe('libopus');
+    expect(audioEncoderFor('ogg')).toBe('libvorbis');
+    expect(audioEncoderFor('wav')).toBe('pcm_s16le');
+    expect(audioEncoderFor('flac')).toBe('flac');
+    expect(audioEncoderFor('MP3')).toBe('libmp3lame');
+    expect(audioEncoderFor('weird')).toBe('aac');
   });
 });
 

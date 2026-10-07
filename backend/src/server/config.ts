@@ -153,6 +153,14 @@ const EnvSchema = z.object({
   // Render injects this automatically - used when SELF_PING_URL is unset.
   RENDER_EXTERNAL_URL: z.string().optional(),
 
+  // --- fallback downloader (cobalt, self-hosted) ---------------------------
+  // When set, yt-dlp failures fall back to this cobalt instance instead of
+  // failing the job (bot-blocked extractors keep working). Unset = yt-dlp
+  // only. Never point this at someone else's public instance without
+  // permission - host your own (one docker command).
+  COBALT_API_URL: z.string().optional(),
+  COBALT_API_KEY: z.string().optional(),
+
   // --- observability ------------------------------------------------------
   SENTRY_DSN: z.string().optional(),
 });
@@ -339,6 +347,11 @@ export const config = {
   worker: {
     runner: env.WORKER_RUNNER,
     embedded: env.WORKER_IN_API,
+  },
+  /** Cobalt fallback (Phase 4b): null apiUrl disables it entirely. */
+  cobalt: {
+    apiUrl: env.COBALT_API_URL?.replace(/\/+$/, ''),
+    apiKey: env.COBALT_API_KEY,
   },
   /** Self-ping keepalive against Render's 15-minute idle spin-down. */
   selfPing: {

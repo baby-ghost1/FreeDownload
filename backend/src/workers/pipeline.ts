@@ -15,7 +15,7 @@ import {
 } from '../database/schema/index.js';
 import { AppError } from '../errors/app-error.js';
 import { assertSafeAnalysisUrls, assertSafeUrl } from '../security/ssrf.js';
-import { getAdapterForUrl } from '../downloader/detector.js';
+import { getAdapterWithFallback } from '../downloader/detector.js';
 import { SourceError, SourcePolicyError } from '../downloader/errors.js';
 import { assertSourceUsable, loadSourcePolicy, type SourcePolicy } from '../downloader/policy.js';
 import type { FormatSelection, MediaAnalysis } from '../downloader/types.js';
@@ -172,6 +172,7 @@ async function resolveSelection(
   let container = job.targetContainer?.toLowerCase() ?? '';
   let maxHeight: number | null = null;
   let audioOnly = false;
+  let cobaltIndex: number | null = null;
 
   if (job.requestedFormat) {
     const rows = await db
@@ -190,6 +191,9 @@ async function resolveSelection(
       container ||= picked.container;
       maxHeight = picked.height;
       audioOnly = picked.kind === 'audio';
+      // Cobalt picker rows re-resolve the same item at download time.
+      const pick = /^cobalt\.pick\.(\d+)$/.exec(picked.extKey ?? '');
+      cobaltIndex = pick ? Number(pick[1]) : null;
     } else {
       // No analysis row - accept it as a plain container request.
       container ||= job.requestedFormat.toLowerCase();
@@ -202,7 +206,7 @@ async function resolveSelection(
   }
   assertSourceUsable(policy, container);
 
-  return { selection: { container, maxHeight, audioOnly }, policy };
+  return { selection: { container, maxHeight, audioOnly, cobaltIndex }, policy };
 }
 
 async function sniffHead(path: string): Promise<string | null> {
@@ -241,7 +245,7 @@ async function downloadPhase(db: Database, ctx: RunnerContext, job: DownloadJob)
   let asyncErr: unknown = null;
 
   try {
-    const adapter = getAdapterForUrl(new URL(rawUrl));
+    const adapter = getAdapterWithFallback(new URL(rawUrl));
     const maxMb = policy?.maxFileSizeMb ?? config.source.maxFileSizeMb;
 
     const artifact = await adapter.download(rawUrl, {
@@ -421,7 +425,7 @@ const pipelineRunner: JobRunner = {
       assertSourceUsable(policy, job.targetContainer ?? undefined);
     }
 
-    const adapter = getAdapterForUrl(new URL(rawUrl));
+    const adapter = getAdapterWithFallback(new URL(rawUrl));
     const analysis = await adapter.analyze(rawUrl, {
       signal: ctx.signal,
       timeoutMs: config.source.timeoutMs,

@@ -103,6 +103,29 @@ export interface ConvertResult {
 }
 
 /**
+ * Audio encoder matching the target container. Remux (`-c copy`) is always
+ * tried first by the caller - this is the fallback that actually converts.
+ */
+export function audioEncoderFor(target: string): string {
+  switch (target.toLowerCase()) {
+    case 'mp3':
+      return 'libmp3lame';
+    case 'webm':
+    case 'opus':
+      return 'libopus';
+    case 'ogg':
+    case 'oga':
+      return 'libvorbis';
+    case 'wav':
+      return 'pcm_s16le';
+    case 'flac':
+      return 'flac';
+    default:
+      return 'aac';
+  }
+}
+
+/**
  * Returns a file in `target` container: skips when already there, remuxes
  * (`-c copy`) when possible, re-encodes as a last resort.
  */
@@ -143,11 +166,12 @@ export async function ensureContainer(
     // fall through to transcode - incompatible codecs are the usual cause
   }
 
-  // 2) Transcode - video to H.264/AAC, audio-only to AAC.
+  // 2) Transcode - video to H.264/AAC, audio-only to the target's encoder
+  // (a forced `aac` inside e.g. `.mp3` produces an unplayable file).
   const probe = await probeMedia(inputPath, { signal: opts.signal }).catch(() => null);
   const codecArgs = probe?.hasVideo
     ? ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-c:a', 'aac']
-    : ['-vn', '-c:a', 'aac'];
+    : ['-vn', '-c:a', audioEncoderFor(target)];
 
   try {
     await runProcess(
