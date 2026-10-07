@@ -6,7 +6,7 @@ import { Suspense, useState } from 'react';
 import { AuthLink, AuthShell } from '@/components/auth/auth-shell';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FieldError, Input, Label } from '@/components/ui/input';
+import { FieldError, Label, PasswordInput } from '@/components/ui/input';
 import { ApiError } from '@/lib/api/client';
 import { resetPassword } from '@/lib/api/endpoints';
 
@@ -63,9 +63,8 @@ function ResetForm() {
     <form onSubmit={(e) => void submit(e)} className="space-y-4" data-testid="reset-form">
       <div>
         <Label htmlFor="reset-password">New password</Label>
-        <Input
+        <PasswordInput
           id="reset-password"
-          type="password"
           required
           minLength={8}
           autoComplete="new-password"
@@ -76,9 +75,8 @@ function ResetForm() {
       </div>
       <div>
         <Label htmlFor="reset-confirm">Confirm new password</Label>
-        <Input
+        <PasswordInput
           id="reset-confirm"
-          type="password"
           required
           minLength={8}
           autoComplete="new-password"

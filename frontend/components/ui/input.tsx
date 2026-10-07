@@ -1,3 +1,8 @@
+'use client';
+
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+
 import { cn } from '@/lib/utils/cn';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -48,5 +53,29 @@ export function FieldError({ id, children }: { id?: string; children: React.Reac
     <p id={id} className="mt-1.5 text-sm text-destructive" role="alert">
       {children}
     </p>
+  );
+}
+
+/** Password field with a show/hide toggle (44px touch target). */
+export function PasswordInput({ className, ...props }: InputProps) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <Input type={shown ? 'text' : 'password'} className={cn('pr-12', className)} {...props} />
+      <button
+        type="button"
+        onClick={() => setShown((v) => !v)}
+        aria-pressed={shown}
+        aria-label={shown ? 'Hide password' : 'Show password'}
+        title={shown ? 'Hide password' : 'Show password'}
+        className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {shown ? (
+          <EyeOff className="size-4" aria-hidden="true" />
+        ) : (
+          <Eye className="size-4" aria-hidden="true" />
+        )}
+      </button>
+    </div>
   );
 }

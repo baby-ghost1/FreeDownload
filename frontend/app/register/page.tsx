@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { AuthLink, AuthShell } from '@/components/auth/auth-shell';
 import { Button } from '@/components/ui/button';
-import { FieldError, Input, Label } from '@/components/ui/input';
+import { FieldError, Input, Label, PasswordInput } from '@/components/ui/input';
 import { ApiError } from '@/lib/api/client';
 import { register } from '@/lib/api/endpoints';
 import { useSession } from '@/lib/session';
@@ -75,9 +75,8 @@ export default function RegisterPage() {
         </div>
         <div>
           <Label htmlFor="reg-password">Password</Label>
-          <Input
+          <PasswordInput
             id="reg-password"
-            type="password"
             required
             minLength={8}
             autoComplete="new-password"

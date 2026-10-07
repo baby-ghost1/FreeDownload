@@ -8,7 +8,7 @@ import { Suspense, useState } from 'react';
 import { AuthLink, AuthShell } from '@/components/auth/auth-shell';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FieldError, Input, Label } from '@/components/ui/input';
+import { FieldError, Input, Label, PasswordInput } from '@/components/ui/input';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/session';
 
@@ -68,9 +68,8 @@ function LoginForm() {
       </div>
       <div>
         <Label htmlFor="login-password">Password</Label>
-        <Input
+        <PasswordInput
           id="login-password"
-          type="password"
           required
           autoComplete="current-password"
           value={password}

@@ -8,7 +8,7 @@ test('sign in form works', async ({ page }) => {
 
   await page.goto('/login');
   await page.getByLabel('Email').fill('ada@example.com');
-  await page.getByLabel('Password').fill('password123');
+  await page.getByLabel('Password', { exact: true }).fill('password123');
   await page.getByTestId('login-submit').click();
 
   // Landed signed in: the account page renders the billing section.
@@ -24,7 +24,7 @@ test('register form submits and lands signed in', async ({ page }) => {
   await page.goto('/register');
   await page.getByLabel('Email').fill('grace@example.com');
   await page.getByLabel('Display name (optional)').fill('Grace');
-  await page.getByLabel('Password').fill('password123');
+  await page.getByLabel('Password', { exact: true }).fill('password123');
   await page.getByTestId('register-submit').click();
 
   await expect(page).toHaveURL(/\/$/);
