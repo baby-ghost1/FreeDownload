@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 /** Payment QR image served from `frontend/public`. */
-export const DONATE_QR_SRC: string | null = '/donate-qr.png';
+export const DONATE_QR_SRC: string | null = '/donate-qr.jpeg';
 
 /** Deterministic dummy QR-lookalike (NOT scannable) for layout review. */
 function DummyQr({ size = 168 }: { size?: number }) {
