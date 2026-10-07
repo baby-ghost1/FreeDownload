@@ -236,8 +236,10 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
+      {/* Hero - pulled up behind the in-flow navbar so its own wash
+          covers logo/menu too (no separate navbar bg). Content stays put
+          via matching top padding. */}
+      <section className="relative -mt-14 overflow-hidden pt-14">
         {/* Soft, smooth backdrop - no grid, just a gentle wash of colour */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_70%)]" />
