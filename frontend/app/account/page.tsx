@@ -64,30 +64,25 @@ function limitsText(sub: Subscription): string {
 function UsageBar({ usage }: { usage: Usage }) {
   const total = Math.max(usage.total, 1);
   const done = Math.round((usage.completed / total) * 100);
-  const failed = Math.round((usage.failed / total) * 100);
   return (
     <div>
       <div
-        className="flex h-2.5 overflow-hidden rounded-full bg-surface-sunken"
+        className="h-2.5 overflow-hidden rounded-full bg-surface-sunken"
         role="img"
-        aria-label={`${usage.completed} of ${usage.total} downloads completed`}
+        aria-label={`${usage.completed} of ${usage.total} downloads completed, ${usage.failed} failed`}
       >
         <motion.div
-          className="h-full bg-gradient-to-r from-success to-success/60"
+          className="h-full rounded-full bg-gradient-to-r from-success to-success/60"
           initial={{ width: 0 }}
           animate={{ width: `${done}%` }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         />
-        <motion.div
-          className="h-full bg-destructive/80"
-          initial={{ width: 0 }}
-          animate={{ width: `${failed}%` }}
-          transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-        />
       </div>
       <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-        <span>{done}% completed</span>
-        <span>{failed}% failed</span>
+        <span>
+          {usage.completed} of {usage.total} completed
+        </span>
+        <span>{done}% success</span>
       </div>
     </div>
   );
