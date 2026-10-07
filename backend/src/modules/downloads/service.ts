@@ -22,7 +22,7 @@ import {
   recordJobCreated,
   resolveQuota,
 } from '../../limits/engine.js';
-import { getAdapterForUrl } from '../../downloader/detector.js';
+import { getAdapterWithFallback } from '../../downloader/detector.js';
 import { SourceError, SourcePolicyError } from '../../downloader/errors.js';
 import { assertSourceUsable, findSourceBySlug, loadSourcePolicy } from '../../downloader/policy.js';
 import { getStorage } from '../../storage/index.js';
@@ -378,7 +378,7 @@ export async function analyzeDownloadUrl(
     mapSourceError(err);
   }
 
-  const adapter = getAdapterForUrl(parsed);
+  const adapter = getAdapterWithFallback(parsed);
   const cacheKey = `analyze:${sha256(parsed.toString())}`;
   const ttl = config.source.analyzeCacheTtlSec;
 

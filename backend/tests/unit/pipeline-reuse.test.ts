@@ -50,18 +50,21 @@ vi.mock('../../src/downloader/policy.js', () => ({
   assertSourceUsable: () => undefined,
 }));
 
+const fakeAdapterValue = {
+  key: 'fake',
+  canHandle: () => true,
+  analyze: async () => {
+    throw new Error('must not re-analyze on the reuse path');
+  },
+  download: async (...args: unknown[]) => {
+    events.push('download');
+    return fakeDownload(...args);
+  },
+};
+
 vi.mock('../../src/downloader/detector.js', () => ({
-  getAdapterForUrl: () => ({
-    key: 'fake',
-    canHandle: () => true,
-    analyze: async () => {
-      throw new Error('must not re-analyze on the reuse path');
-    },
-    download: async (...args: unknown[]) => {
-      events.push('download');
-      return fakeDownload(...args);
-    },
-  }),
+  getAdapterForUrl: () => fakeAdapterValue,
+  getAdapterWithFallback: () => fakeAdapterValue,
   registerAdapter: () => undefined,
   listAdapters: () => [{ key: 'fake' }],
 }));
