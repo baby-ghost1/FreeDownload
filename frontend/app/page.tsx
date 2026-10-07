@@ -75,6 +75,30 @@ const FORMATS = [
   },
 ];
 
+/* Honest, objection-handling answers. Native <details> = no JS, big touch targets. */
+const FAQS = [
+  {
+    q: 'Do I need an account?',
+    a: 'No. Paste a link and download as a guest. An account just keeps your history across devices plus higher limits and API keys.',
+  },
+  {
+    q: 'Which links work?',
+    a: 'Links from your favourite platforms — paste one and we list the formats that are actually available for it.',
+  },
+  {
+    q: 'What quality will I get?',
+    a: 'Up to the source quality. Choose video resolution yourself, or take audio-only MP3/M4A when you only need sound.',
+  },
+  {
+    q: 'How long do download links last?',
+    a: 'Files arrive through short-lived signed links that expire automatically — download promptly once your file is ready.',
+  },
+  {
+    q: 'What may I download?',
+    a: 'Only media you own or have permission to download. Sources that restrict downloads stay restricted.',
+  },
+];
+
 /* Faded brand glyphs that drift gently behind the hero. Deliberately faint -
  * decoration only, never competing with the content in front. */
 const FLOATERS = [
@@ -400,6 +424,60 @@ export default function HomePage() {
               </StaggerItem>
             ))}
           </Stagger>
+        </div>
+      </section>
+
+      {/* FAQ - native details, full-width touch targets on mobile */}
+      <section aria-label="Frequently asked questions" className="relative overflow-hidden bg-surface-sunken/60">
+        <div className="relative mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-14">
+          <Reveal>
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Questions
+            </p>
+            <h2 className="mt-2 text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              Before you paste
+            </h2>
+          </Reveal>
+          <div className="mt-8 space-y-2.5">
+            {FAQS.map((f) => (
+              <Reveal key={f.q}>
+                <details className="group rounded-xl border border-border bg-surface px-4 py-1 shadow-1 transition-colors open:border-primary/40">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-sm font-semibold text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    {f.q}
+                    <span
+                      aria-hidden="true"
+                      className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-transform duration-300 group-open:rotate-45 group-open:border-primary/40 group-open:text-primary"
+                    >
+                      +
+                    </span>
+                  </summary>
+                  <p className="pb-4 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
+
+          {/* Final CTA - one thumb-friendly button on mobile */}
+          <Reveal className="mt-10 text-center">
+            <div className="glass mx-auto max-w-xl rounded-2xl border border-border bg-surface/80 p-4 shadow-3 sm:p-6">
+              <p className="text-base font-semibold text-foreground sm:text-lg">
+                Have a link ready?
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Paste it now — you&apos;ll see formats in seconds.
+              </p>
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => router.push('/download')}
+                className="btn-shine mt-4 h-12 w-full px-6 sm:w-auto"
+                data-testid="landing-final-cta"
+              >
+                Start downloading
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </Reveal>
         </div>
       </section>
 
