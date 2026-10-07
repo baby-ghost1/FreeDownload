@@ -8,6 +8,7 @@ import { AppError } from '../../errors/app-error.js';
 import { assertCsrf } from '../../security/csrf.js';
 import { apiKeys, apiUsage } from '../../database/schema/index.js';
 import { generateApiKey } from '../../security/api-key.js';
+import { resolveQuota } from '../../limits/engine.js';
 import { requireAuth } from '../auth/session.js';
 import { errorResponses } from '../../http/error-schema.js';
 
@@ -95,6 +96,17 @@ export async function registerApiKeyRoutes(app: AppInstance): Promise<void> {
     async (req, reply) => {
       assertCsrf(req);
       const auth = requireAuth(req);
+
+      // API keys are a paid facility (Pro/Business) - free users see the
+      // section but are pointed at an upgrade instead of a key.
+      const quota = await resolveQuota(getDb(), { userId: auth.user.id });
+      if (quota.tier < 1) {
+        throw new AppError(
+          'FORBIDDEN',
+          'API keys are available on Pro and Business plans. Upgrade your plan to create one.',
+          { details: { upgradeRequired: true, plan: quota.planCode } },
+        );
+      }
 
       const generated = generateApiKey();
       const inserted = await getDb()
