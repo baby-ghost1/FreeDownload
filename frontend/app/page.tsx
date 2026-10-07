@@ -297,7 +297,7 @@ export default function HomePage() {
                     type="submit"
                     size="lg"
                     loading={going}
-                    className="btn-shine h-12 shrink-0 px-5 shadow-2"
+                    className="btn-shine h-12 shrink-0 px-3 text-sm shadow-2 sm:px-5 sm:text-base"
                     data-testid="hero-go"
                   >
                     {!going && (
