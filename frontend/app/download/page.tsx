@@ -292,12 +292,16 @@ function DownloadFlow() {
         </p>
 
         {/* Flow stepper - the pill glides as you move forward */}
-        <div
+        <ol
+          aria-label="Download progress"
           className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2"
-          aria-hidden="true"
         >
           {FLOW_STEPS.map((label, i) => (
-            <span key={label} className="relative rounded-full px-3 py-1 text-xs font-medium">
+            <li
+              key={label}
+              aria-current={i === activeStep ? 'step' : undefined}
+              className="relative rounded-full px-3 py-1 text-xs font-medium"
+            >
               {i === activeStep && (
                 <motion.span
                   layoutId="flow-pill"
@@ -317,9 +321,9 @@ function DownloadFlow() {
                 {i < activeStep ? '✓ ' : `${i + 1}. `}
                 {label}
               </span>
-            </span>
+            </li>
           ))}
-        </div>
+        </ol>
 
         {/* Detected platform - the whole page tints to match it */}
         <AnimatePresence mode="wait">

@@ -253,7 +253,7 @@ export default function MyDownloadsPage() {
                   onClick={() => setFilter(f.id)}
                   aria-pressed={filter === f.id}
                   className={cn(
-                    'relative rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95',
+                    'relative min-h-11 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95',
                     filter === f.id
                       ? 'text-primary-foreground'
                       : 'border border-border bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground',
