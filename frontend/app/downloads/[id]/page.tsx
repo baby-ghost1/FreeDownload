@@ -102,7 +102,8 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
-/** Small metric tile used inside the live progress console. */
+/** Small metric tile: icon + value only (self-explanatory), label kept
+ *  for screen readers via aria-label. */
 function StatTile({
   icon: Icon,
   label,
@@ -113,14 +114,13 @@ function StatTile({
   value: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-surface/60 px-2.5 py-2">
-      <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-      <div className="min-w-0">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
-        <p className="truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
-      </div>
+    <div
+      aria-label={`${label}: ${value}`}
+      title={`${label}: ${value}`}
+      className="flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-border/70 bg-surface/60 px-2 py-2"
+    >
+      <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+      <p className="truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -342,8 +342,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           {(active || done) && (
             <div className="grid grid-cols-3 gap-2">
               <StatTile icon={Hourglass} label="Elapsed" value={elapsed} />
-              <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '-'} />
-              <StatTile icon={HardDrive} label="Size" value={size ?? '-'} />
+              <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '…'} />
+              <StatTile icon={HardDrive} label="Size" value={size ?? '…'} />
             </div>
           )}
 
