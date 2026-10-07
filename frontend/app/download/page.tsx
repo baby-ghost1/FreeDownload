@@ -271,7 +271,7 @@ function DownloadFlow() {
       data-platform={platform.id}
       className="relative mx-auto w-full max-w-2xl px-4 pb-10 pt-10 sm:px-6 sm:pt-12"
     >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_70%)]" />
         <div className="animate-drift-a absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-[70%] rounded-full bg-primary/10 blur-3xl" />
         <div className="animate-drift-b absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-[20%] rounded-full bg-info/10 blur-3xl" />
@@ -536,7 +536,7 @@ function DownloadFlow() {
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate" data-testid="analysis-title">
+                    <CardTitle className="line-clamp-2" data-testid="analysis-title">
                       {analysis.title ?? analysis.url}
                     </CardTitle>
                     <p className="mt-1 flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
