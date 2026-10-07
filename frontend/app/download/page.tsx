@@ -519,21 +519,23 @@ function DownloadFlow() {
                       <Image
                         src={analysis.thumbnailUrl}
                         alt=""
-                        width={160}
-                        height={90}
+                        width={192}
+                        height={112}
                         unoptimized
-                        className="h-20 w-36 object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="h-24 w-40 object-cover transition-transform duration-500 group-hover:scale-105 sm:h-28 sm:w-48"
                       />
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <CardTitle className="line-clamp-2" data-testid="analysis-title">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate" data-testid="analysis-title">
                       {analysis.title ?? analysis.url}
                     </CardTitle>
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      {analysis.uploader && <span>{analysis.uploader}</span>}
-                      {duration && <span>· {duration}</span>}
-                      <span>· {analysis.url}</span>
+                    <p className="mt-1 flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
+                      {analysis.uploader && (
+                        <span className="shrink-0">{analysis.uploader}</span>
+                      )}
+                      {duration && <span className="shrink-0">· {duration}</span>}
+                      <span className="min-w-0 flex-1 truncate">· {analysis.url}</span>
                     </p>
                   </div>
                 </div>
