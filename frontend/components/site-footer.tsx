@@ -118,7 +118,7 @@ export function SiteFooter() {
         aria-hidden="true"
         className="pointer-events-none relative select-none overflow-hidden"
       >
-        <p className="-mb-[0.23em] bg-gradient-to-b from-foreground/[0.09] to-transparent bg-clip-text text-center text-[21vw] font-bold leading-none tracking-tighter text-transparent md:text-[10.5rem]">
+        <p className="-mb-[0.23em] bg-gradient-to-b from-foreground/[0.09] to-transparent bg-clip-text text-center text-[12.5vw] font-bold leading-none tracking-tighter whitespace-nowrap text-transparent sm:text-[11vw] md:text-[10.5rem]">
           {SITE_CONFIG.name}
         </p>
       </div>
