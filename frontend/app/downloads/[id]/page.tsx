@@ -22,6 +22,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
+import { DonateModal } from '@/components/donate-coffee';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { ApiError } from '@/lib/api/client';
@@ -60,26 +61,6 @@ function formatElapsed(ms: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
-}
-
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/**
- * Unique on-device filename: FreeDownload_07-10-2026_Tue_143022_a1b2.mp4.
- * Date + weekday + time come from the job; the trailing job-id slice stands
- * in for a day-serial (no backend counter yet) and guarantees no two
- * platform downloads ever share a name - phones stop warning
- * "download again" on first-time saves.
- */
-function buildFileName(jobId: string, createdAt: string, container: string): string {
-  const d = new Date(createdAt);
-  const p2 = (n: number) => String(n).padStart(2, '0');
-  const date = `${p2(d.getDate())}-${p2(d.getMonth() + 1)}-${d.getFullYear()}`;
-  const day = WEEKDAYS[d.getDay()] ?? '';
-  const time = `${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
-  const serial = (jobId.replace(/[^a-zA-Z0-9]/g, '').slice(-4) || '0000').toLowerCase();
-  const ext = (container || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4';
-  return `FreeDownload_${date}_${day}_${time}_${serial}.${ext}`;
 }
 
 /** Live "expires in 14:32" chip for the signed download link. */
@@ -151,6 +132,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   // Elapsed clock freezes the moment the job completes (100% + button).
   const [frozenElapsed, setFrozenElapsed] = useState<string | null>(null);
   useEffect(() => {
@@ -290,9 +272,10 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const blocked = job.status === 'policy_restricted';
   const platform = detectPlatform(job.url);
   const elapsed = formatElapsed(now - new Date(job.createdAt).getTime());
-  const fileName = result
-    ? buildFileName(job.id, job.createdAt, result.container ?? 'mp4')
-    : null;
+  // Single source of truth for the saved name: the backend names the stored
+  // object, signs it into the URL (R2) / Content-Disposition (local), and
+  // echoes it here for display + the download attribute.
+  const fileName = result?.fileName ?? null;
 
   const onCancel = async () => {
     setCancelling(true);
@@ -594,13 +577,23 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               </motion.div>
             )}
 
-            <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              FreeDownload is free because people help -{' '}
-              <span className="font-medium text-foreground">enjoying it? Tap the coffee button to support us.</span>
-              <span className="mt-0.5 block">
-                FreeDownload muft hai kyunki log madad karte hain - achha laga to coffee button dabakar support karo.
-              </span>
-            </p>
+            <div className="rounded-2xl border border-border/70 bg-surface/60 px-4 py-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                FreeDownload is free because people help - enjoying it?{' '}
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen(true)}
+                  className="link-underline font-semibold text-primary underline-offset-2"
+                >
+                  Tap here to support us
+                </button>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                FreeDownload muft hai kyunki log madad karte hain - achha laga to Help
+                Us button dabakar support karo.
+              </p>
+              <DonateModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+            </div>
 
             <nav
               aria-label="More downloads"

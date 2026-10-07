@@ -131,6 +131,7 @@ export function jobFixture(overrides: Partial<Job> = {}): Job {
 
 export const jobResult: JobResult = {
   url: 'https://cdn.test/files/job-1.mp4?sig=test',
+  fileName: 'FreeDownload_03-10-2026_Fri_120000_job1.mp4',
   expiresAt: '2026-10-03T12:15:00.000Z',
   sizeBytes: 12_345_678,
   container: 'mp4',

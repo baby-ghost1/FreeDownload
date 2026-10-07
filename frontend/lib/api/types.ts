@@ -61,6 +61,7 @@ export interface AnalyzeResult {
 
 export interface JobResult {
   url: string;
+  fileName: string;
   expiresAt: string;
   sizeBytes: number | null;
   container: string | null;

@@ -123,7 +123,7 @@ every URL the extractor reports (thumbnail, format URLs) before returning or
 caching anything. Private/internal targets answer `403 POLICY_RESTRICTED`;
 unreachable sources answer `503`.
 
-`result` returns `{ url, expiresAt, sizeBytes, container, mimeType }` where
+`result` returns `{ url, fileName, expiresAt, sizeBytes, container, mimeType }` where
 `url` is a short-lived signed link (R2 presigned GET in production, HMAC
 `GET /api/v1/files/...` for the local dev driver) - media bytes never travel
 through the API (contract invariant 5).
