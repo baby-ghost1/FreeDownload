@@ -69,6 +69,8 @@ export const localStorage: Storage = {
   },
 
   async signedUrl(key, ttlSec): Promise<string> {
+    // The /files route sets Content-Disposition from the key's last segment,
+    // which already carries the unique download name - nothing to add here.
     const ttl = ttlSec ?? config.storage.signedUrlTtlSec;
     const exp = Math.floor(Date.now() / 1000) + ttl;
     const sig = signFileToken(key, exp);

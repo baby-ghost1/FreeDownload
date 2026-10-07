@@ -71,6 +71,8 @@ export interface PresignInput {
   secretAccessKey: string;
   expiresAt: Date;
   now?: Date;
+  /** Extra signed query params, e.g. S3 `response-content-disposition`. */
+  responseParams?: Record<string, string>;
 }
 
 /**
@@ -89,6 +91,9 @@ export function presignRequest(input: PresignInput): string {
   const expiresIn = Math.max(1, Math.floor((input.expiresAt.getTime() - now.getTime()) / 1000));
 
   const params = new URLSearchParams();
+  if (input.responseParams) {
+    for (const [k, v] of Object.entries(input.responseParams)) params.set(k, v);
+  }
   params.set('X-Amz-Algorithm', 'AWS4-HMAC-SHA256');
   params.set('X-Amz-Credential', `${input.accessKeyId}/${scope}`);
   params.set('X-Amz-Date', stamp);
@@ -208,14 +213,18 @@ export const r2Storage: Storage = {
     return { key, sizeBytes: s.size, sha256 };
   },
 
-  async signedUrl(key, ttlSec): Promise<string> {
+  async signedUrl(key, ttlSec, options): Promise<string> {
     const creds = requireCreds();
+    // Browsers save cross-origin links under the URL's last segment; the
+    // signed disposition makes the on-device name deterministic instead.
+    const filename = options?.filename ?? key.slice(key.lastIndexOf('/') + 1);
     return presignRequest({
       method: 'GET',
       url: objectUrl(creds, key),
       accessKeyId: creds.accessKeyId,
       secretAccessKey: creds.secretAccessKey,
       expiresAt: new Date(Date.now() + (ttlSec ?? config.storage.signedUrlTtlSec) * 1000),
+      responseParams: { 'response-content-disposition': `attachment; filename="${filename}"` },
     });
   },
 

@@ -536,6 +536,8 @@ export async function startDownload(
 
 export interface JobResult {
   url: string;
+  /** On-device filename (unique per download) - mirrors the saved file. */
+  fileName: string;
   expiresAt: Date;
   sizeBytes: number | null;
   container: string | null;
@@ -581,6 +583,7 @@ export async function getJobResult(
   const url = await getStorage().signedUrl(file.objectKey, Math.ceil(remainingMs / 1000));
   return {
     url,
+    fileName: file.objectKey.slice(file.objectKey.lastIndexOf('/') + 1),
     expiresAt: windowEnd,
     sizeBytes: file.sizeBytes ?? null,
     container: file.container ?? null,
