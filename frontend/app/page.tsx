@@ -510,44 +510,44 @@ export default function HomePage() {
                     Math.min(
                       ...config.plans.filter((q) => q.priceCents > 0).map((q) => q.priceCents),
                     );
-                const price =
-                  paid &&
-                  ` ${new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: p.currency.toUpperCase(),
-                    minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
-                  }).format(p.priceCents / 100)}/${p.interval}`;
+                const price = paid
+                  ? new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: p.currency.toUpperCase(),
+                      minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
+                    }).format(p.priceCents / 100)
+                  : null;
                 return (
                   <StaggerItem key={p.code} className="h-full">
                     <Card
                       className={cn(
-                        'relative h-full p-5 pt-6 text-center transition-all duration-300 hover:-translate-y-0.5',
-                        popular
-                          ? 'border-primary/50 shadow-3 ring-1 ring-primary/30 sm:scale-[1.04]'
-                          : 'hover:border-border-strong',
+                        'flex h-full flex-col p-5 text-center',
+                        popular && 'border-primary/50 shadow-3 ring-1 ring-primary/30',
                       )}
                     >
                       {popular && (
-                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-info px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-2">
+                        <span className="mx-auto mb-2 w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary ring-1 ring-primary/25">
                           Most popular
                         </span>
                       )}
                       <p className="text-sm font-semibold text-foreground">{p.name}</p>
                       <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">
-                        {paid ? price : 'Free'}
+                        {price ?? 'Free'}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {paid ? `per ${p.interval}, cancel anytime` : 'no sign-up needed'}
+                        {paid ? `per ${p.interval}` : 'free forever'}
                       </p>
-                      <Button
-                        type="button"
-                        variant={popular ? 'primary' : paid ? 'secondary' : 'outline'}
-                        size="sm"
-                        onClick={() => router.push(paid ? '/register' : '/download')}
-                        className={cn('mt-4 w-full', popular && 'btn-shine')}
-                      >
-                        {paid ? `Get ${p.name}` : 'Start downloading'}
-                      </Button>
+                      <div className="mt-auto pt-4">
+                        <Button
+                          type="button"
+                          variant={popular ? 'primary' : 'outline'}
+                          size="sm"
+                          onClick={() => router.push(paid ? '/register' : '/download')}
+                          className={cn('w-full', popular && 'btn-shine')}
+                        >
+                          {paid ? `Get ${p.name}` : 'Start downloading'}
+                        </Button>
+                      </div>
                     </Card>
                   </StaggerItem>
                 );
