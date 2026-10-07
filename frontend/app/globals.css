@@ -156,9 +156,19 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* Orbs stay unclipped (no cut blur) - sideways scroll dies here
+       instead, at the viewport, on every device. */
+    overflow-x: hidden;
     /* Slim modern scrollbar (Firefox). */
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--foreground) 28%, transparent) transparent;
+  }
+
+  @supports (overflow: clip) {
+    html,
+    body {
+      overflow-x: clip;
+    }
   }
 
   /* Slim modern scrollbar (Chromium / Safari) - thin, subtle, rounded. */

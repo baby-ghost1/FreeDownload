@@ -280,7 +280,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-10 sm:px-6"
     >
       {/* Home-style hero wash */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_70%)]" />
         <div className="animate-drift-a absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-[70%] rounded-full bg-primary/10 blur-3xl" />
         <div className="animate-drift-b absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-[20%] rounded-full bg-info/10 blur-3xl" />
