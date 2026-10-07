@@ -87,7 +87,6 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   // Everything else keeps the strict origin allowlist WITH credentials.
   // Preflights never carry Authorization, so the decision is made on the
   // request path, never on headers.
-  const thirdPartyPrefixes = ['/api/v1/downloads'];
   const corsMethods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'];
   const corsAllowedHeaders = [
     'Content-Type',
@@ -106,31 +105,24 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   ];
   await app.register(cors, {
     delegator: (req, cb) => {
-      const path = (req.url ?? '').split('?')[0] ?? '';
-      if (thirdPartyPrefixes.some((p) => path === p || path.startsWith(`${p}/`))) {
-        cb(null, {
-          origin: '*',
-          credentials: false,
-          methods: corsMethods,
-          allowedHeaders: corsAllowedHeaders,
-          exposedHeaders: corsExposedHeaders,
-          maxAge: 600,
-        });
-        return;
-      }
-      cb(null, {
-        origin(origin, originCb) {
-          // Same-origin / server-to-server callers send no Origin header.
-          if (!origin) return originCb(null, true);
-          if (config.corsOrigins.includes(origin)) return originCb(null, true);
-          originCb(null, false);
-        },
-        credentials: true,
+      const shared = {
         methods: corsMethods,
         allowedHeaders: corsAllowedHeaders,
         exposedHeaders: corsExposedHeaders,
         maxAge: 600,
-      });
+      };
+      const origin = req.headers.origin;
+      if (!origin || config.corsOrigins.includes(origin)) {
+        // Own frontend / server-to-server: reflect + credentials.
+        cb(null, { ...shared, origin: true, credentials: true });
+        return;
+      }
+      const path = (req.url ?? '').split('?')[0] ?? '';
+      if (path === '/api/v1/downloads' || path.startsWith('/api/v1/downloads/')) {
+        cb(null, { ...shared, origin: '*', credentials: false });
+        return;
+      }
+      cb(null, { ...shared, origin: false, credentials: true });
     },
   });
 
