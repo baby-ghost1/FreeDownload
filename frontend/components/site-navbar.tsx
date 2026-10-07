@@ -81,7 +81,6 @@ function linkVisible(href: Route, navbar: PublicConfig['navbar']): boolean {
 export function SiteNavbar() {
   const pathname = usePathname();
   const { user, loading } = useSession();
-  const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [navbar, setNavbar] = useState<PublicConfig['navbar']>(DEFAULT_NAVBAR);
   const navRef = useRef<HTMLElement>(null);
@@ -118,19 +117,6 @@ export function SiteNavbar() {
     return () => {
       live = false;
     };
-  }, []);
-
-  // Hide while scrolling down, glide back the moment the user scrolls up
-  // (or arrives back at the very top).
-  useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      setHidden(y > last && y > 120);
-      last = y;
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   // Close the menu on outside tap and Escape.
@@ -175,7 +161,7 @@ export function SiteNavbar() {
       </AnimatePresence>
       <motion.header
         initial={false}
-        animate={{ y: hidden && !open ? '-130%' : '0%', opacity: hidden && !open ? 0 : 1 }}
+        animate={{ y: '0%', opacity: 1 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-8"
       >
