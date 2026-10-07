@@ -71,12 +71,18 @@ function DonateMessage() {
   return (
     <div className="space-y-3 text-left">
       <p className="text-sm leading-relaxed text-foreground">
-        FreeDownload is free because people help - enjoying it? Tap the Help Us
-        button to support us.
+        Our developers work tirelessly, day and night, to keep FreeDownload fast, free and
+        alive for you. Servers, storage and countless sleepless nights cost real money. If
+        this little tool saved you even a few minutes today, please consider helping us
+        with any small contribution - every rupee goes straight into keeping the lights
+        on. Thank you for keeping us going!
       </p>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        FreeDownload muft hai kyunki log madad karte hain - achha laga to Help Us
-        button dabakar support karo.
+        Hamare developers din-raat mehnat karte hain taaki FreeDownload tumhare liye tez,
+        muft aur zinda rahe. Server, storage aur jaagi hui raaton mehnat aur kharcha dono
+        lagte hain. Agar is chhote tool ne tumhare kuch minute bachaye hain, to please
+        chhoti si madad zaroor karo - har rupaya seedha site ko chalaye rakhne me jata
+        hai. Saath nibhane ke liye dil se dhanyavaad!
       </p>
     </div>
   );
