@@ -38,6 +38,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener('fd:session-expired', onExpired);
+    return () => window.removeEventListener('fd:session-expired', onExpired);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => {
+      void refresh();
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [user, refresh]);
+
   const signIn = useCallback(async (input: { email: string; password: string }) => {
     const session = await loginRequest(input);
     setUser(session.user);

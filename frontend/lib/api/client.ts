@@ -74,6 +74,20 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       json = undefined;
     }
   }
-  if (!res.ok) throw new ApiError(res.status, json as ApiErrorBody | undefined);
+  if (!res.ok) {
+    // Session cookie no longer resolves server-side (e.g. admin deleted the
+    // account) - tell the session provider so the UI signs the user out.
+    // Auth endpoints are skipped so a failed sign-in attempt is not treated
+    // as a revoked session, and admin routes use their own session state.
+    if (
+      res.status === 401 &&
+      typeof window !== 'undefined' &&
+      !path.startsWith('/auth/') &&
+      !path.startsWith('/admin')
+    ) {
+      window.dispatchEvent(new Event('fd:session-expired'));
+    }
+    throw new ApiError(res.status, json as ApiErrorBody | undefined);
+  }
   return json as T;
 }

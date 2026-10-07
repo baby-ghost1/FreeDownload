@@ -119,7 +119,7 @@ export async function loginUser(input: LoginInput, db: Database = getDb()): Prom
   if (!user || user.deletedAt !== null) {
     // Equalise timing with a real verification so login cannot enumerate users.
     await burnPasswordTime(input.password);
-    throw new AppError('UNAUTHORIZED', 'Email or password is incorrect.');
+    throw new AppError('UNAUTHORIZED', 'User does not exist.');
   }
 
   const ok = await verifyPassword(user.passwordHash, input.password);
