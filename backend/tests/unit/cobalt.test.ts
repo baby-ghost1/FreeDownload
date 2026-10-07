@@ -2,8 +2,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { withFallback } from '../../src/downloader/executors/fallback.js';
 import { cobaltAdapter } from '../../src/downloader/executors/cobalt.js';
+import { SourcePolicyError } from '../../src/downloader/errors.js';
 import { config } from '../../src/server/config.js';
-import { SourceError, SourcePolicyError } from '../../src/downloader/errors.js';
+import { invalidateSourcePolicyCache } from '../../src/downloader/policy.js';
+
+const POLICY_ROW = {
+  id: 'src-cobalt',
+  slug: 'cobalt',
+  adapterKey: 'cobalt',
+  enabled: true,
+  mode: 'active',
+  allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+  maxFileSizeMb: 4096,
+  healthStatus: 'unknown',
+};
+
+let sourceRows: unknown[] = [POLICY_ROW];
+
+vi.mock('../../src/database/client.js', async (importOriginal: () => Promise<object>) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getDb: () => ({
+      select: () => ({
+        from: () => ({
+          where: () => ({ limit: async () => sourceRows }),
+        }),
+      }),
+    }),
+  };
+});
+import { SourceError } from '../../src/downloader/errors.js';
 import type { SourceAdapter } from '../../src/downloader/types.js';
 
 function stubAdapter(
@@ -80,8 +109,14 @@ describe('withFallback', () => {
 });
 
 describe('cobaltAdapter mapping', () => {
+  const fetchMock = vi.fn();
+
   beforeEach(() => {
     (config.cobalt as { apiUrl: string | undefined }).apiUrl = 'https://cobalt.test';
+    sourceRows = [POLICY_ROW];
+    invalidateSourcePolicyCache();
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
   });
 
   afterEach(() => {
@@ -142,19 +177,27 @@ describe('cobaltAdapter mapping', () => {
   });
 
   it('throws a user-safe error on cobalt error responses', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ status: 'error', error: { code: 'error.api.rate_limit' } }),
-      })),
-    );
-    const { cobaltAdapter } = await import('../../src/downloader/executors/cobalt.js');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'error', error: { code: 'error.api.rate_limit' } }),
+    });
     await expect(
       cobaltAdapter.analyze('https://example.com/v', {
         signal: AbortSignal.timeout(5000),
         timeoutMs: 5000,
       }),
     ).rejects.toThrow(SourceError);
+  });
+
+  it('fails closed before any network when the source row is missing/disabled', async () => {
+    sourceRows = [];
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'tunnel' }) });
+    await expect(
+      cobaltAdapter.analyze('https://example.com/v', {
+        signal: AbortSignal.timeout(5000),
+        timeoutMs: 5000,
+      }),
+    ).rejects.toThrow(SourcePolicyError);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

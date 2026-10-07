@@ -59,25 +59,41 @@ export async function seed(): Promise<void> {
       .onConflictDoUpdate({ target: plans.code, set: { ...plan, updatedAt: new Date() } });
   }
 
-  const sourceRow = {
-    slug: 'generic',
-    name: 'Generic (yt-dlp)',
-    adapterKey: 'ytdlp',
-    enabled: true,
-    mode: 'active' as const,
-    allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
-    maxFileSizeMb: 4096,
-    allowedFeatures: ['metadata', 'formats'],
-    priority: 100,
-    policyVersion: 1,
-  };
-  await db
-    .insert(downloadSources)
-    .values(sourceRow)
-    .onConflictDoUpdate({
-      target: downloadSources.slug,
-      set: { ...sourceRow, updatedAt: new Date() },
-    });
+  const sourceRows = [
+    {
+      slug: 'generic',
+      name: 'Generic (yt-dlp)',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      allowedFeatures: ['metadata', 'formats'],
+      priority: 100,
+      policyVersion: 1,
+    },
+    {
+      slug: 'cobalt',
+      name: 'Cobalt (fallback)',
+      adapterKey: 'cobalt',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      allowedFeatures: ['metadata', 'formats'],
+      priority: 200,
+      policyVersion: 1,
+    },
+  ];
+  for (const sourceRow of sourceRows) {
+    await db
+      .insert(downloadSources)
+      .values(sourceRow)
+      .onConflictDoUpdate({
+        target: downloadSources.slug,
+        set: { ...sourceRow, updatedAt: new Date() },
+      });
+  }
 
   // Anonymous daily cap, owned by the admin console. 0 = no cap (the
   // default). onConflictDoNothing so reseed never clobbers an admin's value.

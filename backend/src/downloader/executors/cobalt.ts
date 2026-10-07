@@ -3,8 +3,10 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { config } from '../../server/config.js';
+import { getDb } from '../../database/client.js';
 import { assertSafeUrl } from '../../security/ssrf.js';
 import { probeMedia } from '../../media/ffmpeg.js';
+import { assertSourceUsable, findSourceBySlug } from '../policy.js';
 import { SourceError } from '../errors.js';
 import type {
   AnalyzeOptions,
@@ -120,6 +122,17 @@ function pickVideoLabel(index: number, total: number): string {
   return total > 1 ? `Video option ${index + 1}` : 'Best available (MP4)';
 }
 
+/**
+ * Admin-console gate: the `cobalt` source row (enabled/mode/formats) applies
+ * here exactly like yt-dlp's `generic` row. Missing or disabled row fails
+ * closed with SourcePolicyError - which the fallback wrapper never retries
+ * past and never falls back from.
+ */
+async function assertCobaltUsable(container?: string): Promise<void> {
+  const policy = await findSourceBySlug('cobalt', getDb());
+  assertSourceUsable(policy, container);
+}
+
 export const cobaltAdapter: SourceAdapter = {
   key: 'cobalt',
 
@@ -128,6 +141,7 @@ export const cobaltAdapter: SourceAdapter = {
   },
 
   async analyze(pageUrl: string, opts: AnalyzeOptions): Promise<MediaAnalysis> {
+    await assertCobaltUsable();
     const timeoutMs = opts.timeoutMs ?? config.source.timeoutMs;
     const json = await cobaltPost(
       pageUrl,
@@ -223,6 +237,7 @@ export const cobaltAdapter: SourceAdapter = {
   },
 
   async download(pageUrl: string, opts: DownloadOptions): Promise<DownloadedArtifact> {
+    await assertCobaltUsable(opts.selection.container.toLowerCase());
     const timeoutMs = config.source.timeoutMs;
     const audioOnly = opts.selection.audioOnly === true;
     const videoQuality = audioOnly
