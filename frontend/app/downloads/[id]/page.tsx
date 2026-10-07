@@ -577,7 +577,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               </motion.div>
             )}
 
-            <div className="rounded-2xl border border-border/70 bg-surface/60 px-4 py-3 text-center">
+            <div className="text-center">
               <p className="text-sm text-muted-foreground">
                 FreeDownload is free because people help - enjoying it?{' '}
                 <button
