@@ -540,7 +540,7 @@ function DownloadFlow() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-5 pt-4">
+              <CardContent className="space-y-5 pt-5">
                 {bestFormat && (
                   <div className="space-y-1.5">
                     <Button
