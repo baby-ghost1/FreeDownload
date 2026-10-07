@@ -501,9 +501,15 @@ export default function HomePage() {
                 Higher daily limits, more parallel downloads, bigger files.
               </p>
             </Reveal>
-            <Stagger className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
+            <Stagger className="mx-auto mt-8 grid max-w-3xl items-stretch gap-3 sm:grid-cols-3">
               {config.plans.map((p) => {
                 const paid = p.priceCents > 0;
+                const popular =
+                  paid &&
+                  p.priceCents ===
+                    Math.min(
+                      ...config.plans.filter((q) => q.priceCents > 0).map((q) => q.priceCents),
+                    );
                 const price =
                   paid &&
                   ` ${new Intl.NumberFormat('en-US', {
@@ -512,24 +518,33 @@ export default function HomePage() {
                     minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2,
                   }).format(p.priceCents / 100)}/${p.interval}`;
                 return (
-                  <StaggerItem key={p.code}>
+                  <StaggerItem key={p.code} className="h-full">
                     <Card
-                      className={
-                        paid
-                          ? 'h-full border-primary/40 p-5 text-center shadow-2'
-                          : 'h-full p-5 text-center'
-                      }
+                      className={cn(
+                        'relative h-full p-5 pt-6 text-center transition-all duration-300 hover:-translate-y-0.5',
+                        popular
+                          ? 'border-primary/50 shadow-3 ring-1 ring-primary/30 sm:scale-[1.04]'
+                          : 'hover:border-border-strong',
+                      )}
                     >
+                      {popular && (
+                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-info px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-2">
+                          Most popular
+                        </span>
+                      )}
                       <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                      <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+                      <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">
                         {paid ? price : 'Free'}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {paid ? `per ${p.interval}, cancel anytime` : 'no sign-up needed'}
                       </p>
                       <Button
                         type="button"
-                        variant={paid ? 'primary' : 'outline'}
+                        variant={popular ? 'primary' : paid ? 'secondary' : 'outline'}
                         size="sm"
                         onClick={() => router.push(paid ? '/register' : '/download')}
-                        className="mt-4 w-full"
+                        className={cn('mt-4 w-full', popular && 'btn-shine')}
                       >
                         {paid ? `Get ${p.name}` : 'Start downloading'}
                       </Button>
