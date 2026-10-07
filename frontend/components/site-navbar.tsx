@@ -165,9 +165,13 @@ export function SiteNavbar() {
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         className="pointer-events-none relative z-50 px-4 pt-3 sm:px-8"
       >
-        {/* Same smooth wash as the hero below - keeps logo/menu blended, not stark. */}
+        {/* Hero-matching wash + soft orbs - spills into the hero so the
+            logo/menu never sit on stark background. Static (no animation)
+            to keep the cost down; the hero below already animates. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(80%_120%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_75%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(80%_120%_at_50%_0%,color-mix(in_oklch,var(--primary)_14%,transparent),transparent_75%)]" />
+          <div className="absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-[70%] rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-[20%] rounded-full bg-info/10 blur-3xl" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
         </div>
         <nav
