@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 
 import { Enter } from '@/components/motion/reveal';
+import { BrandMark } from '@/components/brand-icons';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SITE_CONFIG } from '@/lib/constants/site';
@@ -28,12 +29,10 @@ export function AuthShell({
           className="group mx-auto mb-6 flex w-fit items-center gap-2"
           aria-label={`${SITE_CONFIG.name} home`}
         >
-          <span
-            aria-hidden="true"
-            className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-base font-bold text-primary-foreground shadow-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-          >
-            F
-          </span>
+          <BrandMark
+            size={36}
+            className="transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+          />
           <span className="text-lg font-semibold tracking-tight text-foreground">
             {SITE_CONFIG.name}
           </span>
@@ -57,10 +56,7 @@ export function AuthShell({
 
 export function AuthLink({ href, children }: { href: Route; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="link-underline text-sm text-primary underline-offset-2"
-    >
+    <Link href={href} className="link-underline text-sm text-primary underline-offset-2">
       {children}
     </Link>
   );

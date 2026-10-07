@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 import { SITE_CONFIG } from '@/lib/constants/site';
+import { BrandMark } from '@/components/brand-icons';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { buttonClasses } from '@/components/ui/button';
 import { cn } from '@/lib/utils/cn';
@@ -31,12 +32,10 @@ export function SiteFooter() {
           {/* Brand */}
           <div>
             <Link href="/" className="group inline-flex items-center gap-2.5">
-              <span
-                aria-hidden="true"
-                className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-base font-bold text-primary-foreground shadow-2 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-              >
-                F
-              </span>
+              <BrandMark
+                size={36}
+                className="transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+              />
               <span className="text-lg font-semibold tracking-tight text-foreground">
                 {SITE_CONFIG.name}
               </span>
@@ -45,10 +44,7 @@ export function SiteFooter() {
               {SITE_CONFIG.tagline} No accounts, no clutter - just your media, in the format you
               need.
             </p>
-            <Link
-              href="/download"
-              className={cn(buttonClasses({ size: 'sm' }), 'btn-shine mt-5')}
-            >
+            <Link href="/download" className={cn(buttonClasses({ size: 'sm' }), 'btn-shine mt-5')}>
               Start downloading
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
@@ -114,10 +110,7 @@ export function SiteFooter() {
       </div>
 
       {/* Giant watermark */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none relative select-none overflow-hidden"
-      >
+      <div aria-hidden="true" className="pointer-events-none relative select-none overflow-hidden">
         <p className="-mb-[0.23em] bg-gradient-to-b from-foreground/[0.09] to-transparent bg-clip-text text-center text-[12.5vw] font-bold leading-none tracking-tighter whitespace-nowrap text-transparent sm:text-[11vw] md:text-[10.5rem]">
           {SITE_CONFIG.name}
         </p>

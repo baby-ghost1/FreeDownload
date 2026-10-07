@@ -1,13 +1,4 @@
-import {
-  ArrowBigUp,
-  Clapperboard,
-  Ghost,
-  MessageCircle,
-  Music,
-  Play,
-  Tv,
-  Zap,
-} from 'lucide-react';
+import { ArrowBigUp, Clapperboard, Ghost, MessageCircle, Music, Play, Tv, Zap } from 'lucide-react';
 
 import { cn } from '@/lib/utils/cn';
 
@@ -66,6 +57,41 @@ function InstagramGlyph({ size }: { size: number }) {
       <circle cx="12" cy="12" r="4" />
       <circle cx="17.2" cy="6.8" r={1.2} fill="currentColor" stroke="none" />
     </svg>
+  );
+}
+
+/**
+ * Product mark: gradient squircle with a download glyph (arrow into tray).
+ * Replaces the generic "F" letter - same gradient language as the rest of
+ * the UI, so platform tinting still applies.
+ */
+export function BrandMark({ size = 32, className }: { size?: number; className?: string }) {
+  const glyph = Math.round(size * 0.52);
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: size, height: size }}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-[28%] bg-gradient-to-br from-primary to-info text-white shadow-2',
+        className,
+      )}
+    >
+      <svg
+        width={glyph}
+        height={glyph}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 4v10" />
+        <path d="m8 10 4 4 4-4" />
+        <path d="M5 19h14" />
+      </svg>
+    </span>
   );
 }
 

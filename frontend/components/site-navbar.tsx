@@ -22,6 +22,7 @@ import { useSession } from '@/lib/session';
 import { getPublicConfig } from '@/lib/api/endpoints';
 import type { PublicConfig } from '@/lib/api/types';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { BrandMark } from '@/components/brand-icons';
 import { cn } from '@/lib/utils/cn';
 
 const DEFAULT_NAVBAR: PublicConfig['navbar'] = {
@@ -134,7 +135,7 @@ export function SiteNavbar() {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open ]);
+  }, [open]);
 
   if (pathname !== '/') return null;
   if (!navbar.visible) return null;
@@ -175,9 +176,7 @@ export function SiteNavbar() {
             aria-label={`${SITE_CONFIG.name} home`}
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
           >
-            <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-info text-sm font-bold text-white shadow-2">
-              F
-            </span>
+            <BrandMark size={32} />
             <span className="text-sm font-semibold tracking-tight">{SITE_CONFIG.name}</span>
           </Link>
 
@@ -197,98 +196,98 @@ export function SiteNavbar() {
               className="flex"
             >
               {open ? (
-              <X className="size-5" strokeWidth={2.5} />
-            ) : (
-              <Menu className="size-5" strokeWidth={2.5} />
-            )}
+                <X className="size-5" strokeWidth={2.5} />
+              ) : (
+                <Menu className="size-5" strokeWidth={2.5} />
+              )}
             </motion.span>
           </button>
 
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              id="site-nav-menu"
-              role="menu"
-              initial={{ opacity: 0, y: -8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute right-0 top-[calc(100%+8px)] w-64 overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-3 backdrop-blur-xl"
-            >
-              <ul className="max-h-[70vh] overflow-y-auto p-1.5">
-                {items.map((l) => {
-                  const isActive = l.match(pathname);
-                  return (
-                    <li key={l.href}>
-                      <Link
-                        href={l.href}
-                        role="menuitem"
-                        aria-current={isActive ? 'page' : undefined}
-                        onClick={() => setOpen(false)}
-                        className={cn(
-                          'relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150',
-                          isActive
-                            ? 'text-foreground'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        )}
-                      >
-                        {isActive && (
-                          <motion.span
-                            layoutId="site-nav-pill"
-                            className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/25"
-                            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                          />
-                        )}
-                        <span className="relative flex items-center gap-2.5">
-                          {l.icon}
-                          {l.label}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-                {showAuth ? (
-                  <>
-                    {loading ? (
-                      <span
-                        className="h-8 flex-1 animate-pulse rounded-xl bg-muted"
-                        aria-hidden="true"
-                      />
-                    ) : user ? (
-                    <Link
-                      href="/account"
-                      onClick={() => setOpen(false)}
-                      className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-sm"
-                      title={user.email}
-                    >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
-                        {user.email.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 truncate font-medium">{user.email}</span>
-                    </Link>
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                id="site-nav-menu"
+                role="menu"
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute right-0 top-[calc(100%+8px)] w-64 overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-3 backdrop-blur-xl"
+              >
+                <ul className="max-h-[70vh] overflow-y-auto p-1.5">
+                  {items.map((l) => {
+                    const isActive = l.match(pathname);
+                    return (
+                      <li key={l.href}>
+                        <Link
+                          href={l.href}
+                          role="menuitem"
+                          aria-current={isActive ? 'page' : undefined}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            'relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150',
+                            isActive
+                              ? 'text-foreground'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          )}
+                        >
+                          {isActive && (
+                            <motion.span
+                              layoutId="site-nav-pill"
+                              className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/25"
+                              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                            />
+                          )}
+                          <span className="relative flex items-center gap-2.5">
+                            {l.icon}
+                            {l.label}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+                  {showAuth ? (
+                    <>
+                      {loading ? (
+                        <span
+                          className="h-8 flex-1 animate-pulse rounded-xl bg-muted"
+                          aria-hidden="true"
+                        />
+                      ) : user ? (
+                        <Link
+                          href="/account"
+                          onClick={() => setOpen(false)}
+                          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-sm"
+                          title={user.email}
+                        >
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
+                            {user.email.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="min-w-0 truncate font-medium">{user.email}</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          href="/login"
+                          onClick={() => setOpen(false)}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-info px-3 py-2 text-sm font-semibold text-white shadow-2 transition-all duration-200 hover:brightness-110 active:scale-95"
+                        >
+                          <User className="size-4" />
+                          Sign in
+                        </Link>
+                      )}
+                    </>
                   ) : (
-                    <Link
-                      href="/login"
-                      onClick={() => setOpen(false)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-info px-3 py-2 text-sm font-semibold text-white shadow-2 transition-all duration-200 hover:brightness-110 active:scale-95"
-                    >
-                      <User className="size-4" />
-                      Sign in
-                    </Link>
-                    )}
-                  </>
-                ) : (
-                  <span className="min-w-0 flex-1 truncate px-1 text-xs text-muted-foreground">
-                    {SITE_CONFIG.name}
-                  </span>
-                )}
-                <ThemeToggle className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <span className="min-w-0 flex-1 truncate px-1 text-xs text-muted-foreground">
+                      {SITE_CONFIG.name}
+                    </span>
+                  )}
+                  <ThemeToggle className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </nav>
       </motion.header>
     </>
