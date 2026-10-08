@@ -88,8 +88,17 @@ export function getTargetFormats(opts: Opts = {}): Promise<{ data: TargetFormat[
   return apiFetch<{ data: TargetFormat[] }>('/formats', opts);
 }
 
+/** One in-flight GET /config/public shared by every caller (navbar + home page). */
+let publicConfigFlight: Promise<PublicConfig> | null = null;
+
 export function getPublicConfig(opts: Opts = {}): Promise<PublicConfig> {
-  return apiFetch<PublicConfig>('/config/public', opts);
+  if (Object.keys(opts).length > 0) return apiFetch<PublicConfig>('/config/public', opts);
+  if (!publicConfigFlight) {
+    publicConfigFlight = apiFetch<PublicConfig>('/config/public', opts).finally(() => {
+      publicConfigFlight = null;
+    });
+  }
+  return publicConfigFlight;
 }
 
 // --- auth (cookie session; CSRF header added by apiFetch) -------------------

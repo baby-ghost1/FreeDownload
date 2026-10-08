@@ -33,8 +33,12 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
   // expiry - refetching would restart the countdown (and swap the link)
   // under the user. Pin the first good result; a page reload fetches fresh.
   const resultPinned = useRef(false);
+  const inFlight = useRef(false);
 
   const poll = useCallback(async () => {
+    // Interval tick and window focus can land together - one request at a time.
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const next = await getJob(id);
       if (stopped.current) return;
@@ -54,6 +58,7 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
     } catch (err) {
       if (!stopped.current && err instanceof ApiError) setError(err);
     } finally {
+      inFlight.current = false;
       if (!stopped.current) setLoading(false);
     }
   }, [id]);

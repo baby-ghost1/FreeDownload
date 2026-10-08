@@ -123,8 +123,12 @@ export default function AccountPage() {
     if (user) setDisplayName(user.displayName ?? '');
   }, [user]);
 
+  // Depend on the id, not the user object: the 30 s session heartbeat stores a
+  // fresh object every tick, which would otherwise re-run all six loads.
+  const userId = user?.id ?? null;
+
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     getUsage(30)
       .then(setUsage)
       .catch(() => undefined);
@@ -147,7 +151,7 @@ export default function AccountPage() {
       .catch((err: unknown) =>
         setKeyError(err instanceof ApiError ? err.message : 'Could not load your API keys.'),
       );
-  }, [user]);
+  }, [userId]);
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

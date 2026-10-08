@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Download, ListX, RotateCw, Search, SearchX } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -67,8 +67,15 @@ export default function MyDownloadsPage() {
 
   // mode: 'show' = first page with spinner state, 'quiet' = background
   // refresh that never flashes loading or error states, 'more' = append.
+  const quietFlight = useRef(false);
   const fetchJobs = useCallback(
     async (mode: 'show' | 'quiet' | 'more' = 'show') => {
+      // The 5 s tick and the window-focus listener can fire together - let the
+      // in-flight quiet refresh answer both.
+      if (mode === 'quiet') {
+        if (quietFlight.current) return;
+        quietFlight.current = true;
+      }
       if (mode === 'show') setRefreshing(true);
       if (mode === 'more') setLoadingMore(true);
       try {
@@ -87,6 +94,7 @@ export default function MyDownloadsPage() {
           setError(err instanceof ApiError ? err.message : 'Could not load your downloads.');
         }
       } finally {
+        if (mode === 'quiet') quietFlight.current = false;
         setRefreshing(false);
         setLoadingMore(false);
       }
