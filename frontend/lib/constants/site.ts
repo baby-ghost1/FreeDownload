@@ -40,8 +40,8 @@ export const SITE_CONFIG = {
   name: 'FreeDownload',
   tagline: 'Download media. Fast. Simple. Yours.',
   description:
-    'Paste a link and get your authorized media in the format you need. ' +
-    'Fast processing, privacy-conscious, no software required.',
+    'Video downloader for Facebook, Instagram, YouTube, TikTok, Snapchat, X and more. ' +
+    'Paste a link to save MP4 or MP3 - fast, free, no software to install.',
   url: firstUrl(process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'),
   api: {
     baseUrl: apiBaseUrl(),

@@ -6,27 +6,41 @@ import { SiteNavbar } from '@/components/site-navbar';
 import { DonateCoffeeFloat } from '@/components/donate-coffee';
 import './globals.css';
 
+/** SERP/tab title - keyword front-loaded; SITE_CONFIG.tagline stays the visible copy. */
+const SEARCH_TITLE = `${SITE_CONFIG.name} - Facebook, Instagram, YouTube Video Downloader`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: `${SITE_CONFIG.name} - ${SITE_CONFIG.tagline}`,
+    default: SEARCH_TITLE,
     template: `%s · ${SITE_CONFIG.name}`,
   },
   description: SITE_CONFIG.description,
   applicationName: SITE_CONFIG.name,
-  keywords: ['media downloader', 'video converter', 'audio extraction', 'media tools'],
+  keywords: [
+    'video downloader',
+    'facebook video downloader',
+    'instagram video downloader',
+    'youtube video downloader',
+    'tiktok video downloader',
+    'snapchat video downloader',
+    'twitter video downloader',
+    'video to mp3',
+    'media downloader',
+  ],
   openGraph: {
     type: 'website',
     siteName: SITE_CONFIG.name,
-    title: `${SITE_CONFIG.name} - ${SITE_CONFIG.tagline}`,
+    title: SEARCH_TITLE,
     description: SITE_CONFIG.description,
     url: SITE_CONFIG.url,
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE_CONFIG.name} - ${SITE_CONFIG.tagline}`,
+    title: SEARCH_TITLE,
     description: SITE_CONFIG.description,
   },
+  verification: { google: 'RTQnvXeWUDsDzdZ7pE-cvlbAsnX2nEJj63rs3Ed_UsE' },
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
 };

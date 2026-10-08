@@ -2,7 +2,7 @@
   "name": "freedownload",
   "version": "0.1.0",
   "private": true,
-  "description": "Production-grade media download and processing platform",
+  "description": "Video downloader for Facebook, Instagram, YouTube, TikTok, Snapchat, X and more - production-grade media download and processing platform",
   "license": "UNLICENSED",
   "packageManager": "npm@11.6.2",
   "engines": {
