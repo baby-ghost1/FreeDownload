@@ -223,10 +223,12 @@ export function SiteNavbar() {
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
           >
             <BrandMark size={32} />
-          <span className="text-sm font-semibold tracking-tight">{SITE_CONFIG.name}</span>
+          <span className="hidden text-sm font-semibold tracking-tight min-[360px]:inline">
+            {SITE_CONFIG.name}
+          </span>
         </Link>
 
-        <DonateCoffeeButton className="hidden shrink-0 min-[500px]:inline-flex" />
+        <DonateCoffeeButton className="shrink-0" />
 
         <button
             ref={buttonRef}

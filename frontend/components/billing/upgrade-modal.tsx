@@ -18,10 +18,8 @@ import type { PlanInfo } from '@/lib/api/types';
 import { formatINR } from '@/lib/format';
 import { DONATE_QR_SRC } from '@/components/donate-coffee';
 
-function amountText(cents: number, currency: string): string {
-  return currency.toLowerCase() === 'inr'
-    ? formatINR(cents)
-    : `${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)} ${currency.toUpperCase()}`;
+function amountText(cents: number): string {
+  return formatINR(cents);
 }
 
 /**
@@ -72,7 +70,6 @@ export function UpgradeModal({
   };
 
   const amount = preview?.amountCents ?? plan.priceCents;
-  const currency = plan.currency;
 
   const requestUpgrade = async () => {
     setRequestBusy(true);
@@ -121,7 +118,7 @@ export function UpgradeModal({
                 Upgrade to {plan.name}
               </h2>
               <p className="mt-0.5 text-2xl font-bold tabular-nums" data-testid="upgrade-amount">
-                {amountText(amount, currency)}
+                {amountText(amount)}
                 <span className="text-sm font-normal text-muted-foreground">/{plan.interval}</span>
               </p>
               {preview?.couponApplied && (
@@ -177,7 +174,7 @@ export function UpgradeModal({
           <div className="mt-4 rounded-2xl border border-border bg-background p-4 text-center">
             <p className="flex items-center justify-center gap-1.5 text-sm font-semibold">
               <QrCode className="size-4 text-primary" />
-              Scan and pay exactly {amountText(amount, currency)}
+              Scan and pay exactly {amountText(amount)}
             </p>
             <div className="mt-3 flex justify-center">
               {DONATE_QR_SRC ? (
