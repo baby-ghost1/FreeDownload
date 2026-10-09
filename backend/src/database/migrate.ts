@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 
@@ -10,7 +10,8 @@ import { logger } from '../logging/logger.js';
  *
  * Migrations are generated with `npm run db:generate`, reviewed like code and
  * applied with `npm run db:migrate`. They run in a transaction and the journal
- * lives in `__drizzle_migrations` (contract §14).
+ * lives in `__drizzle_migrations` (contract §14). The API also calls this on
+ * boot (server.ts) so deploys stay in sync without a separate migrate step.
  */
 export async function runMigrations(): Promise<void> {
   const db = getDb();
@@ -18,8 +19,10 @@ export async function runMigrations(): Promise<void> {
   await migrate(db, { migrationsFolder });
 }
 
+// True only when this file is the process entrypoint (`db:migrate`) -
+// importing runMigrations from server.ts must never exit the process.
 const isDirectRun =
-  import.meta.url.endsWith('migrate.ts') || import.meta.url.endsWith('migrate.js');
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isDirectRun) {
   runMigrations()

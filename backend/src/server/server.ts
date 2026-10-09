@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import { config } from './config.js';
+import { runMigrations } from '../database/migrate.js';
 import { resolveSelfPingUrl, startSelfPing, type SelfPingHandle } from '../keepalive/self-ping.js';
 import { logger } from '../logging/logger.js';
 import { closeQueues } from '../queue/queues.js';
@@ -7,6 +8,19 @@ import { closeRedis } from '../redis/client.js';
 import { startWorkers, stopWorkers, type WorkerHandles } from '../workers/index.js';
 
 async function main(): Promise<void> {
+  // The deploy image never runs `db:seed`, and until now nothing ran
+  // migrations either - databases provisioned before a schema/data change
+  // stayed stale after a redeploy (e.g. the missing `cobalt` source row).
+  // Migrations are idempotent (journal-tracked), so running them on boot
+  // keeps every environment in sync with the committed SQL.
+  try {
+    await runMigrations();
+    logger.info('migrations up to date');
+  } catch (err) {
+    logger.error({ err }, 'migration failed - refusing to start against a stale schema');
+    process.exit(1);
+  }
+
   const app = await buildApp();
 
   let workers: WorkerHandles | null = null;
