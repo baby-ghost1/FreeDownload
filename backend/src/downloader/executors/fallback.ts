@@ -33,8 +33,16 @@ export function withFallback(
     key: primary.key,
     canHandle: (url: URL) => primary.canHandle(url),
     analyze: (url, opts) =>
-      attempt('analyze', () => primary.analyze(url, opts), () => fallback.analyze(url, opts)),
+      attempt(
+        'analyze',
+        () => primary.analyze(url, opts),
+        () => fallback.analyze(url, opts),
+      ),
     download: (url, opts) =>
-      attempt('download', () => primary.download(url, opts), () => fallback.download(url, opts)),
+      attempt(
+        'download',
+        () => primary.download(url, opts),
+        () => fallback.download(url, opts),
+      ),
   };
 }

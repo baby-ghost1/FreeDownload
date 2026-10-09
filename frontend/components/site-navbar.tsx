@@ -223,14 +223,14 @@ export function SiteNavbar() {
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5"
           >
             <BrandMark size={32} />
-          <span className="hidden text-sm font-semibold tracking-tight min-[360px]:inline">
-            {SITE_CONFIG.name}
-          </span>
-        </Link>
+            <span className="hidden text-sm font-semibold tracking-tight min-[360px]:inline">
+              {SITE_CONFIG.name}
+            </span>
+          </Link>
 
-        <DonateCoffeeButton className="shrink-0" />
+          <DonateCoffeeButton className="shrink-0" />
 
-        <button
+          <button
             ref={buttonRef}
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -316,9 +316,7 @@ export function SiteNavbar() {
                           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
                             {user.email.slice(0, 1).toUpperCase()}
                           </span>
-                          <span className="min-w-0 flex-1 truncate font-medium">
-                            {user.email}
-                          </span>
+                          <span className="min-w-0 flex-1 truncate font-medium">{user.email}</span>
                           <PlanBadge />
                         </Link>
                       ) : (

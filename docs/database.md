@@ -57,8 +57,9 @@ Tokens are stored **hashed**; the plaintext exists only in the emailed link.
 
 `download_jobs` stores a **hash plus a redacted copy** of the URL, plus the raw
 URL in a nullable `url` column (added in migration `0002_dark_captain_cross`)
+
 - the worker needs it for extraction, so it is nulled at completion; history
-surfaces only ever read the redacted copy (privacy §51).
+  surfaces only ever read the redacted copy (privacy §51).
 
 ### Billing
 
@@ -129,14 +130,14 @@ FKs with explicit `ON DELETE` · `unique (user_id, day)` on `usage_records`.
 
 ## Retention
 
-| Data                  | Policy                                                                          |
-| --------------------- | ------------------------------------------------------------------------------- |
-| R2 objects            | `expires_at` → cleanup deletes from storage, then rows marked purged            |
-| job raw `url`         | nulled at completion (redacted copy serves history); hash kept for abuse checks |
-| `media_metadata.raw`  | trimmed after 7 days                                                            |
-| sessions / tokens     | TTL job; dead `admin_sessions` purged after 30 days                             |
-| logs                  | per `LOG_RETENTION_DAYS`, structured logs only                                  |
-| audit_logs            | retained (append-only, DB trigger forbids DELETE)                               |
-| `download_attempts`   | finished rows purged after 90 days                                              |
-| `api_usage`           | hourly buckets purged after 90 days                                             |
-| `expired` jobs        | hard-deleted after 60 days (cascades attempts, formats, metadata, files)        |
+| Data                 | Policy                                                                          |
+| -------------------- | ------------------------------------------------------------------------------- |
+| R2 objects           | `expires_at` → cleanup deletes from storage, then rows marked purged            |
+| job raw `url`        | nulled at completion (redacted copy serves history); hash kept for abuse checks |
+| `media_metadata.raw` | trimmed after 7 days                                                            |
+| sessions / tokens    | TTL job; dead `admin_sessions` purged after 30 days                             |
+| logs                 | per `LOG_RETENTION_DAYS`, structured logs only                                  |
+| audit_logs           | retained (append-only, DB trigger forbids DELETE)                               |
+| `download_attempts`  | finished rows purged after 90 days                                              |
+| `api_usage`          | hourly buckets purged after 90 days                                             |
+| `expired` jobs       | hard-deleted after 60 days (cascades attempts, formats, metadata, files)        |

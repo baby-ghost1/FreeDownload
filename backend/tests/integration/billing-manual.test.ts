@@ -51,12 +51,14 @@ describeInfra('manual UPI billing (integration)', () => {
 
   beforeAll(async () => {
     await seed();
-    await getDb().insert(adminUsers).values({
-      email: OWNER_EMAIL,
-      passwordHash: await hashPassword(OWNER_PASSWORD),
-      role: 'owner',
-      active: true,
-    });
+    await getDb()
+      .insert(adminUsers)
+      .values({
+        email: OWNER_EMAIL,
+        passwordHash: await hashPassword(OWNER_PASSWORD),
+        role: 'owner',
+        active: true,
+      });
     app = await buildApp({ rateLimit: false });
     await app.ready();
 
@@ -108,11 +110,7 @@ describeInfra('manual UPI billing (integration)', () => {
     });
   }
 
-  function user(
-    method: 'GET' | 'POST' | 'DELETE',
-    url: string,
-    payload?: Record<string, unknown>,
-  ) {
+  function user(method: 'GET' | 'POST' | 'DELETE', url: string, payload?: Record<string, unknown>) {
     return app.inject({
       method,
       url,
@@ -241,9 +239,8 @@ describeInfra('manual UPI billing (integration)', () => {
 
     const list = await admin('GET', '/api/v1/admin/upgrade-requests?status=pending');
     expect(list.statusCode).toBe(200);
-    const pending = (
-      list.json() as { data: Array<{ id: string; couponCode: string | null }> }
-    ).data;
+    const pending = (list.json() as { data: Array<{ id: string; couponCode: string | null }> })
+      .data;
     const mine = pending.find((r) => r.couponCode === code);
     expect(mine).toBeDefined();
 

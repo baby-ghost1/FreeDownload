@@ -103,9 +103,9 @@ function RegisterForm() {
           </p>
         </div>
         {error && <FieldError id="register-error">{error}</FieldError>}
-      <Button type="submit" loading={busy} className="w-full" data-testid="register-submit">
-        Create account
-      </Button>
+        <Button type="submit" loading={busy} className="w-full" data-testid="register-submit">
+          Create account
+        </Button>
       </form>
     </>
   );

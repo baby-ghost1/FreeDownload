@@ -608,12 +608,14 @@ export default function AccountPage() {
               {keyError && <FieldError id="api-key-error">{keyError}</FieldError>}
               {needsUpgrade && (
                 <Alert tone="info" className="mb-3" data-testid="api-key-upgrade">
-                  API keys need a Pro or Business plan - your key quota starts the moment
-                  you upgrade.{' '}
+                  API keys need a Pro or Business plan - your key quota starts the moment you
+                  upgrade.{' '}
                   <button
                     type="button"
                     onClick={() =>
-                      document.getElementById('billing-card')?.scrollIntoView({ behavior: 'smooth' })
+                      document
+                        .getElementById('billing-card')
+                        ?.scrollIntoView({ behavior: 'smooth' })
                     }
                     className="link-underline font-medium text-primary underline-offset-2"
                   >
@@ -778,10 +780,7 @@ export default function AccountPage() {
         </StaggerItem>
       </Stagger>
 
-      <PlanQueryOpener
-        plans={availablePlans}
-        onPick={(p) => setUpgradePlan(p)}
-      />
+      <PlanQueryOpener plans={availablePlans} onPick={(p) => setUpgradePlan(p)} />
       <AnimatePresence>
         {upgradePlan && (
           <UpgradeModal
@@ -796,13 +795,7 @@ export default function AccountPage() {
 }
 
 /** Opens the upgrade modal from `?plan=pro|business` (home page deep link). */
-function PlanQueryOpener({
-  plans,
-  onPick,
-}: {
-  plans: PlanInfo[];
-  onPick: (p: PlanInfo) => void;
-}) {
+function PlanQueryOpener({ plans, onPick }: { plans: PlanInfo[]; onPick: (p: PlanInfo) => void }) {
   return (
     <Suspense fallback={null}>
       <PlanQueryOpenerInner plans={plans} onPick={onPick} />

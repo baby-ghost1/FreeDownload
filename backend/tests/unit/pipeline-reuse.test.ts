@@ -14,36 +14,39 @@ const JOB_ROW = {
   targetContainer: 'mp4',
 };
 
-vi.mock('../../src/database/client.js', async (importOriginal: () => Promise<Record<string, unknown>>) => {
-  const actual = await importOriginal();
-  const schema = (await import('../../src/database/schema/index.js')) as unknown as {
-    mediaFormats: object;
-  };
-  return {
-    ...actual,
-    getDb: () => ({
-      select: () => ({
-        from: (table: unknown) => ({
-          where: () => ({
-            limit: async () =>
-            table === schema.mediaFormats
-              ? [
-                  {
-                    id: 'fmt-1',
-                    extKey: 'best.mp4',
-                    label: 'Best available (MP4)',
-                    container: 'mp4',
-                    height: null,
-                    kind: 'video',
-                  },
-                ]
-              : [{ ...JOB_ROW }],
+vi.mock(
+  '../../src/database/client.js',
+  async (importOriginal: () => Promise<Record<string, unknown>>) => {
+    const actual = await importOriginal();
+    const schema = (await import('../../src/database/schema/index.js')) as unknown as {
+      mediaFormats: object;
+    };
+    return {
+      ...actual,
+      getDb: () => ({
+        select: () => ({
+          from: (table: unknown) => ({
+            where: () => ({
+              limit: async () =>
+                table === schema.mediaFormats
+                  ? [
+                      {
+                        id: 'fmt-1',
+                        extKey: 'best.mp4',
+                        label: 'Best available (MP4)',
+                        container: 'mp4',
+                        height: null,
+                        kind: 'video',
+                      },
+                    ]
+                  : [{ ...JOB_ROW }],
+            }),
           }),
         }),
       }),
-    }),
-  };
-});
+    };
+  },
+);
 
 vi.mock('../../src/downloader/policy.js', () => ({
   loadSourcePolicy: async () => ({ maxFileSizeMb: 512 }),
@@ -87,7 +90,9 @@ describe('pipeline reuse path (regression)', () => {
       jobId: 'job-1',
       signal: AbortSignal.timeout(10_000),
       report: async (_progress: number, transition?: { from: string[]; to: string }) => {
-        events.push(`report:${transition ? `${transition.from.join('/')}>${transition.to}` : 'beat'}`);
+        events.push(
+          `report:${transition ? `${transition.from.join('/')}>${transition.to}` : 'beat'}`,
+        );
         if (transition) transitions.push(transition);
       },
     };

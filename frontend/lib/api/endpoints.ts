@@ -54,11 +54,7 @@ export function getJob(id: string, opts: Opts = {}): Promise<Job> {
   return apiFetch<Job>(`/downloads/${id}`, opts);
 }
 
-export function listJobs(
-  limit = 20,
-  cursor?: string,
-  opts: Opts = {},
-): Promise<Page<Job>> {
+export function listJobs(limit = 20, cursor?: string, opts: Opts = {}): Promise<Page<Job>> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set('cursor', cursor);
   return apiFetch<Page<Job>>(`/downloads?${params.toString()}`, opts);
@@ -255,7 +251,12 @@ export function createAdminCoupon(input: {
 
 export function updateAdminCoupon(
   code: string,
-  patch: { percentOff?: number; maxUses?: number | null; expiresAt?: string | null; active?: boolean },
+  patch: {
+    percentOff?: number;
+    maxUses?: number | null;
+    expiresAt?: string | null;
+    active?: boolean;
+  },
 ): Promise<Coupon> {
   return apiFetch<Coupon>(`/admin/coupons/${code}`, { method: 'PATCH', body: patch });
 }

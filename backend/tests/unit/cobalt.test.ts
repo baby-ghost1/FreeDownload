@@ -166,9 +166,7 @@ describe('cobaltAdapter mapping', () => {
   });
 
   it('isInstanceUrl matches only the configured instance origin', async () => {
-    const { isInstanceUrl } = await import(
-      '../../src/downloader/executors/cobalt.js'
-    );
+    const { isInstanceUrl } = await import('../../src/downloader/executors/cobalt.js');
     expect(isInstanceUrl('https://cobalt.test/tunnel/abc')).toBe(true);
     expect(isInstanceUrl('https://cdn.example.com/video.mp4')).toBe(false);
     expect(isInstanceUrl('not a url')).toBe(false);

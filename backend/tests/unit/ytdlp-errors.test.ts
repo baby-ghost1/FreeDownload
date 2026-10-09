@@ -8,7 +8,9 @@ import {
 describe('classifyExtractorFailure', () => {
   it('maps timeouts to SOURCE_TIMEOUT', () => {
     expect(
-      classifyExtractorFailure('ERROR: [TikTok] 123: Unable to download webpage: connection timed out'),
+      classifyExtractorFailure(
+        'ERROR: [TikTok] 123: Unable to download webpage: connection timed out',
+      ),
     ).toMatchObject({ code: 'SOURCE_TIMEOUT' });
     expect(classifyExtractorFailure('ERROR: something timed out after 15 seconds').code).toBe(
       'SOURCE_TIMEOUT',

@@ -124,7 +124,8 @@ export default function AdminLoginPage() {
                 backgroundImage:
                   'linear-gradient(to right, rgba(255,255,255,.25) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.25) 1px, transparent 1px)',
                 backgroundSize: '28px 28px',
-                maskImage: 'radial-gradient(ellipse 80% 70% at 20% 10%, black 40%, transparent 100%)',
+                maskImage:
+                  'radial-gradient(ellipse 80% 70% at 20% 10%, black 40%, transparent 100%)',
               }}
             />
 

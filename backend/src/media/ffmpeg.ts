@@ -201,7 +201,10 @@ export async function ensureContainer(
   }
 
   if (!existsSync(outPath)) {
-    throw new SourceError('SOURCE_INTEGRITY', 'The conversion produced no file. Try another format.');
+    throw new SourceError(
+      'SOURCE_INTEGRITY',
+      'The conversion produced no file. Try another format.',
+    );
   }
   return { path: outPath, container: target };
 }

@@ -253,12 +253,7 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
 
   const UpgradeRequestBody = z.object({
     planCode: z.enum(['pro', 'business']),
-    couponCode: z
-      .string()
-      .trim()
-      .min(1)
-      .max(32)
-      .optional(),
+    couponCode: z.string().trim().min(1).max(32).optional(),
   });
 
   app.get(
@@ -311,8 +306,7 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
     '/subscriptions/upgrade-requests',
     {
       schema: {
-        description:
-          'File a manual upgrade request after paying over UPI (admin verifies).',
+        description: 'File a manual upgrade request after paying over UPI (admin verifies).',
         body: UpgradeRequestBody,
         response: { 201: UpgradeRequestSchema, ...errorResponses(400, 401, 409) },
       },

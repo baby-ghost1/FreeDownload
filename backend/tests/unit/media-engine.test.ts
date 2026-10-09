@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertContainer, buildFetchArgs, buildSelector } from '../../src/downloader/executors/ytdlp.js';
+import {
+  assertContainer,
+  buildFetchArgs,
+  buildSelector,
+} from '../../src/downloader/executors/ytdlp.js';
 import { audioEncoderFor } from '../../src/media/ffmpeg.js';
 import { sniffContainer } from '../../src/media/ffmpeg.js';
 import { presignRequest } from '../../src/storage/r2.js';

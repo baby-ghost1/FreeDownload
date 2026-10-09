@@ -150,12 +150,7 @@ export async function enforceAdminSessionLimit(db: Database, adminId: string): P
   const rows = await db
     .select({ id: adminSessions.id })
     .from(adminSessions)
-    .where(
-      and(
-        eq(adminSessions.adminId, adminId),
-        isNull(adminSessions.revokedAt),
-      ),
-    )
+    .where(and(eq(adminSessions.adminId, adminId), isNull(adminSessions.revokedAt)))
     .orderBy(desc(adminSessions.createdAt))
     .limit(MAX_ADMIN_SESSIONS + 1);
   if (rows.length <= MAX_ADMIN_SESSIONS) return;

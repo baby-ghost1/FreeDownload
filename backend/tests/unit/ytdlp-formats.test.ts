@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildFormats,
-  extractDirectMediaUrl,
-} from '../../src/downloader/executors/ytdlp.js';
+import { buildFormats, extractDirectMediaUrl } from '../../src/downloader/executors/ytdlp.js';
 
 describe('buildFormats', () => {
   it('derives real heights from group keys (no NaN keys, labels or heights)', () => {
@@ -172,9 +169,11 @@ describe('extractDirectMediaUrl', () => {
   });
 
   it('finds audio and video tags', () => {
-    expect(
-      extractDirectMediaUrl('<audio src="/media/ep.mp3"></audio>', base),
-    ).toMatchObject({ url: 'https://www.zedge.net/media/ep.mp3', ext: 'mp3', kind: 'audio' });
+    expect(extractDirectMediaUrl('<audio src="/media/ep.mp3"></audio>', base)).toMatchObject({
+      url: 'https://www.zedge.net/media/ep.mp3',
+      ext: 'mp3',
+      kind: 'audio',
+    });
     expect(
       extractDirectMediaUrl('<video><source src="https://cdn.test/v.mp4" /></video>', base),
     ).toMatchObject({ ext: 'mp4', kind: 'video' });
@@ -182,8 +181,6 @@ describe('extractDirectMediaUrl', () => {
 
   it('returns null for pages without playable files', () => {
     expect(extractDirectMediaUrl('<html><body>hello</body></html>', base)).toBeNull();
-    expect(
-      extractDirectMediaUrl('<img src="https://cdn.test/a.jpg" />', base),
-    ).toBeNull();
+    expect(extractDirectMediaUrl('<img src="https://cdn.test/a.jpg" />', base)).toBeNull();
   });
 });

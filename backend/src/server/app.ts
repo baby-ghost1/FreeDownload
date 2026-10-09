@@ -223,8 +223,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     // lost (expired, cleared, cross-device) would otherwise deadlock sign-in
     // - the login POST itself is rejected before it can issue fresh cookies.
     const path = req.routeOptions?.url ?? req.url;
-    const isAuthEntryPoint =
-      path.includes('/auth/login') || path.includes('/auth/register');
+    const isAuthEntryPoint = path.includes('/auth/login') || path.includes('/auth/register');
     if (!SAFE_METHODS.has(req.method) && (context || adminContext) && !isAuthEntryPoint) {
       assertCsrf(req);
     }

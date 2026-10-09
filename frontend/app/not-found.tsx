@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Compass, House } from 'lucide-react';
 
-import { buttonClasses } from '@/components/ui/button';import { Enter } from '@/components/motion/reveal';
+import { buttonClasses } from '@/components/ui/button';
+import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { cn } from '@/lib/utils/cn';
 
@@ -26,10 +27,7 @@ export default function NotFound() {
             <House className="size-4" aria-hidden="true" />
             Back to home
           </Link>
-          <Link
-            href="/download"
-            className={cn(buttonClasses({ variant: 'outline', size: 'md' }))}
-          >
+          <Link href="/download" className={cn(buttonClasses({ variant: 'outline', size: 'md' }))}>
             <Compass className="size-4" aria-hidden="true" />
             Start a download
           </Link>

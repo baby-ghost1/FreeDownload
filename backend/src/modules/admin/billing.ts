@@ -106,9 +106,8 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
         .from(upgradeRequests)
         .innerJoin(users, eq(upgradeRequests.userId, users.id))
         .$dynamic();
-      const rows = await (req.query.status
-        ? base.where(eq(upgradeRequests.status, req.query.status))
-        : base
+      const rows = await (
+        req.query.status ? base.where(eq(upgradeRequests.status, req.query.status)) : base
       )
         .orderBy(desc(upgradeRequests.createdAt))
         .limit(req.query.limit);
@@ -202,11 +201,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
     },
     async (req) => {
       requireAdmin(req);
-      const rows = await getDb()
-        .select()
-        .from(coupons)
-        .orderBy(desc(coupons.createdAt))
-        .limit(100);
+      const rows = await getDb().select().from(coupons).orderBy(desc(coupons.createdAt)).limit(100);
       return { data: rows };
     },
   );
@@ -434,10 +429,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
       const context = requireAdmin(req);
       assertMutatorRole(context);
       if (req.body.confirmText !== DELETE_ALL_CONFIRM_TEXT) {
-        throw new AppError(
-          'VALIDATION_ERROR',
-          `Type "${DELETE_ALL_CONFIRM_TEXT}" to confirm.`,
-        );
+        throw new AppError('VALIDATION_ERROR', `Type "${DELETE_ALL_CONFIRM_TEXT}" to confirm.`);
       }
       const ok = await verifyPassword(context.admin.passwordHash, req.body.password);
       if (!ok) {
@@ -447,10 +439,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
       let deleted = 0;
       // Batched so a huge user base cannot wedge the request.
       for (let round = 0; round < 25; round++) {
-        const batch = await db
-          .select({ id: users.id })
-          .from(users)
-          .limit(200);
+        const batch = await db.select({ id: users.id }).from(users).limit(200);
         if (batch.length === 0) break;
         for (const row of batch) {
           try {
@@ -479,8 +468,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
     '/admin/users/:id',
     {
       schema: {
-        description:
-          'Delete a user outright (owner/admin only, own password required to confirm).',
+        description: 'Delete a user outright (owner/admin only, own password required to confirm).',
         params: IdParams,
         body: z.object({ password: z.string().min(1).max(256) }),
         response: { 200: OkSchema, ...errorResponses(400, 401, 403, 404) },

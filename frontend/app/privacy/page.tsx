@@ -31,8 +31,8 @@ const SECTIONS = [
     body: (
       <p>
         Processed files are kept for a limited window ({SITE_CONFIG.name} uses a short, documented
-        retention period), then deleted from storage along with their metadata. Derived analytics are
-        aggregated and cannot identify you.
+        retention period), then deleted from storage along with their metadata. Derived analytics
+        are aggregated and cannot identify you.
       </p>
     ),
   },

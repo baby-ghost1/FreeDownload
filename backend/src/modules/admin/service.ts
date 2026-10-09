@@ -523,10 +523,7 @@ export async function updateSetting(
 ): Promise<SettingView> {
   if (key === 'anon_daily_limit') {
     const ok =
-      typeof value === 'number' &&
-      Number.isInteger(value) &&
-      value >= 0 &&
-      value <= 100000;
+      typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100000;
     if (!ok) {
       throw new AppError(
         'VALIDATION_ERROR',

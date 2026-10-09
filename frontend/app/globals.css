@@ -327,8 +327,16 @@
 
   .bg-grid {
     background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--foreground) 7%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 7%, transparent) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        color-mix(in oklch, var(--foreground) 7%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--foreground) 7%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 34px 34px;
   }
 
@@ -369,12 +377,7 @@
       transparent 100%
     );
 
-    mask-image: linear-gradient(
-      to bottom,
-      #000 0%,
-      rgba(0, 0, 0, 0.5) 55%,
-      transparent 100%
-    );
+    mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
 
     box-shadow: 0 -0.5px 0 rgba(255, 255, 255, 0.92);
   }
@@ -433,7 +436,12 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.28) 50%, transparent 60%);
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgb(255 255 255 / 0.28) 50%,
+      transparent 60%
+    );
     transform: translateX(-110%);
     transition: transform 0.7s var(--ease-out);
     pointer-events: none;

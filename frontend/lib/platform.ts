@@ -79,9 +79,10 @@ export function detectPlatform(rawUrl: string | null | undefined): Platform {
 }
 
 /** Pills for the "works with" strip - id, label plus decorative dot colour. */
-export const PLATFORM_PILLS: Array<{ id: PlatformId; label: string; accent: string }> =
-  KNOWN.map((p) => ({
+export const PLATFORM_PILLS: Array<{ id: PlatformId; label: string; accent: string }> = KNOWN.map(
+  (p) => ({
     id: p.id,
     label: p.label,
     accent: p.accent,
-  }));
+  }),
+);

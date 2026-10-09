@@ -34,9 +34,9 @@ function isBool(value: unknown): value is boolean {
 export function normalizeNavbar(raw: unknown): NavbarConfig {
   if (typeof raw !== 'object' || raw === null) return DEFAULT_NAVBAR;
   const record = raw as Record<string, unknown>;
-  const links = (typeof record.links === 'object' && record.links !== null
-    ? record.links
-    : {}) as Record<string, unknown>;
+  const links = (
+    typeof record.links === 'object' && record.links !== null ? record.links : {}
+  ) as Record<string, unknown>;
   return {
     visible: isBool(record.visible) ? record.visible : true,
     links: {

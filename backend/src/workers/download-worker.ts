@@ -586,7 +586,12 @@ async function handleDownloadJob(bullJob: BullJob<DownloadJobData>): Promise<voi
         current?.maxRetries ?? config.queue.retryLimit,
       );
       await finishAttempt(db, attempt.id, 'failed', code, durationMs);
-      await parkAsFailed(db, jobId, { errorCode: code, errorMessage: message, retryCount }, leaseToken);
+      await parkAsFailed(
+        db,
+        jobId,
+        { errorCode: code, errorMessage: message, retryCount },
+        leaseToken,
+      );
       logger.warn({ jobId, code }, 'download job failed permanently; not retrying');
       return;
     }
@@ -628,11 +633,10 @@ export async function deadLetterExhaustedJob(
   }
 
   if (job.status !== 'failed') {
-    const parked = await parkAsFailed(
-      db,
-      jobId,
-      { errorCode: code, errorMessage: 'Retries exhausted.' },
-    );
+    const parked = await parkAsFailed(db, jobId, {
+      errorCode: code,
+      errorMessage: 'Retries exhausted.',
+    });
     if (!parked) return; // somebody else already decided the outcome
   }
 

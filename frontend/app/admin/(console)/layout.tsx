@@ -96,10 +96,7 @@ export default function AdminConsoleLayout({ children }: { children: React.React
 
   return (
     <AdminConsoleContext.Provider value={value}>
-      <div
-        className="relative mx-auto w-full max-w-5xl px-4 py-8 sm:px-6"
-        data-testid="admin-app"
-      >
+      <div className="relative mx-auto w-full max-w-5xl px-4 py-8 sm:px-6" data-testid="admin-app">
         <SoftBackdrop />
         <div className="relative mb-4">
           <BackButton href="/" label="Back to home" />
@@ -140,7 +137,11 @@ export default function AdminConsoleLayout({ children }: { children: React.React
                   href="/admin/profile"
                   aria-label="Settings"
                   data-testid="admin-open-profile"
-                  className={buttonClasses({ variant: 'outline', size: 'sm', className: 'rounded-xl px-3' })}
+                  className={buttonClasses({
+                    variant: 'outline',
+                    size: 'sm',
+                    className: 'rounded-xl px-3',
+                  })}
                 >
                   <Settings className="size-3.5" />
                 </Link>

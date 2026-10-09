@@ -278,8 +278,8 @@ export default function HomePage() {
 
           <Enter delay={0.16}>
             <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-              Drop your link below - we&apos;ll show every format available.
-              Pick one, and it&apos;s yours in seconds.
+              Drop your link below - we&apos;ll show every format available. Pick one, and it&apos;s
+              yours in seconds.
             </p>
           </Enter>
 
@@ -289,7 +289,7 @@ export default function HomePage() {
                 <Input
                   ref={inputRef}
                   aria-label="Paste a media link"
-                    placeholder="Paste a Facebook, Instagram or YouTube link…"
+                  placeholder="Paste a Facebook, Instagram or YouTube link…"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onBlur={scrollToStart}
@@ -433,7 +433,10 @@ export default function HomePage() {
       </section>
 
       {/* FAQ - native details, full-width touch targets on mobile */}
-      <section aria-label="Frequently asked questions" className="relative overflow-hidden bg-surface-sunken/60">
+      <section
+        aria-label="Frequently asked questions"
+        className="relative overflow-hidden bg-surface-sunken/60"
+      >
         <div className="relative mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-14">
           <Reveal>
             <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-primary">

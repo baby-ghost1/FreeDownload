@@ -139,11 +139,10 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot latch: freezes the elapsed clock on the first completed poll
     setFrozenElapsed((prev) => {
       if (job?.status !== 'completed') return null;
-      return (
-        prev ?? formatElapsed(Date.now() - new Date(job?.createdAt ?? Date.now()).getTime())
-      );
+      return prev ?? formatElapsed(Date.now() - new Date(job?.createdAt ?? Date.now()).getTime());
     });
-  }, [job?.status, job?.id, job?.createdAt]);  const [canGoForward, setCanGoForward] = useState(() => {
+  }, [job?.status, job?.id, job?.createdAt]);
+  const [canGoForward, setCanGoForward] = useState(() => {
     try {
       return sessionStorage.getItem('fd_can_forward') === '1';
     } catch {
@@ -363,261 +362,262 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             </div>
           )}
 
-            <div className="relative">
-              <div className="relative mx-auto max-w-md">
-                <span
-                  aria-hidden="true"
-                  className="absolute left-[12.5%] right-[12.5%] top-3 h-0.5 rounded-full bg-border"
-                />
-                <motion.span
-                  aria-hidden="true"
-                  className="absolute left-[12.5%] top-3 h-0.5 rounded-full bg-gradient-to-r from-primary to-info"
-                  initial={false}
-                  animate={{
-                    width: `${Math.max(0, Math.min(100, (step / (STEPS.length - 1)) * 100)) * 0.75}%`,
-                  }}
-                  transition={{ type: 'spring', stiffness: 70, damping: 22 }}
-                />
-                <ol className="relative flex items-start justify-between gap-1" aria-label="Download steps">
-                  {STEPS.map((s, i) => {
-                    const reached = i < step;
-                    const current = i === step;
-                    return (
-                      <li
-                        key={s.key}
+          <div className="relative">
+            <div className="relative mx-auto max-w-md">
+              <span
+                aria-hidden="true"
+                className="absolute left-[12.5%] right-[12.5%] top-3 h-0.5 rounded-full bg-border"
+              />
+              <motion.span
+                aria-hidden="true"
+                className="absolute left-[12.5%] top-3 h-0.5 rounded-full bg-gradient-to-r from-primary to-info"
+                initial={false}
+                animate={{
+                  width: `${Math.max(0, Math.min(100, (step / (STEPS.length - 1)) * 100)) * 0.75}%`,
+                }}
+                transition={{ type: 'spring', stiffness: 70, damping: 22 }}
+              />
+              <ol
+                className="relative flex items-start justify-between gap-1"
+                aria-label="Download steps"
+              >
+                {STEPS.map((s, i) => {
+                  const reached = i < step;
+                  const current = i === step;
+                  return (
+                    <li
+                      key={s.key}
+                      className={cn(
+                        'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
+                        i <= step ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                      data-testid={`step-${s.key}`}
+                    >
+                      <motion.span
+                        layout
+                        animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                        transition={
+                          current
+                            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                            : { type: 'spring', stiffness: 400, damping: 22 }
+                        }
                         className={cn(
-                          'flex flex-1 flex-col items-center gap-1.5 text-center transition-colors duration-300',
-                          i <= step ? 'text-foreground' : 'text-muted-foreground',
+                          'relative z-10 flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold',
+                          reached
+                            ? 'border-success bg-success text-white shadow-[0_0_10px_-3px_var(--color-success)]'
+                            : current
+                              ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
+                              : 'border-border-strong bg-surface',
                         )}
-                        data-testid={`step-${s.key}`}
                       >
                         <motion.span
-                          layout
-                          animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                          transition={
-                            current
-                              ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-                              : { type: 'spring', stiffness: 400, damping: 22 }
-                          }
-                          className={cn(
-                            'relative z-10 flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold',
-                            reached
-                              ? 'border-success bg-success text-white shadow-[0_0_10px_-3px_var(--color-success)]'
-                              : current
-                                ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
-                                : 'border-border-strong bg-surface',
-                          )}
+                          key={reached ? 'tick' : 'num'}
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.25 }}
+                          className="flex"
                         >
-                          <motion.span
-                            key={reached ? 'tick' : 'num'}
-                            initial={{ opacity: 0, scale: 0.6 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.25 }}
-                            className="flex"
-                          >
-                            {reached ? <Check className="size-3.5" aria-hidden="true" /> : i + 1}
-                          </motion.span>
+                          {reached ? <Check className="size-3.5" aria-hidden="true" /> : i + 1}
                         </motion.span>
-                        <span className="text-[11px] font-medium leading-tight">{s.label}</span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
+                      </motion.span>
+                      <span className="text-[11px] font-medium leading-tight">{s.label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
+          </div>
 
-            {active && (
-              <div className="flex justify-center pt-1">
-                <Button
-                  variant="outline"
-                  loading={cancelling}
-                  onClick={() => void onCancel()}
-                  data-testid="cancel-job"
-                  className="rounded-full px-8 shadow-1"
-                >
-                  <XCircle className="size-4" aria-hidden="true" />
-                  Cancel download
-                </Button>
-              </div>
-            )}
-
-            {job.status === 'failed' && job.errorMessage && (
-              <Alert tone="error">
-                {job.errorMessage}
-                {job.retryCount > 0 && ` (attempt ${job.retryCount + 1})`}
-              </Alert>
-            )}
-            {blocked && (
-              <Alert tone="error">
-                {job.errorMessage ?? 'This source does not allow downloads right now.'}
-              </Alert>
-            )}
-            {cancelError && <Alert tone="error">{cancelError}</Alert>}
-
-            {failed && (
-              <Alert tone="error">
-                {job.errorMessage ?? 'This download failed.'}{' '}
-                <Link
-                  href="/download"
-                  onClick={clearForward}
-                  className="link-underline font-medium text-primary underline-offset-2"
-                >
-                  Try another link →
-                </Link>
-              </Alert>
-            )}
-
-            {done && !result && !loading && (
-              <Alert tone="error" data-testid="result-expired">
-                This link has expired - start a new download to get a fresh one.{' '}
-                <Link
-                  href="/download"
-                  onClick={clearForward}
-                  className="link-underline font-medium text-primary underline-offset-2"
-                >
-                  New download →
-                </Link>
-              </Alert>
-            )}
-
-            {job.status === 'completed' && result && (
-              <motion.div
-                initial={{ opacity: 0, y: 12, scale: 0.99 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="glass relative mt-2 overflow-hidden rounded-2xl border border-border bg-surface/80 p-4 shadow-3"
-                data-testid="result-card"
+          {active && (
+            <div className="flex justify-center pt-1">
+              <Button
+                variant="outline"
+                loading={cancelling}
+                onClick={() => void onCancel()}
+                data-testid="cancel-job"
+                className="rounded-full px-8 shadow-1"
               >
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -left-10 -top-12 size-40 rounded-full bg-primary/10 blur-3xl"
-                />
-                <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
-                      <FileVideo className="size-5" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 text-left">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {fileName}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        {size && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                            <HardDrive className="size-3" aria-hidden="true" />
-                            {size}
-                          </span>
-                        )}
-                        <ExpiryCountdown expiresAt={result.expiresAt} />
-                      </div>
-                    </div>
-                  </div>
-                  {!confirmAgain && (
-                    <motion.a
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.96 }}
-                      href={result.url}
-                      download={fileName ?? undefined}
-                      data-testid="download-link"
-                      onClick={(e) => {
-                        if (alreadyDownloaded && !confirmAgain) {
-                          // Second+ click - stop and ask first (warning below).
-                          e.preventDefault();
-                          setConfirmAgain(true);
-                          return;
-                        }
-                        markDownloaded();
-                      }}
-                      className={cn(
-                        buttonClasses({ size: 'lg' }),
-                        'btn-shine h-12 w-full shrink-0 px-6 sm:w-auto',
-                      )}
-                    >
-                      {alreadyDownloaded ? (
-                        <Check className="size-4" aria-hidden="true" />
-                      ) : (
-                        <Download className="size-4" aria-hidden="true" />
-                      )}
-                      {alreadyDownloaded ? 'Downloaded' : 'Download file'}
-                    </motion.a>
-                  )}
-                </div>
-                {confirmAgain && (
-                  <div
-                    role="alert"
-                    data-testid="redownload-confirm"
-                    className="relative mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm"
-                  >
-                    <span className="min-w-0 flex-1 text-foreground">
-                      Already downloaded - download this file again?
-                    </span>
-                    <span className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmAgain(false)}
-                        data-testid="redownload-cancel"
-                      >
-                        Cancel
-                      </Button>
-                      <motion.a
-                        whileTap={{ scale: 0.96 }}
-                        href={result.url}
-                        download={fileName ?? undefined}
-                        onClick={markDownloaded}
-                        data-testid="redownload-yes"
-                        className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
-                      >
-                        <Download className="size-4" aria-hidden="true" />
-                        Yes, download
-                      </motion.a>
-                    </span>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                FreeDownload is free because people help - enjoying it?{' '}
-                <button
-                  type="button"
-                  onClick={() => setSupportOpen(true)}
-                  className="link-underline font-semibold text-primary underline-offset-2"
-                >
-                  Tap here to support us
-                </button>
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                FreeDownload muft hai kyunki log madad karte hain - achha laga to Help
-                Us button dabakar support karo.
-              </p>
-              <DonateModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+                <XCircle className="size-4" aria-hidden="true" />
+                Cancel download
+              </Button>
             </div>
+          )}
 
-            <nav
-              aria-label="More downloads"
-              className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-surface/60 px-4 py-3"
-            >
+          {job.status === 'failed' && job.errorMessage && (
+            <Alert tone="error">
+              {job.errorMessage}
+              {job.retryCount > 0 && ` (attempt ${job.retryCount + 1})`}
+            </Alert>
+          )}
+          {blocked && (
+            <Alert tone="error">
+              {job.errorMessage ?? 'This source does not allow downloads right now.'}
+            </Alert>
+          )}
+          {cancelError && <Alert tone="error">{cancelError}</Alert>}
+
+          {failed && (
+            <Alert tone="error">
+              {job.errorMessage ?? 'This download failed.'}{' '}
               <Link
                 href="/download"
                 onClick={clearForward}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 transition-colors hover:text-foreground"
+                className="link-underline font-medium text-primary underline-offset-2"
               >
-                <Download className="size-4" aria-hidden="true" />
-                New download
+                Try another link →
               </Link>
-              <span aria-hidden="true" className="h-4 w-px bg-border" />
+            </Alert>
+          )}
+
+          {done && !result && !loading && (
+            <Alert tone="error" data-testid="result-expired">
+              This link has expired - start a new download to get a fresh one.{' '}
               <Link
-                href="/downloads"
+                href="/download"
                 onClick={clearForward}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary"
+                className="link-underline font-medium text-primary underline-offset-2"
               >
-                <History className="size-4" aria-hidden="true" />
-                My downloads
+                New download →
               </Link>
-            </nav>
+            </Alert>
+          )}
+
+          {job.status === 'completed' && result && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="glass relative mt-2 overflow-hidden rounded-2xl border border-border bg-surface/80 p-4 shadow-3"
+              data-testid="result-card"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -left-10 -top-12 size-40 rounded-full bg-primary/10 blur-3xl"
+              />
+              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
+                    <FileVideo className="size-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-sm font-semibold text-foreground">{fileName}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {size && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          <HardDrive className="size-3" aria-hidden="true" />
+                          {size}
+                        </span>
+                      )}
+                      <ExpiryCountdown expiresAt={result.expiresAt} />
+                    </div>
+                  </div>
+                </div>
+                {!confirmAgain && (
+                  <motion.a
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    href={result.url}
+                    download={fileName ?? undefined}
+                    data-testid="download-link"
+                    onClick={(e) => {
+                      if (alreadyDownloaded && !confirmAgain) {
+                        // Second+ click - stop and ask first (warning below).
+                        e.preventDefault();
+                        setConfirmAgain(true);
+                        return;
+                      }
+                      markDownloaded();
+                    }}
+                    className={cn(
+                      buttonClasses({ size: 'lg' }),
+                      'btn-shine h-12 w-full shrink-0 px-6 sm:w-auto',
+                    )}
+                  >
+                    {alreadyDownloaded ? (
+                      <Check className="size-4" aria-hidden="true" />
+                    ) : (
+                      <Download className="size-4" aria-hidden="true" />
+                    )}
+                    {alreadyDownloaded ? 'Downloaded' : 'Download file'}
+                  </motion.a>
+                )}
+              </div>
+              {confirmAgain && (
+                <div
+                  role="alert"
+                  data-testid="redownload-confirm"
+                  className="relative mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm"
+                >
+                  <span className="min-w-0 flex-1 text-foreground">
+                    Already downloaded - download this file again?
+                  </span>
+                  <span className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setConfirmAgain(false)}
+                      data-testid="redownload-cancel"
+                    >
+                      Cancel
+                    </Button>
+                    <motion.a
+                      whileTap={{ scale: 0.96 }}
+                      href={result.url}
+                      download={fileName ?? undefined}
+                      onClick={markDownloaded}
+                      data-testid="redownload-yes"
+                      className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
+                    >
+                      <Download className="size-4" aria-hidden="true" />
+                      Yes, download
+                    </motion.a>
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              FreeDownload is free because people help - enjoying it?{' '}
+              <button
+                type="button"
+                onClick={() => setSupportOpen(true)}
+                className="link-underline font-semibold text-primary underline-offset-2"
+              >
+                Tap here to support us
+              </button>
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              FreeDownload muft hai kyunki log madad karte hain - achha laga to Help Us button
+              dabakar support karo.
+            </p>
+            <DonateModal open={supportOpen} onClose={() => setSupportOpen(false)} />
           </div>
+
+          <nav
+            aria-label="More downloads"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-surface/60 px-4 py-3"
+          >
+            <Link
+              href="/download"
+              onClick={clearForward}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 transition-colors hover:text-foreground"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              New download
+            </Link>
+            <span aria-hidden="true" className="h-4 w-px bg-border" />
+            <Link
+              href="/downloads"
+              onClick={clearForward}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary"
+            >
+              <History className="size-4" aria-hidden="true" />
+              My downloads
+            </Link>
+          </nav>
+        </div>
       </Enter>
     </div>
   );

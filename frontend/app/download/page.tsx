@@ -109,9 +109,7 @@ function FormatOption({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
-            {shortLabel(format)}
-          </span>
+          <span className="truncate text-sm font-medium text-foreground">{shortLabel(format)}</span>
           {format.isDefault && !busy && <Badge tone="default">Recommended</Badge>}
         </span>
         <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -467,8 +465,8 @@ function DownloadFlow() {
             exit={{ opacity: 0, y: -6 }}
           >
             <Alert tone="info" className="mt-4">
-              Link changed - press <strong>Analyze</strong> to get formats for the new link.
-              The formats below belong to the previous link and are locked.
+              Link changed - press <strong>Analyze</strong> to get formats for the new link. The
+              formats below belong to the previous link and are locked.
             </Alert>
           </motion.div>
         )}
@@ -562,9 +560,7 @@ function DownloadFlow() {
                       {analysis.title ?? analysis.url}
                     </CardTitle>
                     <p className="mt-1 flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
-                      {analysis.uploader && (
-                        <span className="shrink-0">{analysis.uploader}</span>
-                      )}
+                      {analysis.uploader && <span className="shrink-0">{analysis.uploader}</span>}
                       {duration && <span className="shrink-0">· {duration}</span>}
                       <span className="min-w-0 flex-1 truncate">· {analysis.url}</span>
                     </p>

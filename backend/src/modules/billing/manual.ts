@@ -2,7 +2,13 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import { AppError } from '../../errors/app-error.js';
 import type { Database } from '../../database/client.js';
-import { coupons, plans, subscriptions, upgradeRequests, users } from '../../database/schema/index.js';
+import {
+  coupons,
+  plans,
+  subscriptions,
+  upgradeRequests,
+  users,
+} from '../../database/schema/index.js';
 
 /**
  * Manual UPI billing: the buyer pays over QR, optionally with a coupon,
@@ -188,9 +194,7 @@ export async function approveUpgradeRequest(db: Database, requestId: string, adm
   await setUserPlan(db, request.userId, request.planCode, 'manual');
 
   if (coupon) {
-    const crow = (
-      await db.select().from(coupons).where(eq(coupons.code, coupon.code)).limit(1)
-    )[0];
+    const crow = (await db.select().from(coupons).where(eq(coupons.code, coupon.code)).limit(1))[0];
     if (crow) {
       const usedCount = crow.usedCount + 1;
       // Redemption cap reached -> auto-deactivate so the list (and every

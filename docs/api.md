@@ -87,15 +87,15 @@ Identity: a session cookie **or** an `X-Anon-Key` header (client-generated,
 creation/analyze also carries `X-Turnstile-Token` once Turnstile is keyed;
 Bearer requests skip the challenge.
 
-| Method | Path                           | Auth                 | Notes                                                                          |
-| ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
-| POST   | `/api/v1/downloads`            | session+CSRF \| anon | 201 + job; honors `Idempotency-Key` (replay → 201 + `Idempotent-Replay: true`) |
-| POST   | `/api/v1/downloads/analyze`    | session+CSRF \| anon | synchronous metadata + format list, Redis-cached (`ANALYZE_CACHE_TTL_SEC`)     |
+| Method | Path                           | Auth                 | Notes                                                                                            |
+| ------ | ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------ |
+| POST   | `/api/v1/downloads`            | session+CSRF \| anon | 201 + job; honors `Idempotency-Key` (replay → 201 + `Idempotent-Replay: true`)                   |
+| POST   | `/api/v1/downloads/analyze`    | session+CSRF \| anon | synchronous metadata + format list, Redis-cached (`ANALYZE_CACHE_TTL_SEC`)                       |
 | GET    | `/api/v1/downloads`            | session \| anon      | `?limit=1..100` (default 20) + `cursor`, newest first with `nextCursor` - only the caller's jobs |
-| GET    | `/api/v1/downloads/:id`        | session \| anon      | status + progress; a foreign job answers `404`, never `403`                    |
-| POST   | `/api/v1/downloads/:id/start`  | session+CSRF \| anon | `ready` → `processing` with the chosen `format`/`container`; else `409`        |
-| GET    | `/api/v1/downloads/:id/result` | session \| anon      | signed URL once `completed` (409 before that, 404 if purged)                   |
-| POST   | `/api/v1/downloads/:id/cancel` | session+CSRF \| anon | only before `COMPLETED`; repeating it → `409`                                  |
+| GET    | `/api/v1/downloads/:id`        | session \| anon      | status + progress; a foreign job answers `404`, never `403`                                      |
+| POST   | `/api/v1/downloads/:id/start`  | session+CSRF \| anon | `ready` → `processing` with the chosen `format`/`container`; else `409`                          |
+| GET    | `/api/v1/downloads/:id/result` | session \| anon      | signed URL once `completed` (409 before that, 404 if purged)                                     |
+| POST   | `/api/v1/downloads/:id/cancel` | session+CSRF \| anon | only before `COMPLETED`; repeating it → `409`                                                    |
 
 Request body: `{ "url": "https://.", "format"?: "mp4", "container"?: "mp4" }`.
 `format` matches `^[A-Za-z0-9][A-Za-z0-9.#_-]{0,63}$`, `container`
@@ -157,10 +157,10 @@ enqueues (contract invariant 1).
 
 ### Catalog ✅ (Phase 4)
 
-| Method | Path                    | Auth | Notes                                                                         |
-| ------ | ----------------------- | ---- | ----------------------------------------------------------------------------- |
-| GET    | `/api/v1/sources`       | none | enabled sources + health `mode` (`active`/`maintenance`/…)                    |
-| GET    | `/api/v1/formats`       | none | supported output formats for `body.format`                                    |
+| Method | Path                    | Auth | Notes                                                                                                                                      |
+| ------ | ----------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/v1/sources`       | none | enabled sources + health `mode` (`active`/`maintenance`/…)                                                                                 |
+| GET    | `/api/v1/formats`       | none | supported output formats for `body.format`                                                                                                 |
 | GET    | `/api/v1/config/public` | none | limits, flags, plans, navbar (`system_settings.navbar_config`, fail-open visible), Turnstile site key; `Cache-Control: public, max-age=60` |
 
 `GET /api/v1/files/*` serves bytes **only** when `STORAGE_DRIVER=local`

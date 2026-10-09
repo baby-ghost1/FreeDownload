@@ -40,7 +40,11 @@ export function Alert({ tone = 'info', className, children, role, id, ...rest }:
       initial={{ opacity: 0, y: -8, scale: 0.99 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className={cn('flex gap-2.5 rounded-md border px-3.5 py-3 text-sm shadow-1', t.wrap, className)}
+      className={cn(
+        'flex gap-2.5 rounded-md border px-3.5 py-3 text-sm shadow-1',
+        t.wrap,
+        className,
+      )}
       role={role ?? (tone === 'error' ? 'alert' : 'status')}
     >
       {t.icon}

@@ -38,10 +38,7 @@ export default function GlobalError({
             <RotateCcw className="size-4" aria-hidden="true" />
             Try again
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.location.assign('/')}
-          >
+          <Button variant="outline" onClick={() => window.location.assign('/')}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to home
           </Button>

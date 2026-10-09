@@ -288,10 +288,7 @@ export async function registerAdminRoutes(app: AppInstance): Promise<void> {
       const context = requireAdmin(req, { allowUnmfa: true });
       const db = getDb();
       if (req.params.id === context.session.id) {
-        throw new AppError(
-          'VALIDATION_ERROR',
-          'Sign out normally to end this session.',
-        );
+        throw new AppError('VALIDATION_ERROR', 'Sign out normally to end this session.');
       }
       const target = (
         await db.select().from(adminSessions).where(eq(adminSessions.id, req.params.id)).limit(1)

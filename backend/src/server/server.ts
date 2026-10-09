@@ -69,10 +69,7 @@ async function main(): Promise<void> {
         );
       } else {
         selfPing = startSelfPing({ url: target, intervalMs: config.selfPing.intervalMin * 60_000 });
-        logger.info(
-          { target, intervalMin: config.selfPing.intervalMin },
-          'self-ping keepalive on',
-        );
+        logger.info({ target, intervalMin: config.selfPing.intervalMin }, 'self-ping keepalive on');
       }
     }
   } catch (err) {

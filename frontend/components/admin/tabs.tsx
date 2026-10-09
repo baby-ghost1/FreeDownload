@@ -1530,7 +1530,13 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
       validUntil: c.expiresAt ? toLocalDateInput(c.expiresAt) : '',
       // An exhausted coupon always opens in First-N mode with the limit
       // pre-raised by one, so Save reactivates it without a dead end.
-      mode: exhausted ? 'custom' : c.maxUses === null ? 'unlimited' : c.maxUses === 1 ? 'once' : 'custom',
+      mode: exhausted
+        ? 'custom'
+        : c.maxUses === null
+          ? 'unlimited'
+          : c.maxUses === 1
+            ? 'once'
+            : 'custom',
       limit: exhausted ? String(c.maxUses! + 1) : c.maxUses === null ? '' : String(c.maxUses),
       active: c.active || exhausted,
     });
@@ -1777,7 +1783,10 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
           {!couponData ? (
             <Spinner className="mx-auto block size-6" />
           ) : couponData.data.length === 0 ? (
-            <EmptyState icon={<Tag className="size-5" />} text="No coupons yet. Create your first one." />
+            <EmptyState
+              icon={<Tag className="size-5" />}
+              text="No coupons yet. Create your first one."
+            />
           ) : (
             <ul className="space-y-2">
               {couponData.data.map((c) => {

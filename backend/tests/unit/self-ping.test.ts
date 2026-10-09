@@ -52,9 +52,12 @@ describe('startSelfPing', () => {
   });
 
   it('survives unreachable targets without throwing', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new Error('ECONNREFUSED');
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('ECONNREFUSED');
+      }),
+    );
     vi.useFakeTimers();
     const handle = startSelfPing({ url: 'http://127.0.0.1:1/health', intervalMs: 60_000 });
     await vi.advanceTimersByTimeAsync(200_000);

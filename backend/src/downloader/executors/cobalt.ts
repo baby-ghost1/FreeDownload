@@ -190,7 +190,8 @@ export const cobaltAdapter: SourceAdapter = {
       // Instance tunnels are first-party (checked by origin at download);
       // only third-party URLs enter the SSRF sweep lists.
       if (!isInstanceUrl(fileUrl)) sourceUrls.push(fileUrl);
-    } else if (json.status === 'picker' && Array.isArray(json.picker)) {      const items = (json.picker as CobaltPickerItem[]).filter(
+    } else if (json.status === 'picker' && Array.isArray(json.picker)) {
+      const items = (json.picker as CobaltPickerItem[]).filter(
         (it) => (it.type === 'video' || it.type === 'gif') && str(it.url),
       );
       items.forEach((it, i) => {
@@ -326,7 +327,8 @@ export const cobaltAdapter: SourceAdapter = {
     let received = 0;
     try {
       for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
-        if (opts.signal.aborted) throw new SourceError('SOURCE_TIMEOUT', 'The download was stopped.');
+        if (opts.signal.aborted)
+          throw new SourceError('SOURCE_TIMEOUT', 'The download was stopped.');
         received += chunk.length;
         if (received > maxBytes) {
           throw new SourceError(

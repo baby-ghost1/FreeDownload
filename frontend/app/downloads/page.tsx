@@ -170,15 +170,9 @@ export default function MyDownloadsPage() {
               aria-label="Refresh downloads list"
               className="flex size-9 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground transition-all duration-200 hover:text-foreground active:scale-90 disabled:opacity-40"
             >
-              <RotateCw
-                className={cn('size-4', refreshing && 'animate-spin')}
-                aria-hidden="true"
-              />
+              <RotateCw className={cn('size-4', refreshing && 'animate-spin')} aria-hidden="true" />
             </button>
-            <Link
-              href="/download"
-              className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
-            >
+            <Link href="/download" className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}>
               New download
             </Link>
           </div>
@@ -217,10 +211,7 @@ export default function MyDownloadsPage() {
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <Download
-                  className="mx-auto size-8 text-muted-foreground"
-                  aria-hidden="true"
-                />
+                <Download className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
               </motion.div>
               <p className="mt-3 text-sm text-muted-foreground">
                 No downloads yet - paste a link to get started.
@@ -331,7 +322,10 @@ export default function MyDownloadsPage() {
                               </span>
                             </span>
                             <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <span className="shrink-0" title={new Date(job.createdAt).toLocaleString()}>
+                              <span
+                                className="shrink-0"
+                                title={new Date(job.createdAt).toLocaleString()}
+                              >
                                 {timeAgo(job.createdAt)}
                               </span>
                               {job.requestedFormat && (

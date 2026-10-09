@@ -270,7 +270,12 @@ describeInfra('cleanup sweep (integration)', () => {
     const liveSessionId = (
       await db
         .insert(adminSessions)
-        .values({ adminId, tokenHash: `hash-${randomUUID()}`, csrfToken: 'csrf', expiresAt: FUTURE })
+        .values({
+          adminId,
+          tokenHash: `hash-${randomUUID()}`,
+          csrfToken: 'csrf',
+          expiresAt: FUTURE,
+        })
         .returning({ id: adminSessions.id })
     )[0]!.id;
 

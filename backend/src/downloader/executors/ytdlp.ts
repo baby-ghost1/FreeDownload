@@ -242,8 +242,7 @@ export function classifyExtractorFailure(stderrTail: string): ClassifiedFailure 
   ) {
     return {
       code: 'SOURCE_UNAVAILABLE',
-      message:
-        'This video is unavailable - it may be removed, private, or blocked in your region.',
+      message: 'This video is unavailable - it may be removed, private, or blocked in your region.',
     };
   }
   if (
@@ -339,7 +338,8 @@ export function extractDirectMediaUrl(
       if (m[1]) candidates.push(m[1]);
     }
   }
-  const fileRe = /["'(\s=](https?:\/\/[^"'()\s<>]+\.(?:mp3|m4a|aac|ogg|opus|wav|flac|mp4|webm|mov|mkv)(?:\?[^"'()\s<>]*)?)/gi;
+  const fileRe =
+    /["'(\s=](https?:\/\/[^"'()\s<>]+\.(?:mp3|m4a|aac|ogg|opus|wav|flac|mp4|webm|mov|mkv)(?:\?[^"'()\s<>]*)?)/gi;
   let m: RegExpExecArray | null;
   while ((m = fileRe.exec(text)) !== null && candidates.length < 16) {
     if (m[1]) candidates.push(m[1]);
@@ -685,7 +685,10 @@ export const ytdlpAdapter: SourceAdapter = {
 
       const stat = statSync(filePath);
       if (stat.size === 0) {
-        throw new SourceError('SOURCE_INTEGRITY', 'The downloaded file came back empty. Try again.');
+        throw new SourceError(
+          'SOURCE_INTEGRITY',
+          'The downloaded file came back empty. Try again.',
+        );
       }
 
       const extMatch = /\.([A-Za-z0-9]+)$/.exec(basename(filePath));

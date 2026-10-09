@@ -63,9 +63,7 @@ describe('third-party CORS', () => {
 
   it('reflects allowlisted origins with credentials, even on API routes', async () => {
     const app = await testApp();
-    const res = await app.inject(
-      preflight('/api/v1/downloads/analyze', 'http://localhost:3000'),
-    );
+    const res = await app.inject(preflight('/api/v1/downloads/analyze', 'http://localhost:3000'));
     expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
     await app.close();
