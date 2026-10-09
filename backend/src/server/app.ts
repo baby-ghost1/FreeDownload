@@ -26,7 +26,7 @@ import { registerAdminRoutes } from '../modules/admin/routes.js';
 import { registerApiKeyRoutes } from '../modules/apikeys/routes.js';
 import { registerBillingRoutes } from '../modules/billing/routes.js';
 import { closeQueues } from '../queue/queues.js';
-import { assertCsrf } from '../security/csrf.js';
+import { assertCsrf, setCsrfCookie } from '../security/csrf.js';
 import {
   loadApiKey,
   meterApiKeyError,
@@ -185,7 +185,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
   app.decorateRequest('auth', null);
   app.decorateRequest('adminAuth', null);
   app.decorateRequest('apiKey', null);
-  app.addHook('preHandler', async (req: FastifyRequest) => {
+  app.addHook('preHandler', async (req: FastifyRequest, reply: FastifyReply) => {
     const db = getDb();
 
     const token = readSessionToken(req);
@@ -219,8 +219,31 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
     }
 
     // Either ambient credential (user or admin cookie) demands double-submit.
-    if (!SAFE_METHODS.has(req.method) && (context || adminContext)) {
+    // Login/register are exempt: a stale session cookie whose CSRF cookie was
+    // lost (expired, cleared, cross-device) would otherwise deadlock sign-in
+    // - the login POST itself is rejected before it can issue fresh cookies.
+    const path = req.routeOptions?.url ?? req.url;
+    const isAuthEntryPoint =
+      path.includes('/auth/login') || path.includes('/auth/register');
+    if (!SAFE_METHODS.has(req.method) && (context || adminContext) && !isAuthEntryPoint) {
       assertCsrf(req);
+    }
+
+    // Self-heal: any safe request with a live session but a missing CSRF
+    // cookie re-issues it (the session row is the source of truth), so the
+    // next mutation no longer fails with "Invalid or missing CSRF token".
+    if (SAFE_METHODS.has(req.method)) {
+      const existing = req.cookies?.[config.session.csrfCookieName];
+      if (!existing) {
+        const token = adminContext?.session.csrfToken ?? context?.session.csrfToken;
+        if (token) {
+          setCsrfCookie(
+            reply,
+            token,
+            adminContext ? config.admin.ttlSeconds : config.session.ttlSeconds,
+          );
+        }
+      }
     }
   });
 

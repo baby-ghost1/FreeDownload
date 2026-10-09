@@ -97,6 +97,17 @@ describe.runIf(infraUp)('billing: plans, quotas, API keys, payments', () => {
 
   const authed = () => ({ cookie: session.cookie, 'x-csrf-token': session.csrf });
 
+  /** API-key creation is Pro+ only - park the suite user on the given plan. */
+  async function putOnPlan(code: 'free' | 'pro' | 'business'): Promise<void> {
+    const db = getDb();
+    await db.delete(subscriptions).where(eq(subscriptions.userId, await meId()));
+    if (code === 'free') return;
+    const [plan] = await db.select().from(plans).where(eq(plans.code, code));
+    await db
+      .insert(subscriptions)
+      .values({ userId: await meId(), planId: plan!.id, provider: 'none', status: 'active' });
+  }
+
   it('lists active plans for public pricing', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/plans' });
     expect(res.statusCode).toBe(200);
@@ -293,14 +304,14 @@ describe.runIf(infraUp)('billing: plans, quotas, API keys, payments', () => {
     const db = getDb();
     const userId = await meId();
 
-    // Back to a clean free plan with idle jobs so the quota under test here
-    // is only the API-key hourly meter.
+    // Back to idle jobs so the quota under test here is only the API-key
+    // hourly meter. Key creation is Pro+ gated, so park on pro first.
     await db
       .update(downloadJobs)
       .set({ status: 'completed', completedAt: new Date() })
       .where(eq(downloadJobs.userId, userId));
-    await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
     await seed();
+    await putOnPlan('pro');
 
     const noCsrf = await app.inject({
       method: 'POST',
@@ -395,6 +406,9 @@ describe.runIf(infraUp)('billing: plans, quotas, API keys, payments', () => {
   });
 
   it('enforces the hourly API-key quota from plan limits', async () => {
+    // Creation needs pro; the meter below reads the (free) plan limits, so
+    // drop back to free right after the key exists.
+    await putOnPlan('pro');
     const created = await app.inject({
       method: 'POST',
       url: '/api/v1/api-keys',
@@ -402,6 +416,7 @@ describe.runIf(infraUp)('billing: plans, quotas, API keys, payments', () => {
       payload: { name: 'hourly' },
     });
     expect(created.statusCode).toBe(201);
+    await putOnPlan('free');
     const bearer = { authorization: `Bearer ${created.json().rawKey}` };
 
     await getDb()
@@ -499,7 +514,8 @@ describe.runIf(infraUp)('billing: plans, quotas, API keys, payments', () => {
     expect(current.json()).toMatchObject({
       status: 'active',
       provider: 'stripe',
-      plan: { code: 'pro', priceCents: 900 },
+      // plan.priceCents comes from the plans row (INR pricing, c77ed1c).
+      plan: { code: 'pro', priceCents: 49900 },
     });
 
     // Redelivery: natural keys make it a no-op.

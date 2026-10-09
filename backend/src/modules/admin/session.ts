@@ -72,7 +72,9 @@ export function setAdminSessionCookies(
   });
   // The double-submit cookie is shared with user sessions - whichever login
   // ran last owns it, and assertCsrf only ever compares cookie vs header.
-  setCsrfCookie(reply, session.csrfToken);
+  // TTL matches the admin session (not the shorter user TTL) so the cookie
+  // never expires while `fd_admin` is still alive and bricking mutations.
+  setCsrfCookie(reply, session.csrfToken, config.admin.ttlSeconds);
 }
 
 export function readAdminSessionToken(req: FastifyRequest): string | undefined {
@@ -141,8 +143,8 @@ export async function revokeAdminSession(db: Database, session: AdminSession): P
     .where(and(eq(adminSessions.id, session.id), isNull(adminSessions.revokedAt)));
 }
 
-/** At most 50 live admin sessions per admin - oldest beyond that are revoked. */
-export const MAX_ADMIN_SESSIONS = 50;
+/** At most 5 live admin sessions per admin - oldest beyond that are revoked. */
+export const MAX_ADMIN_SESSIONS = 5;
 
 export async function enforceAdminSessionLimit(db: Database, adminId: string): Promise<void> {
   const rows = await db

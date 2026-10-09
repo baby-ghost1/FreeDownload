@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 import { buildApp } from '../../src/server/app.js';
 import { closeDatabase, getDb } from '../../src/database/client.js';
@@ -9,7 +10,7 @@ import { closeQueues } from '../../src/queue/queues.js';
 import { seed } from '../../src/database/seed.js';
 import { config } from '../../src/server/config.js';
 import { hashPassword } from '../../src/security/passwords.js';
-import { adminUsers, users } from '../../src/database/schema/index.js';
+import { adminUsers, coupons, users } from '../../src/database/schema/index.js';
 import type { AppInstance } from '../../src/types/app.js';
 import { infraAvailable, inCi } from '../helpers/infra.js';
 
@@ -45,6 +46,7 @@ describeInfra('manual UPI billing (integration)', () => {
   let owner: Session;
   let userSession: Session;
   let userId = '';
+  let createdCouponCode: string | null = null;
 
   beforeAll(async () => {
     await seed();
@@ -82,6 +84,10 @@ describeInfra('manual UPI billing (integration)', () => {
   });
 
   afterAll(async () => {
+    // The dev DB is shared with the live app - never leave test coupons in it.
+    if (createdCouponCode) {
+      await getDb().delete(coupons).where(eq(coupons.code, createdCouponCode));
+    }
     await app.close();
     await closeQueues();
     await closeDatabase();
@@ -122,6 +128,7 @@ describeInfra('manual UPI billing (integration)', () => {
     });
     expect(couponRes.statusCode).toBe(201);
     const coupon = couponRes.json() as { code: string };
+    createdCouponCode = coupon.code;
     expect(coupon.code).toMatch(/^[A-Z0-9-]+$/);
 
     const preview = await user('POST', '/api/v1/subscriptions/upgrade-requests/preview', {
@@ -204,7 +211,8 @@ describeInfra('manual UPI billing (integration)', () => {
 
     const wrongPassword = await admin('POST', '/api/v1/admin/users/delete-all', {
       password: 'not-the-password',
-      confirmText: 'delete all the users',
+      // Exact phrase so the password check is what rejects (401, not 400).
+      confirmText: 'DELETE ALL USERS',
     });
     expect(wrongPassword.statusCode).toBe(401);
   });

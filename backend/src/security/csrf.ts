@@ -17,13 +17,17 @@ export function issueCsrfToken(): string {
   return randomToken(24);
 }
 
-export function setCsrfCookie(reply: FastifyReply, token: string): void {
+export function setCsrfCookie(
+  reply: FastifyReply,
+  token: string,
+  maxAgeSeconds: number = config.session.ttlSeconds,
+): void {
   reply.setCookie(config.session.csrfCookieName, token, {
     path: '/',
     httpOnly: false, // must be readable by the frontend to echo it back
     secure: config.session.secure,
     sameSite: config.session.sameSite,
-    maxAge: config.session.ttlSeconds,
+    maxAge: maxAgeSeconds,
   });
 }
 

@@ -4,10 +4,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 
 import { buildApp } from '../../src/server/app.js';
+import { seed } from '../../src/database/seed.js';
 import { closeDatabase, getDb } from '../../src/database/client.js';
 import { closeQueues } from '../../src/queue/queues.js';
 import { closeRedis } from '../../src/redis/client.js';
-import { apiKeys } from '../../src/database/schema/index.js';
+import { apiKeys, plans, subscriptions } from '../../src/database/schema/index.js';
 import { sha256 } from '../../src/utils/crypto.js';
 import { signFileToken } from '../../src/storage/local.js';
 import { infraAvailable, inCi } from '../helpers/infra.js';
@@ -81,6 +82,14 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
       headers: { cookie: session.cookie },
     });
     userId = (me.json() as { id: string }).id;
+
+    // API keys are a paid (Pro+) facility - put the suite user on Pro so the
+    // hash-storage assertions exercise the happy path, not the upgrade gate.
+    await seed();
+    const [pro] = await getDb().select().from(plans).where(eq(plans.code, 'pro'));
+    await getDb()
+      .insert(subscriptions)
+      .values({ userId, planId: pro!.id, provider: 'none', status: 'active' });
   });
 
   afterAll(async () => {
@@ -147,6 +156,8 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
     );
     expect(ok.headers['access-control-max-age']).toBe('600');
 
+    // Weather-API model: /downloads* answers any origin with `*` and NO
+    // credentials, so session cookies never travel cross-origin (3e4c508).
     const denied = await app.inject({
       method: 'OPTIONS',
       url: '/api/v1/downloads',
@@ -155,7 +166,20 @@ describe.runIf(infraUp)('security: headers, CORS, cookies, limits, secrets', () 
         'access-control-request-method': 'POST',
       },
     });
-    expect(denied.headers['access-control-allow-origin']).toBeUndefined();
+    expect(denied.headers['access-control-allow-origin']).toBe('*');
+    expect(denied.headers['access-control-allow-credentials']).toBeUndefined();
+
+    // Non-download routes keep the strict allowlist - unknown origins get
+    // no allow-origin at all.
+    const deniedOther = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/v1/api-keys',
+      headers: {
+        origin: 'https://evil.example',
+        'access-control-request-method': 'POST',
+      },
+    });
+    expect(deniedOther.headers['access-control-allow-origin']).toBeUndefined();
   });
 
   it('keeps the session cookie HttpOnly and the CSRF cookie readable', async () => {
