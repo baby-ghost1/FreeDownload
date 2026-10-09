@@ -285,7 +285,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstan
 
     if (fastifyError.validation) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'Request validation failed.', requestId },
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed.',
+          requestId,
+          // Field-level issues so clients can say WHAT failed, not just that it did.
+          details: { fields: fastifyError.validation },
+        },
       });
     }
 

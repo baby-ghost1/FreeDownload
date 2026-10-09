@@ -1344,7 +1344,7 @@ export function LimitsTab({ onError }: { onError: (msg: string | null) => void }
       <Card className="overflow-hidden rounded-2xl">
         <div
           aria-hidden="true"
-          className="neon-edge h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+          className="neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
         />
         <CardHeader className="flex flex-row items-center gap-2.5">
           <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -1488,13 +1488,33 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
 
   const createCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
     setActionError(null);
+
+    // Mirror the API schema (code 4-32 of A-Z/0-9/dash, integer 1-100%,
+    // optional integer maxUses) so a bad field gets a precise message
+    // instead of the generic "Request validation failed."
+    const cleanCode = code.trim().toUpperCase();
+    const pct = Number(percentOff);
+    const uses = maxUses.trim();
+    if (!/^[A-Z0-9-]{4,32}$/.test(cleanCode)) {
+      setActionError('Code: 4-32 characters, only A-Z, 0-9 and dash (-).');
+      return;
+    }
+    if (!Number.isInteger(pct) || pct < 1 || pct > 100) {
+      setActionError('% off must be a whole number from 1 to 100.');
+      return;
+    }
+    if (uses !== '' && (!/^\d+$/.test(uses) || Number(uses) < 1)) {
+      setActionError('Max uses must be a positive whole number, or blank for unlimited.');
+      return;
+    }
+
+    setCreating(true);
     try {
       await createAdminCoupon({
-        code,
-        percentOff: Number(percentOff),
-        ...(maxUses.trim() ? { maxUses: Number(maxUses) } : {}),
+        code: cleanCode,
+        percentOff: pct,
+        ...(uses ? { maxUses: Number(uses) } : {}),
       });
       setCode('');
       setPercentOff('20');
@@ -1845,7 +1865,7 @@ export function ProfileTab({ onError }: { onError: (msg: string | null) => void 
       <Card className="overflow-hidden rounded-2xl">
         <div
           aria-hidden="true"
-          className="neon-edge h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+          className="neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
         />
         <CardHeader>
           <CardTitle>Account</CardTitle>
