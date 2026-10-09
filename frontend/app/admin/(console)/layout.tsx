@@ -109,7 +109,7 @@ export default function AdminConsoleLayout({ children }: { children: React.React
           <div className="relative overflow-hidden rounded-2xl border border-border bg-surface/90 shadow-3 backdrop-blur-xl">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+              className="pointer-events-none absolute inset-x-0 top-0 neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
             />
             <div
               aria-hidden="true"

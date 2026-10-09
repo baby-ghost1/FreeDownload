@@ -209,7 +209,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           <Card className="mt-8 overflow-hidden">
             <div
               aria-hidden="true"
-              className="neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+              className="neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
             />
             <CardContent className="space-y-3 py-8">
               <div className="shimmer-line h-10 w-32 rounded-xl border border-border bg-surface-sunken/60" />

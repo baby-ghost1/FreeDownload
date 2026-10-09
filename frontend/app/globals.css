@@ -340,14 +340,43 @@
   }
 
   /*
-   * Neon edge: the thin colored strip that caps cards. The elliptical mask
-   * keeps full thickness in the middle and tapers the line to a whisper at
-   * both ends (patli -> moti -> patli), so it reads as a glowing filament
-   * instead of a hard border.
+   * Neon edge: the glowing filament that caps cards. A white-hot hairline
+   * (inset shadow) is the core; the gradient beneath it bleeds a tight
+   * colored halo a couple of pixels below. The hard clip-path tapers the
+   * whole thing: pin-thin at both ends, only a touch fuller mid-span, so
+   * it reads as a neon tube lighting up - not a colored fade.
    */
   .neon-edge {
-    -webkit-mask-image: radial-gradient(58% 220% at 50% 50%, black 38%, transparent 100%);
-    mask-image: radial-gradient(58% 220% at 50% 50%, black 38%, transparent 100%);
+    height: 3px;
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      94% 25%,
+      85% 40%,
+      70% 65%,
+      58% 90%,
+      50% 100%,
+      42% 90%,
+      30% 65%,
+      15% 40%,
+      6% 25%
+    );
+
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      rgba(0, 0, 0, 0.5) 55%,
+      transparent 100%
+    );
+
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      rgba(0, 0, 0, 0.5) 55%,
+      transparent 100%
+    );
+
+    box-shadow: 0 -0.5px 0 rgba(255, 255, 255, 0.92);
   }
 
   /* Fades truncated input text at its right edge - an invisible "virtual edge". */

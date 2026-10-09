@@ -81,7 +81,7 @@ export default function TermsPage() {
           <Card className="overflow-hidden">
             <div
               aria-hidden="true"
-              className="neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+              className="neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
             />
             <CardContent className="p-0">
               {SECTIONS.map((s, i) => (

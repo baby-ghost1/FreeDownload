@@ -346,7 +346,7 @@ export default function AccountPage() {
           <Card id="billing-card" className="overflow-hidden scroll-mt-6">
             <div
               aria-hidden="true"
-              className="neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+              className="neon-edge bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
             />
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
