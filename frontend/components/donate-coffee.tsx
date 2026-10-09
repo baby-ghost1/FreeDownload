@@ -122,7 +122,7 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
           >
             <div
               aria-hidden="true"
-              className="h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:220%_100%] animate-gradient-pan"
+              className="neon-edge h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:220%_100%] animate-gradient-pan"
             />
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">

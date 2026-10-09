@@ -8,14 +8,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Flag,
   Gauge,
-  Globe,
   LayoutDashboard,
   ListChecks,
   LogOut,
-  MonitorSmartphone,
   Receipt,
+  Settings,
   ShieldCheck,
-  UserRound,
   Users,
 } from 'lucide-react';
 
@@ -24,7 +22,7 @@ import { BackButton } from '@/components/back-button';
 import { Badge } from '@/components/ui/badge';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClasses } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/progress';
 import { AdminConsoleContext } from '@/components/admin/shared';
 import { adminLogout, adminMe } from '@/lib/api/endpoints';
@@ -48,19 +46,6 @@ const TABS: Array<{ id: string; href: Route; label: string; icon: React.ReactNod
   { id: 'flags', href: '/admin/flags', label: 'Flags', icon: <Flag className="size-4" /> },
   { id: 'limits', href: '/admin/limits', label: 'Limits', icon: <Gauge className="size-4" /> },
   { id: 'billing', href: '/admin/billing', label: 'Billing', icon: <Receipt className="size-4" /> },
-  { id: 'site', href: '/admin/site', label: 'Site', icon: <Globe className="size-4" /> },
-  {
-    id: 'sessions',
-    href: '/admin/sessions',
-    label: 'Sessions',
-    icon: <MonitorSmartphone className="size-4" />,
-  },
-  {
-    id: 'profile',
-    href: '/admin/profile',
-    label: 'Profile',
-    icon: <UserRound className="size-4" />,
-  },
 ];
 
 export default function AdminConsoleLayout({ children }: { children: React.ReactNode }) {
@@ -124,7 +109,7 @@ export default function AdminConsoleLayout({ children }: { children: React.React
           <div className="relative overflow-hidden rounded-2xl border border-border bg-surface/90 shadow-3 backdrop-blur-xl">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+              className="pointer-events-none absolute inset-x-0 top-0 neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
             />
             <div
               aria-hidden="true"
@@ -150,17 +135,27 @@ export default function AdminConsoleLayout({ children }: { children: React.React
                   </span>
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                loading={signingOut}
-                onClick={() => void signOut()}
-                data-testid="admin-sign-out"
-                className="gap-1.5 rounded-xl"
-              >
-                <LogOut className="size-3.5" />
-                Sign out
-              </Button>
+              <div className="flex items-center gap-2.5">
+                <Link
+                  href="/admin/profile"
+                  aria-label="Settings"
+                  data-testid="admin-open-profile"
+                  className={buttonClasses({ variant: 'outline', size: 'sm', className: 'rounded-xl px-3' })}
+                >
+                  <Settings className="size-3.5" />
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={signingOut}
+                  onClick={() => void signOut()}
+                  data-testid="admin-sign-out"
+                  className="gap-1.5 rounded-xl"
+                >
+                  <LogOut className="size-3.5" />
+                  Log out
+                </Button>
+              </div>
             </div>
           </div>
         </Enter>

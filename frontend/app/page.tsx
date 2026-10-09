@@ -373,7 +373,7 @@ export default function HomePage() {
                 <Card className="hover-lift group relative h-full overflow-hidden">
                   <div
                     aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-primary to-info transition-transform duration-500 group-hover:scale-x-100"
+                    className="absolute inset-x-0 top-0 neon-edge h-1 origin-left scale-x-0 bg-gradient-to-r from-primary to-info transition-transform duration-500 group-hover:scale-x-100"
                   />
                   <CardHeader>
                     <span className="mb-2 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-info/15 text-primary ring-1 ring-primary/20 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">

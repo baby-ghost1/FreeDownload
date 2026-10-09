@@ -163,7 +163,7 @@ export default function AdminLoginPage() {
 
           {/* Form panel */}
           <div className="relative flex flex-col justify-center bg-surface p-5 sm:p-7">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan" />
             <div className="mb-5 flex items-center gap-2 lg:hidden">
               <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-info text-sm font-bold text-white shadow-2">
                 F

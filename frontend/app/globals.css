@@ -339,6 +339,17 @@
     mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
   }
 
+  /*
+   * Neon edge: the thin colored strip that caps cards. The elliptical mask
+   * keeps full thickness in the middle and tapers the line to a whisper at
+   * both ends (patli -> moti -> patli), so it reads as a glowing filament
+   * instead of a hard border.
+   */
+  .neon-edge {
+    -webkit-mask-image: radial-gradient(58% 220% at 50% 50%, black 38%, transparent 100%);
+    mask-image: radial-gradient(58% 220% at 50% 50%, black 38%, transparent 100%);
+  }
+
   /* Fades truncated input text at its right edge - an invisible "virtual edge". */
   .mask-input-r {
     mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent 100%);

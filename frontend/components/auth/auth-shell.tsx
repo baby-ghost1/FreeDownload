@@ -44,7 +44,7 @@ export function AuthShell({
         <Card className="overflow-hidden" data-testid={testId}>
           <div
             aria-hidden="true"
-            className="h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+            className="neon-edge h-1 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
           />
           <CardHeader>
             <CardTitle className="text-xl">{title}</CardTitle>

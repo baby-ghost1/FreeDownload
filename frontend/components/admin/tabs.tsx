@@ -11,7 +11,6 @@ import {
   Download,
   Filter,
   Gauge,
-  Globe,
   Inbox,
   KeyRound,
   ListChecks,
@@ -1345,7 +1344,7 @@ export function LimitsTab({ onError }: { onError: (msg: string | null) => void }
       <Card className="overflow-hidden rounded-2xl">
         <div
           aria-hidden="true"
-          className="h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+          className="neon-edge h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
         />
         <CardHeader className="flex flex-row items-center gap-2.5">
           <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -1430,173 +1429,6 @@ export function LimitsTab({ onError }: { onError: (msg: string | null) => void }
               </ul>
             </details>
           )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-const NAVBAR_SETTING_KEY = 'navbar_config';
-
-type NavbarLinks = { home: boolean; download: boolean; downloads: boolean; auth: boolean };
-
-const DEFAULT_NAVBAR_LINKS: NavbarLinks = {
-  home: true,
-  download: true,
-  downloads: true,
-  auth: true,
-};
-
-const NAVBAR_LINK_META: Array<{ key: keyof NavbarLinks; label: string; hint: string }> = [
-  { key: 'home', label: 'Home', hint: 'Landing link + logo shortcut' },
-  { key: 'download', label: 'Download', hint: 'Paste-a-link page' },
-  { key: 'downloads', label: 'My downloads', hint: 'History + queue page' },
-  { key: 'auth', label: 'Sign in / Account', hint: 'Auth button or avatar' },
-];
-
-function normalizeNavbarLinks(raw: unknown): NavbarLinks {
-  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const links =
-    typeof record.links === 'object' && record.links !== null
-      ? (record.links as Record<string, unknown>)
-      : {};
-  const pick = (v: unknown) => (typeof v === 'boolean' ? v : true);
-  return {
-    home: pick(links.home),
-    download: pick(links.download),
-    downloads: pick(links.downloads),
-    auth: pick(links.auth),
-  };
-}
-
-export function SiteTab({ onError }: { onError: (msg: string | null) => void }) {
-  const { data, reload } = useTabData<{ data: SystemSetting[] }>(
-    () => listAdminSettings(),
-    onError,
-  );
-  const toast = useToast();
-  const [visible, setVisible] = useState(true);
-  const [links, setLinks] = useState<NavbarLinks>(DEFAULT_NAVBAR_LINKS);
-  const [saving, setSaving] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!data) return;
-    const raw = data.data.find((s) => s.key === NAVBAR_SETTING_KEY)?.value;
-    const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- form drafts mirror the loaded setting
-    setVisible(typeof record.visible === 'boolean' ? record.visible : true);
-    setLinks(normalizeNavbarLinks(raw));
-  }, [data]);
-
-  if (!data) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12">
-        <Spinner className="size-7" />
-        <p className="text-xs text-muted-foreground">Loading…</p>
-      </div>
-    );
-  }
-
-  const save = async () => {
-    setActionError(null);
-    setSaving(true);
-    try {
-      await updateAdminSetting(NAVBAR_SETTING_KEY, { visible, links });
-      toast('Navbar visibility updated - live within about a minute', 'success');
-      reload();
-    } catch (err) {
-      setActionError(message(err, 'Could not save navbar settings.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <SectionHeader
-        icon={<Globe className="size-5" />}
-        title="Site chrome"
-        sub="Floating navbar visibility for visitors"
-        right={
-          <Badge tone={visible ? 'success' : 'muted'} data-testid="site-navbar-state">
-            {visible ? 'Visible' : 'Hidden'}
-          </Badge>
-        }
-      />
-      {actionError && (
-        <Alert tone="error" role="alert" className="rounded-2xl">
-          {actionError}
-        </Alert>
-      )}
-      <Card className="overflow-hidden rounded-2xl">
-        <div
-          aria-hidden="true"
-          className="h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
-        />
-        <CardHeader>
-          <CardTitle>Floating navbar</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-background p-3.5 text-sm font-medium transition-colors hover:border-primary/30">
-            <input
-              type="checkbox"
-              checked={visible}
-              onChange={(e) => setVisible(e.target.checked)}
-              data-testid="site-navbar-visible"
-              className="size-5 accent-primary"
-            />
-            <span>
-              Show navbar
-              <span className="block text-xs font-normal text-muted-foreground">
-                Off hides the pill on every public page
-              </span>
-            </span>
-            <span
-              className={`ml-auto size-2.5 rounded-full ${visible ? 'bg-success' : 'bg-muted-foreground/30'}`}
-            />
-          </label>
-
-          <div className={visible ? '' : 'pointer-events-none opacity-40'}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Visible items
-            </p>
-            <ul className="space-y-2">
-              {NAVBAR_LINK_META.map((item) => (
-                <li key={item.key}>
-                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-background p-3 text-sm transition-colors hover:border-primary/30">
-                    <input
-                      type="checkbox"
-                      checked={links[item.key]}
-                      onChange={(e) => setLinks((l) => ({ ...l, [item.key]: e.target.checked }))}
-                      data-testid={`site-navbar-link-${item.key}`}
-                      className="size-4 accent-primary"
-                    />
-                    <span>
-                      {item.label}
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        {item.hint}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <Button
-            size="sm"
-            loading={saving}
-            onClick={() => void save()}
-            data-testid="site-navbar-save"
-            className="h-11 rounded-xl bg-gradient-to-r from-primary to-info px-6 font-semibold text-white shadow-[0_8px_20px_-8px_var(--color-primary)] hover:brightness-110"
-          >
-            Save navbar
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Served through public config (cached ~60s) - visitors pick it up within about a minute,
-            no deploy.
-          </p>
         </CardContent>
       </Card>
     </div>
@@ -1908,10 +1740,10 @@ export function SessionsTab({ onError }: { onError: (msg: string | null) => void
       <SectionHeader
         icon={<MonitorSmartphone className="size-5" />}
         title="Signed-in devices"
-        sub="At most 50 live sessions - oldest beyond that are signed out automatically"
+        sub="At most 5 live sessions - oldest beyond that are signed out automatically"
         right={
           <Badge tone="info" data-testid="sessions-count">
-            {data.data.length} / 50
+            {data.data.length} / 5
           </Badge>
         }
       />
@@ -2008,12 +1840,12 @@ export function ProfileTab({ onError }: { onError: (msg: string | null) => void 
       <SectionHeader
         icon={<UserRound className="size-5" />}
         title="Admin profile"
-        sub="Your own account - sessions live here until you sign out, up to 30 days"
+        sub="Your own account - password and signed-in devices live here"
       />
       <Card className="overflow-hidden rounded-2xl">
         <div
           aria-hidden="true"
-          className="h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
+          className="neon-edge h-1.5 bg-gradient-to-r from-primary via-info to-primary bg-[length:220%_100%] animate-gradient-pan"
         />
         <CardHeader>
           <CardTitle>Account</CardTitle>
@@ -2092,6 +1924,8 @@ export function ProfileTab({ onError }: { onError: (msg: string | null) => void 
           </form>
         </CardContent>
       </Card>
+
+      <SessionsTab onError={onError} />
     </div>
   );
 }
