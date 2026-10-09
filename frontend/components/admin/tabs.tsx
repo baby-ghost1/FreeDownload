@@ -15,11 +15,14 @@ import {
   KeyRound,
   ListChecks,
   MonitorSmartphone,
+  Pencil,
   Play,
+  Plus,
   Receipt,
   ScrollText,
   ShieldAlert,
   Tag,
+  Trash2,
   UserCheck,
   UserRound,
   Users,
@@ -38,6 +41,7 @@ import {
   bulkDeleteAdminUsers,
   changeAdminPassword,
   createAdminCoupon,
+  deleteAdminCoupon,
   deleteAdminUser,
   deleteAllAdminUsers,
   getAdminOverview,
@@ -1438,7 +1442,39 @@ export function LimitsTab({ onError }: { onError: (msg: string | null) => void }
 function money(cents: number, currency: string): string {
   return currency.toLowerCase() === 'inr'
     ? `₹${(cents / 100).toLocaleString('en-IN', { maximumFractionDigits: cents % 100 === 0 ? 0 : 2 })}`
-    : `${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)} ${currency.toUpperCase()}`;
+    : `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+}
+
+type CouponLimitMode = 'once' | 'custom' | 'unlimited';
+
+interface CouponDraft {
+  code: string;
+  percentOff: string;
+  validUntil: string; // yyyy-mm-dd, '' = never expires
+  mode: CouponLimitMode;
+  limit: string; // used when mode === 'custom'
+  active: boolean;
+}
+
+const EMPTY_DRAFT: CouponDraft = {
+  code: '',
+  percentOff: '20',
+  validUntil: '',
+  mode: 'custom',
+  limit: '100',
+  active: true,
+};
+
+function couponStatus(c: Coupon): 'active' | 'inactive' | 'expired' | 'exhausted' {
+  if (c.expiresAt && new Date(c.expiresAt).getTime() <= Date.now()) return 'expired';
+  if (c.maxUses !== null && c.usedCount >= c.maxUses) return 'exhausted';
+  return c.active ? 'active' : 'inactive';
+}
+
+function toLocalDateInput(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 export function BillingTab({ onError }: { onError: (msg: string | null) => void }) {
@@ -1454,10 +1490,17 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
   );
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const [percentOff, setPercentOff] = useState('20');
-  const [maxUses, setMaxUses] = useState('');
-  const [creating, setCreating] = useState(false);
+  const toast = useToast();
+
+  // One draft object drives both create and edit so validation is shared.
+  const [couponDialog, setCouponDialog] = useState<
+    null | { mode: 'create' } | { mode: 'edit'; coupon: Coupon }
+  >(null);
+  const [draft, setDraft] = useState<CouponDraft>(EMPTY_DRAFT);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [savingCoupon, setSavingCoupon] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const decide = async (id: string, approve: boolean) => {
     setBusyId(id);
@@ -1473,11 +1516,47 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
     }
   };
 
+  const openCreateCoupon = () => {
+    setDraft(EMPTY_DRAFT);
+    setDialogError(null);
+    setCouponDialog({ mode: 'create' });
+  };
+
+  const openEditCoupon = (c: Coupon) => {
+    const exhausted = c.maxUses !== null && c.usedCount >= c.maxUses;
+    setDraft({
+      code: c.code,
+      percentOff: String(c.percentOff),
+      validUntil: c.expiresAt ? toLocalDateInput(c.expiresAt) : '',
+      // An exhausted coupon always opens in First-N mode with the limit
+      // pre-raised by one, so Save reactivates it without a dead end.
+      mode: exhausted ? 'custom' : c.maxUses === null ? 'unlimited' : c.maxUses === 1 ? 'once' : 'custom',
+      limit: exhausted ? String(c.maxUses! + 1) : c.maxUses === null ? '' : String(c.maxUses),
+      active: c.active || exhausted,
+    });
+    setDialogError(null);
+    setCouponDialog({ mode: 'edit', coupon: c });
+  };
+
   const toggleCoupon = async (c: Coupon) => {
+    const status = couponStatus(c);
+    if (status === 'expired') {
+      openEditCoupon(c); // dead by date — only a new expiry can revive it
+      return;
+    }
     setBusyId(c.id);
     setActionError(null);
     try {
-      await updateAdminCoupon(c.code, { active: !c.active });
+      if (status === 'exhausted') {
+        await updateAdminCoupon(c.code, { active: true, maxUses: c.usedCount + 1 });
+        toast(`"${c.code}" reactivated · 1 more redemption available`, 'success');
+      } else if (c.active) {
+        await updateAdminCoupon(c.code, { active: false });
+        toast(`"${c.code}" deactivated`, 'success');
+      } else {
+        await updateAdminCoupon(c.code, { active: true });
+        toast(`"${c.code}" activated`, 'success');
+      }
       reloadCoupons();
     } catch (err) {
       setActionError(message(err, 'Could not update that coupon.'));
@@ -1486,44 +1565,86 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
     }
   };
 
-  const createCoupon = async (e: React.FormEvent) => {
+  const saveCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActionError(null);
+    if (!couponDialog) return;
+    setDialogError(null);
 
     // Mirror the API schema (code 4-32 of A-Z/0-9/dash, integer 1-100%,
-    // optional integer maxUses) so a bad field gets a precise message
-    // instead of the generic "Request validation failed."
-    const cleanCode = code.trim().toUpperCase();
-    const pct = Number(percentOff);
-    const uses = maxUses.trim();
-    if (!/^[A-Z0-9-]{4,32}$/.test(cleanCode)) {
-      setActionError('Code: 4-32 characters, only A-Z, 0-9 and dash (-).');
+    // integer redemption cap, future expiry) so a bad field gets a precise
+    // message instead of the generic "Request validation failed."
+    const cleanCode = draft.code.trim().toUpperCase();
+    const pct = Number(draft.percentOff);
+    if (couponDialog.mode === 'create' && !/^[A-Z0-9-]{4,32}$/.test(cleanCode)) {
+      setDialogError('Code: 4-32 characters, only A-Z, 0-9 and dash (-).');
       return;
     }
     if (!Number.isInteger(pct) || pct < 1 || pct > 100) {
-      setActionError('% off must be a whole number from 1 to 100.');
+      setDialogError('% off must be a whole number from 1 to 100.');
       return;
     }
-    if (uses !== '' && (!/^\d+$/.test(uses) || Number(uses) < 1)) {
-      setActionError('Max uses must be a positive whole number, or blank for unlimited.');
-      return;
+    let maxUses: number | null;
+    if (draft.mode === 'once') maxUses = 1;
+    else if (draft.mode === 'unlimited') maxUses = null;
+    else {
+      const n = Number(draft.limit);
+      if (!Number.isInteger(n) || n < 1 || n > 1_000_000) {
+        setDialogError('Redemptions must be a whole number from 1 to 1,000,000.');
+        return;
+      }
+      maxUses = n;
+    }
+    let expiresAt: string | null = null;
+    if (draft.validUntil) {
+      const end = new Date(`${draft.validUntil}T23:59:59`);
+      if (Number.isNaN(end.getTime()) || end.getTime() <= Date.now()) {
+        setDialogError('Valid until must be a future date.');
+        return;
+      }
+      expiresAt = end.toISOString();
     }
 
-    setCreating(true);
+    setSavingCoupon(true);
     try {
-      await createAdminCoupon({
-        code: cleanCode,
-        percentOff: pct,
-        ...(uses ? { maxUses: Number(uses) } : {}),
-      });
-      setCode('');
-      setPercentOff('20');
-      setMaxUses('');
+      if (couponDialog.mode === 'create') {
+        await createAdminCoupon({
+          code: cleanCode,
+          percentOff: pct,
+          maxUses,
+          expiresAt,
+          active: draft.active,
+        });
+        toast(`"${cleanCode}" created · ${pct}% off`, 'success');
+      } else {
+        await updateAdminCoupon(couponDialog.coupon.code, {
+          percentOff: pct,
+          maxUses,
+          expiresAt,
+          active: draft.active,
+        });
+        toast(`"${couponDialog.coupon.code}" updated`, 'success');
+      }
+      setCouponDialog(null);
       reloadCoupons();
     } catch (err) {
-      setActionError(message(err, 'Could not create that coupon.'));
+      setDialogError(message(err, 'Could not save that coupon.'));
     } finally {
-      setCreating(false);
+      setSavingCoupon(false);
+    }
+  };
+
+  const deleteCoupon = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteAdminCoupon(deleteTarget.code);
+      toast(`"${deleteTarget.code}" deleted`, 'success');
+      setDeleteTarget(null);
+      reloadCoupons();
+    } catch (err) {
+      setDialogError(message(err, 'Could not delete that coupon.'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1635,92 +1756,296 @@ export function BillingTab({ onError }: { onError: (msg: string | null) => void 
 
       <Card className="overflow-hidden rounded-2xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tag className="size-4 text-muted-foreground" aria-hidden="true" />
-            Coupons
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="size-4 text-muted-foreground" aria-hidden="true" />
+              Coupons
+            </CardTitle>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={openCreateCoupon}
+              data-testid="coupon-open-create"
+              className="rounded-xl"
+            >
+              <Plus className="size-4" />
+              New coupon
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <form onSubmit={(e) => void createCoupon(e)} className="flex flex-wrap items-end gap-2">
+          {!couponData ? (
+            <Spinner className="mx-auto block size-6" />
+          ) : couponData.data.length === 0 ? (
+            <EmptyState icon={<Tag className="size-5" />} text="No coupons yet. Create your first one." />
+          ) : (
+            <ul className="space-y-2">
+              {couponData.data.map((c) => {
+                const status = couponStatus(c);
+                return (
+                  <li
+                    key={c.id}
+                    data-testid="coupon-row"
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm"
+                  >
+                    <code className="font-mono font-semibold">{c.code}</code>
+                    <span className="text-muted-foreground">{c.percentOff}% off</span>
+                    <span className="text-xs text-muted-foreground">
+                      {c.usedCount}
+                      {c.maxUses != null ? `/${c.maxUses}` : ''} used
+                    </span>
+                    {c.expiresAt && (
+                      <span className="text-xs text-muted-foreground">
+                        till{' '}
+                        {new Date(c.expiresAt).toLocaleDateString(undefined, {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                    <Badge
+                      tone={
+                        status === 'active'
+                          ? 'success'
+                          : status === 'inactive'
+                            ? 'muted'
+                            : 'warning'
+                      }
+                      data-testid="coupon-status"
+                    >
+                      {status}
+                    </Badge>
+                    <span className="ml-auto flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditCoupon(c)}
+                        data-testid="coupon-edit"
+                        className="rounded-xl"
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={busyId === c.id}
+                        onClick={() => void toggleCoupon(c)}
+                        data-testid="coupon-toggle"
+                        className="rounded-xl"
+                      >
+                        {status === 'active'
+                          ? 'Deactivate'
+                          : status === 'inactive'
+                            ? 'Activate'
+                            : 'Reactivate'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setDialogError(null);
+                          setDeleteTarget(c);
+                        }}
+                        data-testid="coupon-delete"
+                        className="rounded-xl hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Delete
+                      </Button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {couponDialog && (
+        <DialogShell
+          tone="success"
+          title={couponDialog.mode === 'create' ? 'New coupon' : `Edit ${couponDialog.coupon.code}`}
+          sub={
+            couponDialog.mode === 'create'
+              ? 'Code, discount, validity and redemption limit.'
+              : couponStatus(couponDialog.coupon) === 'expired'
+                ? 'Expired — set a future date to bring it back.'
+                : couponStatus(couponDialog.coupon) === 'exhausted'
+                  ? 'Exhausted — the limit is pre-raised, Save to reactivate.'
+                  : 'Change discount, dates or redemption limit.'
+          }
+          onClose={() => setCouponDialog(null)}
+          closeTestId="coupon-dialog-close"
+          testid="coupon-dialog"
+        >
+          <form onSubmit={(e) => void saveCoupon(e)} className="space-y-4">
+            {dialogError && (
+              <Alert tone="error" role="alert" className="rounded-xl">
+                {dialogError}
+              </Alert>
+            )}
             <div>
               <Label htmlFor="coupon-code">Code</Label>
               <Input
                 id="coupon-code"
                 placeholder="LAUNCH20"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                value={draft.code}
+                onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
+                readOnly={couponDialog.mode === 'edit'}
                 data-testid="coupon-code"
-                className="mt-1.5 h-10 w-36 rounded-xl uppercase"
+                className="mt-1.5 h-10 rounded-xl uppercase"
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                4-32 characters: A-Z, 0-9, dash (-).
+              </p>
             </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label htmlFor="coupon-off">% off</Label>
+                <Input
+                  id="coupon-off"
+                  inputMode="numeric"
+                  value={draft.percentOff}
+                  onChange={(e) => setDraft({ ...draft, percentOff: e.target.value })}
+                  data-testid="coupon-off"
+                  className="mt-1.5 h-10 rounded-xl text-center"
+                />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="coupon-until">Valid until</Label>
+                <Input
+                  id="coupon-until"
+                  type="date"
+                  value={draft.validUntil}
+                  onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
+                  data-testid="coupon-until"
+                  className="mt-1.5 h-10 rounded-xl"
+                />
+              </div>
+            </div>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Blank = never expires. Closes at end of your day.
+            </p>
             <div>
-              <Label htmlFor="coupon-off">% off</Label>
-              <Input
-                id="coupon-off"
-                inputMode="numeric"
-                value={percentOff}
-                onChange={(e) => setPercentOff(e.target.value)}
-                data-testid="coupon-off"
-                className="mt-1.5 h-10 w-20 rounded-xl text-center"
-              />
-            </div>
-            <div>
-              <Label htmlFor="coupon-uses">Max uses</Label>
-              <Input
-                id="coupon-uses"
-                inputMode="numeric"
-                placeholder="∞"
-                value={maxUses}
-                onChange={(e) => setMaxUses(e.target.value)}
-                data-testid="coupon-uses"
-                className="mt-1.5 h-10 w-24 rounded-xl text-center"
-              />
-            </div>
-            <Button
-              size="sm"
-              type="submit"
-              loading={creating}
-              data-testid="coupon-create"
-              className="h-10 rounded-xl"
-            >
-              Generate
-            </Button>
-          </form>
-          {!couponData ? (
-            <Spinner className="mx-auto block size-6" />
-          ) : couponData.data.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No coupons yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {couponData.data.map((c) => (
-                <li
-                  key={c.id}
-                  data-testid="coupon-row"
-                  className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm"
-                >
-                  <code className="font-mono font-semibold">{c.code}</code>
-                  <span className="text-muted-foreground">{c.percentOff}% off</span>
-                  <span className="text-xs text-muted-foreground">
-                    {c.usedCount}
-                    {c.maxUses != null ? `/${c.maxUses}` : ''} used
-                  </span>
-                  <Badge tone={c.active ? 'success' : 'muted'}>{c.active ? 'On' : 'Off'}</Badge>
+              <Label>Redemptions</Label>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    { mode: 'once', label: 'One-time' },
+                    { mode: 'custom', label: 'First N' },
+                    { mode: 'unlimited', label: 'Unlimited' },
+                  ] as const
+                ).map((opt) => (
                   <Button
+                    key={opt.mode}
                     size="sm"
-                    variant="ghost"
-                    loading={busyId === c.id}
-                    onClick={() => void toggleCoupon(c)}
-                    data-testid="coupon-toggle"
-                    className="ml-auto rounded-xl"
+                    type="button"
+                    variant={draft.mode === opt.mode ? 'primary' : 'outline'}
+                    onClick={() => setDraft({ ...draft, mode: opt.mode })}
+                    data-testid={`coupon-limit-${opt.mode}`}
+                    className="rounded-xl"
                   >
-                    {c.active ? 'Disable' : 'Enable'}
+                    {opt.label}
                   </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                {draft.mode === 'custom' && (
+                  <Input
+                    inputMode="numeric"
+                    placeholder="100"
+                    value={draft.limit}
+                    onChange={(e) => setDraft({ ...draft, limit: e.target.value })}
+                    data-testid="coupon-limit-input"
+                    className="h-9 w-24 rounded-xl text-center"
+                  />
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {draft.mode === 'once'
+                  ? 'Single redemption, then it deactivates itself.'
+                  : draft.mode === 'custom'
+                    ? 'Auto-deactivates after N redemptions.'
+                    : 'No redemption cap.'}
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.active}
+                onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
+                data-testid="coupon-active"
+                className="size-4 accent-[var(--color-primary)]"
+              />
+              {couponDialog.mode === 'create' ? 'Go live immediately' : 'Active'}
+            </label>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCouponDialog(null)}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={savingCoupon}
+                data-testid="coupon-create"
+                className="rounded-xl"
+              >
+                {couponDialog.mode === 'create' ? 'Generate coupon' : 'Save changes'}
+              </Button>
+            </div>
+          </form>
+        </DialogShell>
+      )}
+
+      {deleteTarget && (
+        <DialogShell
+          tone="danger"
+          title={`Delete ${deleteTarget.code}?`}
+          sub="This removes the coupon for good."
+          onClose={() => setDeleteTarget(null)}
+          closeTestId="coupon-delete-close"
+          testid="coupon-delete-dialog"
+        >
+          <div className="space-y-4">
+            {dialogError && (
+              <Alert tone="error" role="alert" className="rounded-xl">
+                {dialogError}
+              </Alert>
+            )}
+            <p className="text-sm text-muted-foreground">
+              {deleteTarget.usedCount > 0
+                ? `${deleteTarget.usedCount} redemption(s) already used — past upgrade requests keep the code as plain text.`
+                : 'It has not been used yet. This cannot be undone.'}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                loading={deleting}
+                onClick={() => void deleteCoupon()}
+                data-testid="coupon-delete-confirm"
+                className="rounded-xl"
+              >
+                <Trash2 className="size-3.5" />
+                Delete coupon
+              </Button>
+            </div>
+          </div>
+        </DialogShell>
+      )}
     </div>
   );
 }

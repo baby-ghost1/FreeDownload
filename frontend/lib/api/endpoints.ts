@@ -248,6 +248,7 @@ export function createAdminCoupon(input: {
   percentOff: number;
   maxUses?: number | null;
   expiresAt?: string | null;
+  active?: boolean;
 }): Promise<Coupon> {
   return apiFetch<Coupon>('/admin/coupons', { method: 'POST', body: input });
 }
@@ -257,6 +258,10 @@ export function updateAdminCoupon(
   patch: { percentOff?: number; maxUses?: number | null; expiresAt?: string | null; active?: boolean },
 ): Promise<Coupon> {
   return apiFetch<Coupon>(`/admin/coupons/${code}`, { method: 'PATCH', body: patch });
+}
+
+export function deleteAdminCoupon(code: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>(`/admin/coupons/${code}`, { method: 'DELETE' });
 }
 
 export function setAdminUserPlan(

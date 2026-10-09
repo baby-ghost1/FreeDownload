@@ -51,6 +51,7 @@ const CouponBody = z.object({
   percentOff: z.number().int().min(1).max(100),
   maxUses: z.number().int().min(1).max(1_000_000).nullable().optional(),
   expiresAt: z.coerce.date().nullable().optional(),
+  active: z.boolean().optional(),
 });
 
 const CouponPatchBody = z
@@ -236,6 +237,7 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
             percentOff: req.body.percentOff,
             maxUses: req.body.maxUses ?? null,
             expiresAt: req.body.expiresAt ?? null,
+            active: req.body.active ?? true,
             createdBy: context.admin.id,
           })
           .returning();
@@ -289,6 +291,38 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
         userAgent: req.headers['user-agent'] ?? null,
       });
       return row;
+    },
+  );
+
+  app.delete(
+    '/admin/coupons/:code',
+    {
+      schema: {
+        description: 'Delete a coupon outright (owner/admin only).',
+        params: z.object({ code: z.string().min(1).max(32) }),
+        response: { 200: OkSchema, ...errorResponses(401, 403, 404) },
+      },
+    },
+    async (req) => {
+      assertCsrf(req);
+      const context = requireAdmin(req);
+      assertMutatorRole(context);
+      const db = getDb();
+      const rows = await db
+        .delete(coupons)
+        .where(eq(coupons.code, normalizeCouponCode(req.params.code)))
+        .returning({ code: coupons.code });
+      const row = rows[0];
+      if (!row) throw new AppError('NOT_FOUND', 'Coupon not found.');
+      await writeAudit(db, {
+        adminId: context.admin.id,
+        action: 'billing.coupon.delete',
+        resource: 'coupons',
+        resourceId: row.code,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] ?? null,
+      });
+      return { ok: true as const };
     },
   );
 

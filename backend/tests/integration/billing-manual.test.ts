@@ -47,6 +47,7 @@ describeInfra('manual UPI billing (integration)', () => {
   let userSession: Session;
   let userId = '';
   let createdCouponCode: string | null = null;
+  const extraCouponCodes: string[] = [];
 
   beforeAll(async () => {
     await seed();
@@ -85,8 +86,8 @@ describeInfra('manual UPI billing (integration)', () => {
 
   afterAll(async () => {
     // The dev DB is shared with the live app - never leave test coupons in it.
-    if (createdCouponCode) {
-      await getDb().delete(coupons).where(eq(coupons.code, createdCouponCode));
+    for (const code of [createdCouponCode, ...extraCouponCodes]) {
+      if (code) await getDb().delete(coupons).where(eq(coupons.code, code));
     }
     await app.close();
     await closeQueues();
@@ -158,6 +159,56 @@ describeInfra('manual UPI billing (integration)', () => {
     expect(second.statusCode).toBe(409);
   });
 
+  it('deactivates, reactivates, rejects expired codes and deletes coupons', async () => {
+    const code = `CTRL-${suffix.slice(0, 6).toUpperCase()}`;
+    extraCouponCodes.push(code);
+    const created = await admin('POST', '/api/v1/admin/coupons', {
+      code,
+      percentOff: 15,
+      maxUses: 1,
+      active: true,
+    });
+    expect(created.statusCode).toBe(201);
+    expect((created.json() as { active: boolean }).active).toBe(true);
+
+    // Deactivate -> the discount no longer applies.
+    const off = await admin('PATCH', `/api/v1/admin/coupons/${code}`, { active: false });
+    expect(off.statusCode).toBe(200);
+    expect((off.json() as { active: boolean }).active).toBe(false);
+    const blocked = await user('POST', '/api/v1/subscriptions/upgrade-requests/preview', {
+      planCode: 'pro',
+      couponCode: code,
+    });
+    expect(blocked.statusCode).toBe(400);
+
+    // Reactivate -> applies again.
+    const on = await admin('PATCH', `/api/v1/admin/coupons/${code}`, { active: true });
+    expect(on.statusCode).toBe(200);
+    expect((on.json() as { active: boolean }).active).toBe(true);
+
+    // A coupon whose expiry already passed is refused at apply time.
+    const expCode = `PAST-${suffix.slice(0, 6).toUpperCase()}`;
+    extraCouponCodes.push(expCode);
+    const expired = await admin('POST', '/api/v1/admin/coupons', {
+      code: expCode,
+      percentOff: 50,
+      expiresAt: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+    expect(expired.statusCode).toBe(201);
+    const deadPreview = await user('POST', '/api/v1/subscriptions/upgrade-requests/preview', {
+      planCode: 'pro',
+      couponCode: expCode,
+    });
+    expect(deadPreview.statusCode).toBe(400);
+
+    // Delete removes it outright; a second delete is a 404.
+    const gone = await admin('DELETE', `/api/v1/admin/coupons/${expCode}`);
+    expect(gone.statusCode).toBe(200);
+    expect(gone.json()).toMatchObject({ ok: true });
+    const again = await admin('DELETE', `/api/v1/admin/coupons/${expCode}`);
+    expect(again.statusCode).toBe(404);
+  });
+
   it('approves the request and activates the plan', async () => {
     const list = await admin('GET', '/api/v1/admin/upgrade-requests?status=pending');
     expect(list.statusCode).toBe(200);
@@ -170,6 +221,59 @@ describeInfra('manual UPI billing (integration)', () => {
     const current = await user('GET', '/api/v1/subscriptions/current');
     expect(current.statusCode).toBe(200);
     expect((current.json() as { plan: { code: string } }).plan.code).toBe('pro');
+  });
+
+  it('auto-deactivates a coupon once its redemption cap is hit, and reactivation works', async () => {
+    const code = `ONCE-${suffix.slice(0, 6).toUpperCase()}`;
+    extraCouponCodes.push(code);
+    const res = await admin('POST', '/api/v1/admin/coupons', {
+      code,
+      percentOff: 10,
+      maxUses: 1,
+    });
+    expect(res.statusCode).toBe(201);
+
+    const file = await user('POST', '/api/v1/subscriptions/upgrade-requests', {
+      planCode: 'business',
+      couponCode: code,
+    });
+    expect(file.statusCode).toBe(201);
+
+    const list = await admin('GET', '/api/v1/admin/upgrade-requests?status=pending');
+    expect(list.statusCode).toBe(200);
+    const pending = (
+      list.json() as { data: Array<{ id: string; couponCode: string | null }> }
+    ).data;
+    const mine = pending.find((r) => r.couponCode === code);
+    expect(mine).toBeDefined();
+
+    const approve = await admin('POST', `/api/v1/admin/upgrade-requests/${mine!.id}/approve`);
+    expect(approve.statusCode).toBe(200);
+
+    // Cap reached -> the coupon flips itself off (kill switch stays honest).
+    const row = (await getDb().select().from(coupons).where(eq(coupons.code, code)))[0];
+    expect(row?.usedCount).toBe(1);
+    expect(row?.active).toBe(false);
+
+    // Applying it again is refused while exhausted.
+    const blocked = await user('POST', '/api/v1/subscriptions/upgrade-requests/preview', {
+      planCode: 'pro',
+      couponCode: code,
+    });
+    expect(blocked.statusCode).toBe(400);
+
+    // Admin reactivates by raising the cap -> usable again.
+    const reactivated = await admin('PATCH', `/api/v1/admin/coupons/${code}`, {
+      active: true,
+      maxUses: 2,
+    });
+    expect(reactivated.statusCode).toBe(200);
+    const preview = await user('POST', '/api/v1/subscriptions/upgrade-requests/preview', {
+      planCode: 'pro',
+      couponCode: code,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect((preview.json() as { couponApplied: boolean }).couponApplied).toBe(true);
   });
 
   it('bulk-deletes users with one password confirmation', async () => {

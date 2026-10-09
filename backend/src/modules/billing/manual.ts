@@ -192,9 +192,13 @@ export async function approveUpgradeRequest(db: Database, requestId: string, adm
       await db.select().from(coupons).where(eq(coupons.code, coupon.code)).limit(1)
     )[0];
     if (crow) {
+      const usedCount = crow.usedCount + 1;
+      // Redemption cap reached -> auto-deactivate so the list (and every
+      // future resolve) shows it as spent; "Reactivate" extends the cap.
+      const exhausted = crow.maxUses !== null && usedCount >= crow.maxUses;
       await db
         .update(coupons)
-        .set({ usedCount: crow.usedCount + 1 })
+        .set(exhausted ? { usedCount, active: false } : { usedCount })
         .where(eq(coupons.id, crow.id));
     }
   }
