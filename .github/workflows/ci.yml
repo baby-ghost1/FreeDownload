@@ -67,6 +67,18 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # pipeline.test.ts mints a real fixture with ffmpeg/ffprobe and drives
+      # the real yt-dlp download path; bare ubuntu runners ship neither, and
+      # the suite is forced on in CI (`|| inCi`), so install both here.
+      - name: Install media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          curl -fsSL -o /tmp/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
+          sudo install -m 0755 /tmp/yt-dlp /usr/local/bin/yt-dlp
+          ffmpeg -version
+          yt-dlp --version
+
       - name: Prepare database
         run: |
           npm run db:migrate -w @freedownload/backend

@@ -128,7 +128,11 @@ describeRun('media engine pipeline (integration)', () => {
     await closeQueues();
     await closeDatabase();
     await closeRedis();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    // beforeAll can die before the fixture server exists (e.g. ffmpeg
+    // missing) - don't let teardown mask the real error with a TypeError.
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
     await rm(fixtureDir, { recursive: true, force: true }).catch(() => undefined);
   });
 
