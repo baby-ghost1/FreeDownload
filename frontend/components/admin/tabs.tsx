@@ -372,14 +372,14 @@ export function OverviewTab({ onError }: { onError: (msg: string | null) => void
     },
     {
       label: 'Active users',
-      value: data.users.active,
+      value: `${data.users.active}/${data.users.total}`,
       testid: 'admin-active-users',
       icon: <UserCheck className="size-5" />,
       tint: 'from-success/15 to-info/10 text-success',
     },
     {
       label: 'Suspended users',
-      value: data.users.suspended,
+      value: `${data.users.suspended}/${data.users.total}`,
       testid: 'admin-suspended-users',
       icon: <ShieldAlert className="size-5" />,
       tint: 'from-destructive/15 to-destructive/5 text-destructive',
