@@ -7,11 +7,23 @@ import {
   adminMe,
   adminMfaComplete,
   adminMfaSetup,
+  approveUpgradeRequest,
   bulkDeleteAdminUsers,
+  cancelUpgradeRequest,
   changeAdminPassword,
+  createAdminCoupon,
+  createUpgradeRequest,
+  deleteAdminCoupon,
+  deleteAdminUser,
   deleteAllAdminUsers,
+  listAdminCoupons,
   listAdminSessions,
+  listAdminUpgradeRequests,
+  listMyUpgradeRequests,
+  previewUpgradeRequest,
+  rejectUpgradeRequest,
   revokeAdminSession,
+  setAdminUserPlan,
   adminRetryJob,
   analyzeUrl,
   cancelJob,
@@ -53,6 +65,7 @@ import {
   updateAdminFlag,
   updateAdminSource,
   updateAdminSetting,
+  updateAdminCoupon,
   updateAdminUser,
   updateProfile,
   verifyEmail,
@@ -250,6 +263,83 @@ const CASES: Case[] = [
     path: '/admin/settings/k',
     init: { method: 'PATCH', body: { value: 'v' } },
     call: () => updateAdminSetting('k', 'v'),
+  },
+  // upgrade requests - buyer side
+  {
+    path: '/subscriptions/upgrade-requests/preview',
+    init: { method: 'POST', body: { planCode: 'pro' } },
+    call: () => previewUpgradeRequest({ planCode: 'pro' }),
+  },
+  { path: '/subscriptions/upgrade-requests', init: {}, call: () => listMyUpgradeRequests() },
+  {
+    path: '/subscriptions/upgrade-requests',
+    init: { method: 'POST', body: { planCode: 'business', couponCode: 'SAVE20' } },
+    call: () => createUpgradeRequest({ planCode: 'business', couponCode: 'SAVE20' }),
+  },
+  {
+    path: '/subscriptions/upgrade-requests/r1',
+    init: { method: 'DELETE' },
+    call: () => cancelUpgradeRequest('r1'),
+  },
+  // upgrade requests - admin side (status and reason branches both ways)
+  { path: '/admin/upgrade-requests', init: {}, call: () => listAdminUpgradeRequests() },
+  {
+    path: '/admin/upgrade-requests?status=pending',
+    init: {},
+    call: () => listAdminUpgradeRequests('pending'),
+  },
+  {
+    path: '/admin/upgrade-requests/r1/approve',
+    init: { method: 'POST' },
+    call: () => approveUpgradeRequest('r1'),
+  },
+  {
+    path: '/admin/upgrade-requests/r1/reject',
+    init: { method: 'POST', body: { reason: null } },
+    call: () => rejectUpgradeRequest('r1'),
+  },
+  {
+    path: '/admin/upgrade-requests/r1/reject',
+    init: { method: 'POST', body: { reason: 'paid elsewhere' } },
+    call: () => rejectUpgradeRequest('r1', 'paid elsewhere'),
+  },
+  // coupons
+  { path: '/admin/coupons', init: {}, call: () => listAdminCoupons() },
+  {
+    path: '/admin/coupons',
+    init: {
+      method: 'POST',
+      body: { code: 'LAUNCH20', percentOff: 20, maxUses: 100, expiresAt: null, active: true },
+    },
+    call: () =>
+      createAdminCoupon({
+        code: 'LAUNCH20',
+        percentOff: 20,
+        maxUses: 100,
+        expiresAt: null,
+        active: true,
+      }),
+  },
+  {
+    path: '/admin/coupons/LAUNCH20',
+    init: { method: 'PATCH', body: { active: false } },
+    call: () => updateAdminCoupon('LAUNCH20', { active: false }),
+  },
+  {
+    path: '/admin/coupons/LAUNCH20',
+    init: { method: 'DELETE' },
+    call: () => deleteAdminCoupon('LAUNCH20'),
+  },
+  // user plan + delete
+  {
+    path: '/admin/users/u1/plan',
+    init: { method: 'PATCH', body: { planCode: 'pro' } },
+    call: () => setAdminUserPlan('u1', 'pro'),
+  },
+  {
+    path: '/admin/users/u1',
+    init: { method: 'DELETE', body: { password: 'pw' } },
+    call: () => deleteAdminUser('u1', 'pw'),
   },
 ];
 
