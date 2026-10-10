@@ -231,7 +231,7 @@ describeRun('media engine pipeline (integration)', () => {
       headers: { 'x-anon-key': ANON_KEY },
     });
     expect(res.statusCode).toBe(200);
-    const result = res.json() as { url: string; sizeBytes: number | null };
+    const result = res.json() as { url: string; downloadUrl: string; sizeBytes: number | null };
     const signed = new URL(result.url);
     const dl = await app.inject({
       method: 'GET',
@@ -240,6 +240,19 @@ describeRun('media engine pipeline (integration)', () => {
     expect(dl.statusCode).toBe(200);
     expect(dl.rawPayload.length).toBe(fixtureBytes.length);
     expect(Buffer.from(dl.rawPayload).equals(fixtureBytes)).toBe(true);
+    // Inline variant: playable as a cross-origin <video> source.
+    expect(dl.headers['content-disposition']).toContain('inline;');
+    expect(dl.headers['cross-origin-resource-policy']).toBe('cross-origin');
+
+    // Download variant: forces a save-to-device.
+    const down = new URL(result.downloadUrl);
+    expect(down.searchParams.get('dl')).toBe('1');
+    const dlRes = await app.inject({
+      method: 'GET',
+      url: `${down.pathname}${down.search}`,
+    });
+    expect(dlRes.statusCode).toBe(200);
+    expect(dlRes.headers['content-disposition']).toContain('attachment;');
 
     // The raw URL is never echoed back to the client.
     expect(JSON.stringify(result)).not.toContain('127.0.0.1');

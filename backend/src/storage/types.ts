@@ -16,7 +16,11 @@ export interface Storage {
   /** Uploads a worker-local file under a worker-generated key. */
   put(localPath: string, key: string, mimeType: string): Promise<StoredObject>;
   /** Short-lived URL; TTL comes from SIGNED_URL_TTL_SEC by default. */
-  signedUrl(key: string, ttlSec?: number, options?: { filename?: string }): Promise<string>;
+  signedUrl(
+    key: string,
+    ttlSec?: number,
+    options?: { filename?: string; download?: boolean },
+  ): Promise<string>;
   remove(key: string): Promise<void>;
 }
 

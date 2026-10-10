@@ -3,7 +3,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -136,6 +136,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [confirmAgain, setConfirmAgain] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const mediaRef = useRef<HTMLVideoElement | null>(null);
+  const [playing, setPlaying] = useState(false);
   // Elapsed clock freezes the moment the job completes (100% + button).
   const [frozenElapsed, setFrozenElapsed] = useState<string | null>(null);
   useEffect(() => {
@@ -152,6 +154,17 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  }, [previewOpen]);
+  useEffect(() => {
+    // Autoplay with sound needs user activation; the play click usually
+    // grants it. If the browser still refuses, the center play overlay
+    // stays visible for an explicit tap (play() resolves async, so every
+    // set-state below lands in a microtask, never synchronously).
+    if (!previewOpen) return;
+    mediaRef.current
+      ?.play()
+      .then(() => setPlaying(true))
+      .catch(() => setPlaying(false));
   }, [previewOpen]);
   const [canGoForward, setCanGoForward] = useState(() => {
     try {
@@ -524,12 +537,15 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   </div>
                 </div>
                 {!confirmAgain && (
-                  <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+                  <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
                     <motion.button
                       type="button"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setPreviewOpen(true)}
+                      onClick={() => {
+                        setPlaying(false);
+                        setPreviewOpen(true);
+                      }}
                       aria-label="Play video"
                       data-testid="play-preview"
                       className={cn(
@@ -542,7 +558,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                     <motion.a
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.96 }}
-                      href={result.url}
+                      href={result.downloadUrl || result.url}
                       download={fileName ?? undefined}
                       data-testid="download-link"
                       onClick={(e) => {
@@ -589,7 +605,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                     </Button>
                     <motion.a
                       whileTap={{ scale: 0.96 }}
-                      href={result.url}
+                      href={result.downloadUrl || result.url}
                       download={fileName ?? undefined}
                       onClick={markDownloaded}
                       data-testid="redownload-yes"
@@ -654,15 +670,38 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       data-testid="audio-preview"
                     />
                   ) : (
-                    <video
-                      src={result.url}
-                      controls
-                      autoPlay
-                      playsInline
-                      preload="metadata"
-                      className="max-h-[70vh] w-full bg-black"
-                      data-testid="video-player"
-                    />
+                    <>
+                      <video
+                        ref={mediaRef}
+                        src={result.url}
+                        controls
+                        autoPlay
+                        playsInline
+                        preload="metadata"
+                        onPlay={() => setPlaying(true)}
+                        onPause={() => setPlaying(false)}
+                        className="max-h-[70vh] w-full bg-black"
+                        data-testid="video-player"
+                      />
+                      {!playing && (
+                        <button
+                          type="button"
+                          aria-label="Play"
+                          data-testid="video-play-fallback"
+                          onClick={() => {
+                            mediaRef.current
+                              ?.play()
+                              .then(() => setPlaying(true))
+                              .catch(() => {});
+                          }}
+                          className="absolute inset-x-0 bottom-12 top-0 z-[5] flex items-center justify-center bg-black/40 transition-colors hover:bg-black/55"
+                        >
+                          <span className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-3">
+                            <Play className="size-7 fill-current" aria-hidden="true" />
+                          </span>
+                        </button>
+                      )}
+                    </>
                   )}
                 </motion.div>
               </motion.div>

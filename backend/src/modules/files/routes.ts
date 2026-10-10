@@ -24,7 +24,7 @@ const MIME_BY_EXT: Record<string, string> = {
 };
 
 const KEY_PATTERN = /^jobs\/[0-9a-fA-F-]{36}\/[A-Za-z0-9._-]{1,120}$/;
-const Query = z.object({ exp: z.string(), sig: z.string() });
+const Query = z.object({ exp: z.string(), sig: z.string(), dl: z.string().optional() });
 
 /**
  * Development/test transport for the `local` storage driver only - production
@@ -72,14 +72,18 @@ export async function registerFilesRoutes(app: AppInstance): Promise<void> {
       }
 
       const ext = key.slice(key.lastIndexOf('.') + 1).toLowerCase();
-      // `attachment` forces a save-to-device instead of inline playback -
-      // the `download` attribute alone is ignored on cross-origin links.
+      // `dl=1` forces a save-to-device (the `download` attribute alone is
+      // ignored on cross-origin links); the bare URL stays inline so
+      // <video>/<audio> can stream it. CORP must be `cross-origin` or the
+      // browser blocks the media as a cross-origin subresource.
       const filename = key.slice(key.lastIndexOf('/') + 1);
+      const disposition = req.query.dl === '1' ? 'attachment' : 'inline';
       reply
         .type(MIME_BY_EXT[ext] ?? 'application/octet-stream')
         .header('content-length', String(size))
         .header('cache-control', 'private, max-age=0, must-revalidate')
-        .header('content-disposition', `attachment; filename="${filename}"`);
+        .header('cross-origin-resource-policy', 'cross-origin')
+        .header('content-disposition', `${disposition}; filename="${filename}"`);
       return reply.send(createReadStream(path));
     },
   );

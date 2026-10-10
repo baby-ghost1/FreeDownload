@@ -580,9 +580,15 @@ export async function getJobResult(
       'This link has expired - start a new download to get a fresh one.',
     );
   }
-  const url = await getStorage().signedUrl(file.objectKey, Math.ceil(remainingMs / 1000));
+  const url = await getStorage().signedUrl(file.objectKey, Math.ceil(remainingMs / 1000), {
+    download: false,
+  });
+  const downloadUrl = await getStorage().signedUrl(file.objectKey, Math.ceil(remainingMs / 1000), {
+    download: true,
+  });
   return {
     url,
+    downloadUrl,
     fileName: file.objectKey.slice(file.objectKey.lastIndexOf('/') + 1),
     expiresAt: windowEnd,
     sizeBytes: file.sizeBytes ?? null,

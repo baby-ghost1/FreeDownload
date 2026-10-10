@@ -87,6 +87,7 @@ const StartBody = z
 
 const ResultResponse = z.object({
   url: z.string(),
+  downloadUrl: z.string(),
   fileName: z.string(),
   expiresAt: z.coerce.date(),
   sizeBytes: z.number().nullable(),

@@ -68,15 +68,16 @@ export const localStorage: Storage = {
     return { key, sizeBytes: s.size, sha256: await sha256File(target) };
   },
 
-  async signedUrl(key, ttlSec): Promise<string> {
-    // The /files route sets Content-Disposition from the key's last segment,
-    // which already carries the unique download name - nothing to add here.
+  async signedUrl(key, ttlSec, options): Promise<string> {
+    // The /files route picks the disposition: `dl=1` (download) forces a
+    // save-to-device, the bare URL plays inline in <video>/<audio>.
     const ttl = ttlSec ?? config.storage.signedUrlTtlSec;
     const exp = Math.floor(Date.now() / 1000) + ttl;
     const sig = signFileToken(key, exp);
     const url = new URL(`/api/v1/files/${encodeURI(key)}`, config.apiUrl);
     url.searchParams.set('exp', String(exp));
     url.searchParams.set('sig', sig);
+    if (options?.download) url.searchParams.set('dl', '1');
     return url.toString();
   },
 

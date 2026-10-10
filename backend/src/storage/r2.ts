@@ -224,7 +224,12 @@ export const r2Storage: Storage = {
       accessKeyId: creds.accessKeyId,
       secretAccessKey: creds.secretAccessKey,
       expiresAt: new Date(Date.now() + (ttlSec ?? config.storage.signedUrlTtlSec) * 1000),
-      responseParams: { 'response-content-disposition': `attachment; filename="${filename}"` },
+      // Inline (playback) URLs omit the disposition entirely - an explicit
+      // `download: false` is the only way to opt out of save-to-device.
+      responseParams:
+        options?.download === false
+          ? undefined
+          : { 'response-content-disposition': `attachment; filename="${filename}"` },
     });
   },
 
