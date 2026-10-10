@@ -359,7 +359,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       </span>
 
       <Enter delay={0.08}>
-        <div className="relative mt-8 space-y-6" data-testid="job-progress">
+        <div className="relative mt-8 space-y-7" data-testid="job-progress">
           {(active || done) && (
             <div className="text-center">
               <p
@@ -379,7 +379,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           )}
 
           {(active || done) && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
               <StatTile icon={Hourglass} label="Elapsed" value={frozenElapsed ?? elapsed} />
               <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '…'} />
               <StatTile icon={HardDrive} label="Size" value={size ?? '…'} />
@@ -428,11 +428,20 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                         className={cn(
                           'relative z-10 flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold',
                           reached
-                            ? 'border-success bg-success text-white shadow-[0_0_10px_-3px_var(--color-success)]'
+                            ? 'text-white'
                             : current
                               ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary)_15%,transparent)]'
                               : 'border-border-strong bg-surface',
                         )}
+                        style={
+                          reached
+                            ? {
+                                backgroundColor: platform.accent,
+                                borderColor: platform.accent,
+                                boxShadow: `0 0 10px -3px ${platform.accent}`,
+                              }
+                            : {}
+                        }
                       >
                         <motion.span
                           key={reached ? 'tick' : 'num'}
@@ -631,7 +640,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 Tap here to support us
               </button>
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               FreeDownload muft hai kyunki log madad karte hain - achha laga to Help Us button
               dabakar support karo.
             </p>
