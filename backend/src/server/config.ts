@@ -4,21 +4,31 @@ import { z } from 'zod';
 
 /**
  * Load env files if present - no dotenv dependency, Node's built-in loader.
- * Production reads `.env`, local development reads the committed
- * `.env.example`. Real environments (Render) inject variables directly, so
- * missing files are fine (injected values always win over file values).
- */
-function loadDotEnv(): void {
-  const name = process.env.NODE_ENV === 'production' ? '.env' : '.env.example';
-  for (const base of [process.cwd(), resolve(process.cwd(), '..')]) {
-    const candidate = resolve(base, name);
-    if (existsSync(candidate)) {
-      try {
-        process.loadEnvFile(candidate);
-      } catch {
-        // A malformed file must not crash startup silently - surface below via schema.
+ * Production reads `.env`; local development reads the committed
+ * `.env.example` first and then an untracked `.env` for personal overrides
+ * (file values only add keys the earlier source did not define - same
+ * precedence as Node's --env-file). Tests stay on `.env.example` alone so
+ * personal files never change test behaviour. Real environments (Render)
+ * inject variables directly, so missing files are fine (injected values
+ * always win over file values).
+ */ function loadDotEnv(): void {
+  const names =
+    process.env.NODE_ENV === 'production'
+      ? ['.env']
+      : process.env.NODE_ENV === 'test'
+        ? ['.env.example']
+        : ['.env.example', '.env'];
+  for (const name of names) {
+    for (const base of [process.cwd(), resolve(process.cwd(), '..')]) {
+      const candidate = resolve(base, name);
+      if (existsSync(candidate)) {
+        try {
+          process.loadEnvFile(candidate);
+        } catch {
+          // A malformed file must not crash startup silently - surface below via schema.
+        }
+        break;
       }
-      return;
     }
   }
 }
