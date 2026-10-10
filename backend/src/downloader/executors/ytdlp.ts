@@ -1,5 +1,6 @@
-import { statSync } from 'node:fs';
+import { statSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 import { config } from '../../server/config.js';
@@ -501,6 +502,57 @@ export function buildFetchArgs(selection: {
 
 const PROGRESS_RE = /\]\s+(\d+(?:\.\d+)?)%/;
 
+/**
+ * Flags every yt-dlp invocation shares: a JS runtime (yt-dlp needs one for
+ * nsig/SABR solving and ships none by default on servers), plus the optional
+ * YouTube bot-check escape hatches - player-client list, egress proxy and a
+ * cookies file. Kept pure for unit tests; the config wiring lives below.
+ */
+export interface YtdlpCommonOptions {
+  extractorArgs?: string | null | undefined;
+  proxy?: string | null | undefined;
+  cookiesPath?: string | null | undefined;
+}
+
+export function buildCommonArgs(opts: YtdlpCommonOptions): string[] {
+  const args = ['--js-runtimes', 'node'];
+  if (opts.extractorArgs) args.push('--extractor-args', opts.extractorArgs);
+  if (opts.proxy) args.push('--proxy', opts.proxy);
+  if (opts.cookiesPath) args.push('--cookies', opts.cookiesPath);
+  return args;
+}
+
+let cookiesPathCache: string | null | undefined;
+
+/** Decodes YTDLP_COOKIES_B64 (Netscape cookies.txt) to a private temp file. */
+function ensureCookiesPath(): string | null {
+  if (cookiesPathCache !== undefined) return cookiesPathCache;
+  const b64 = config.source.cookiesB64;
+  if (!b64) {
+    cookiesPathCache = null;
+    return null;
+  }
+  const content = Buffer.from(b64, 'base64').toString('utf8');
+  if (!content.includes('\t')) {
+    throw new SourceError(
+      'CONFIG_ERROR',
+      'YTDLP_COOKIES_B64 is not a valid Netscape cookies.txt export.',
+    );
+  }
+  const path = join(tmpdir(), 'fd-ytdlp-cookies.txt');
+  writeFileSync(path, content, { mode: 0o600 });
+  cookiesPathCache = path;
+  return path;
+}
+
+function commonArgs(): string[] {
+  return buildCommonArgs({
+    extractorArgs: config.source.extractorArgs || null,
+    proxy: config.source.proxy || null,
+    cookiesPath: ensureCookiesPath(),
+  });
+}
+
 export const ytdlpAdapter: SourceAdapter = {
   key: 'generic',
 
@@ -526,6 +578,7 @@ export const ytdlpAdapter: SourceAdapter = {
           // burning the whole analyze timeout.
           '--retries',
           '2',
+          ...commonArgs(),
           url,
         ],
         { signal: opts.signal, timeoutMs, maxStdoutBytes: 16 * 1024 * 1024 },
@@ -609,6 +662,7 @@ export const ytdlpAdapter: SourceAdapter = {
       '15',
       '--max-filesize',
       `${opts.maxFileSizeMb}M`,
+      ...commonArgs(),
     ];
 
     const runFetcher = async (

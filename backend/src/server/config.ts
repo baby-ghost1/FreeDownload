@@ -119,6 +119,12 @@ const EnvSchema = z.object({
   YTDLP_PATH: z.string().min(1).default('yt-dlp'),
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
+  // YouTube bot-check escape hatches (server/datacenter IPs): a player-client
+  // list that dodges the sign-in wall, an optional egress proxy, and an
+  // optional Netscape cookies.txt as base64 (from a throwaway account).
+  YTDLP_EXTRACTOR_ARGS: z.string().max(512).optional(),
+  YTDLP_PROXY: z.string().max(512).optional(),
+  YTDLP_COOKIES_B64: z.string().min(16).max(2_000_000).optional(),
   // Tests exercise the full pipeline against a loopback fixture server; this
   // must stay false outside tests (contract security layer 3).
   SSRF_ALLOW_PRIVATE: boolish.default(false),
@@ -328,6 +334,14 @@ export const config = {
     ytdlpPath: env.YTDLP_PATH,
     ffmpegPath: env.FFMPEG_PATH,
     ffprobePath: env.FFPROBE_PATH,
+    // With cookies the default yt-dlp clients authenticate fine; without them
+    // the tv/mobile clients dodge the "sign in to confirm you're not a bot"
+    // wall that datacenter egress IPs hit. Override via YTDLP_EXTRACTOR_ARGS.
+    extractorArgs:
+      env.YTDLP_EXTRACTOR_ARGS ??
+      (env.YTDLP_COOKIES_B64 ? '' : 'youtube:player_client=tv_simply,web_safari,mweb'),
+    proxy: env.YTDLP_PROXY,
+    cookiesB64: env.YTDLP_COOKIES_B64,
     /** Test-only escape hatch; production validation rejects it below. */
     allowPrivate: env.SSRF_ALLOW_PRIVATE,
   },

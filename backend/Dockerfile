@@ -64,12 +64,16 @@ CMD ["node", "dist/server/server.js"]
 # installed at build time because extractor fixes ship weekly; ffmpeg/ffprobe
 # come from Alpine's community repo.
 FROM runtime AS worker
-# The runtime user is unprivileged — binaries must be installed as root,
+# The runtime user is unprivileged �?" binaries must be installed as root,
 # then the process drops back down for the actual work.
+# curl_cffi gives yt-dlp browser TLS impersonation: YouTube answers 429/403
+# to non-browser handshakes from servers, so without it even a passing
+# extraction gets walled at the stream fetch.
 USER root
 RUN apk add --no-cache ffmpeg python3 py3-pip \
- && pip3 install --no-cache-dir --break-system-packages yt-dlp \
- && yt-dlp --version
+ && pip3 install --no-cache-dir --break-system-packages -U yt-dlp curl_cffi \
+ && yt-dlp --version \
+ && python3 -c "import curl_cffi"
 USER app
 ENV WORKER_RUNNER=pipeline
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
