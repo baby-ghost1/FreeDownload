@@ -61,8 +61,11 @@ test('creates an API key, shows it once, reads usage and revokes', async ({ page
   await expect(page.getByTestId('api-key-usage').first()).toContainText('42 requests');
 
   await page.getByTestId('api-key-revoke').first().click();
+  await expect(page.getByTestId('api-key-revoke-confirm')).toHaveCount(1);
+  await page.getByTestId('api-key-revoke-confirm').click();
   await expect(page.getByTestId('api-key-item')).toHaveCount(2);
   await expect(page.getByTestId('api-key-revoke')).toHaveCount(1);
+  await expect(page.getByTestId('api-key-item').first()).toContainText('Revoked');
 });
 
 test('ad slot renders only when the ads flag is enabled', async ({ page }) => {

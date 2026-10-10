@@ -4,7 +4,16 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { Check, Copy, CreditCard, KeyRound, LogOut, Monitor, ShieldCheck } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  CreditCard,
+  KeyRound,
+  LogOut,
+  Monitor,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { BackButton } from '@/components/back-button';
@@ -45,6 +54,7 @@ import type {
 import { UpgradeModal } from '@/components/billing/upgrade-modal';
 import { useSession } from '@/lib/session';
 import { formatINR } from '@/lib/format';
+import { SITE_CONFIG } from '@/lib/constants/site';
 
 function price(cents: number): string {
   return formatINR(cents);
@@ -117,6 +127,7 @@ export default function AccountPage() {
   const [keyBusy, setKeyBusy] = useState(false);
   const [needsUpgrade, setNeedsUpgrade] = useState(false);
   const [usageByKey, setUsageByKey] = useState<Record<string, ApiKeyUsage>>({});
+  const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- drafts the saved name once the session probe resolves
@@ -256,13 +267,19 @@ export default function AccountPage() {
     }
   };
 
-  const revokeKey = async (id: string) => {
+  const revokeKey = async (id: string): Promise<boolean> => {
     try {
       await revokeApiKey(id);
       setApiKeys((await listApiKeys()).data);
+      return true;
     } catch (err) {
       setKeyError(err instanceof ApiError ? err.message : 'Could not revoke that key.');
+      return false;
     }
+  };
+
+  const confirmRevoke = async (id: string) => {
+    if (await revokeKey(id)) setRevokeConfirmId(null);
   };
 
   const copyKey = async () => {
@@ -627,8 +644,12 @@ export default function AccountPage() {
                 <Alert tone="info" className="mb-3" data-testid="api-key-raw">
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
-                      Copy it now - the key is shown only once:{' '}
-                      <code className="break-all">{rawKey}</code>
+                      <span className="block font-medium">
+                        New key created - copy it now, it is shown only once:
+                      </span>
+                      <code className="mt-1 block break-all rounded-lg bg-surface-sunken px-2 py-1.5">
+                        {rawKey}
+                      </code>
                     </span>
                     <button
                       type="button"
@@ -646,6 +667,18 @@ export default function AccountPage() {
                   </span>
                 </Alert>
               )}
+              <details
+                className="mb-3 rounded-xl border border-border bg-background/60 px-3.5 py-2.5"
+                data-testid="api-key-howto"
+              >
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  How to use
+                </summary>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-surface-sunken p-3 font-mono text-xs leading-relaxed text-foreground">{`curl -X POST ${SITE_CONFIG.url}/api/v1/downloads \\
+  -H "Authorization: Bearer fd_live_..." \\
+  -H "content-type: application/json" \\
+  -d '{"url":"<paste a link>"}'`}</pre>
+              </details>
               <form
                 onSubmit={(e) => void createKey(e)}
                 className="flex flex-wrap gap-2"
@@ -668,53 +701,95 @@ export default function AccountPage() {
                 {apiKeys === null ? (
                   <Spinner className="size-5" />
                 ) : apiKeys.length === 0 ? (
-                  <li className="text-sm text-muted-foreground">No API keys yet.</li>
+                  <li className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-border px-4 py-6 text-center">
+                    <KeyRound className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <p className="text-sm text-muted-foreground">
+                      No API keys yet - create one above.
+                    </p>
+                  </li>
                 ) : (
                   apiKeys.map((k) => {
                     const kUsage = usageByKey[k.id];
+                    const confirming = revokeConfirmId === k.id;
                     return (
                       <li
                         key={k.id}
-                        className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-background/50 px-3.5 py-2.5 transition-colors hover:border-border-strong"
+                        className="rounded-xl border border-border bg-background/50 px-3.5 py-3 transition-colors hover:border-border-strong"
                         data-testid="api-key-item"
                       >
-                        <code className="text-sm font-medium">{k.prefix}…</code>
-                        <span className="min-w-0 flex-1 truncate text-sm">{k.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {k.lastUsedAt
-                            ? `last used ${new Date(k.lastUsedAt).toLocaleString()}`
-                            : 'never used'}
-                        </span>
-                        {kUsage && (
-                          <span
-                            className="text-xs text-muted-foreground"
-                            data-testid="api-key-usage"
-                          >
-                            {kUsage.totalRequests} requests · {kUsage.totalErrors} errors
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-info/10 text-primary">
+                            <KeyRound className="size-4" aria-hidden="true" />
                           </span>
-                        )}
-                        {k.revokedAt ? (
-                          <Badge tone="muted">Revoked</Badge>
-                        ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => void loadKeyUsage(k.id)}
-                              data-testid="api-key-usage-load"
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-medium">{k.name}</span>
+                              <code className="rounded-md bg-surface-sunken px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                                {k.prefix}…
+                              </code>
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                              created {new Date(k.createdAt).toLocaleDateString()} ·{' '}
+                              {k.revokedAt
+                                ? `revoked ${new Date(k.revokedAt).toLocaleString()}`
+                                : k.lastUsedAt
+                                  ? `last used ${new Date(k.lastUsedAt).toLocaleString()}`
+                                  : 'never used'}
+                            </span>
+                          </span>
+                          {kUsage && (
+                            <span
+                              className="text-xs text-muted-foreground"
+                              data-testid="api-key-usage"
                             >
-                              Usage
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => void revokeKey(k.id)}
-                              data-testid="api-key-revoke"
-                            >
-                              Revoke
-                            </Button>
-                          </>
-                        )}
+                              {kUsage.totalRequests} requests · {kUsage.totalErrors} errors
+                            </span>
+                          )}
+                          {k.revokedAt ? (
+                            <Badge tone="muted">Revoked</Badge>
+                          ) : confirming ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground">Revoke?</span>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => void confirmRevoke(k.id)}
+                                data-testid="api-key-revoke-confirm"
+                              >
+                                Yes, revoke
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRevokeConfirmId(null)}
+                                data-testid="api-key-revoke-cancel"
+                              >
+                                Cancel
+                              </Button>
+                            </span>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void loadKeyUsage(k.id)}
+                                data-testid="api-key-usage-load"
+                              >
+                                Usage
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRevokeConfirmId(k.id)}
+                                className="hover:text-destructive"
+                                data-testid="api-key-revoke"
+                              >
+                                <Trash2 className="size-3.5" />
+                                Revoke
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </li>
                     );
                   })
