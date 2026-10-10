@@ -222,12 +222,11 @@ function DownloadFlow() {
           err.code === 'RATE_LIMITED' &&
           (err.details as { scope?: string } | undefined)?.scope === 'concurrent'
         ) {
-          // A previous download is still occupying the anonymous slot -
-          // analyzing alone never queues anything, so point at the live job.
+          // A previous download still occupies a concurrency slot - analyzing
+          // alone never queues anything, so point at the live job. The
+          // backend message names the caller's real plan and limit.
           setConcurrentBlocked(true);
-          setError(
-            'You already have a download running. Finish or cancel it before starting another on the anonymous plan.',
-          );
+          setError(err.message);
         } else {
           setError(err instanceof ApiError ? err.message : 'Could not start the download.');
         }
