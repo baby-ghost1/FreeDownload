@@ -535,7 +535,10 @@ export async function startDownload(
 }
 
 export interface JobResult {
+  /** Inline (playable) URL for <video>/<audio> previews. */
   url: string;
+  /** Forced-save variant (`attachment`) for the download button. */
+  downloadUrl: string;
   /** On-device filename (unique per download) - mirrors the saved file. */
   fileName: string;
   expiresAt: Date;
