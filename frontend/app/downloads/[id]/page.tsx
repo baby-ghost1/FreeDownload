@@ -14,7 +14,9 @@ import {
   History,
   Hourglass,
   Layers,
+  Play,
   Timer,
+  X,
   XCircle,
 } from 'lucide-react';
 
@@ -133,6 +135,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [cancelling, setCancelling] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   // Elapsed clock freezes the moment the job completes (100% + button).
   const [frozenElapsed, setFrozenElapsed] = useState<string | null>(null);
   useEffect(() => {
@@ -142,6 +145,14 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       return prev ?? formatElapsed(Date.now() - new Date(job?.createdAt ?? Date.now()).getTime());
     });
   }, [job?.status, job?.id, job?.createdAt]);
+  useEffect(() => {
+    if (!previewOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [previewOpen]);
   const [canGoForward, setCanGoForward] = useState(() => {
     try {
       return sessionStorage.getItem('fd_can_forward') === '1';
@@ -513,33 +524,49 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   </div>
                 </div>
                 {!confirmAgain && (
-                  <motion.a
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    href={result.url}
-                    download={fileName ?? undefined}
-                    data-testid="download-link"
-                    onClick={(e) => {
-                      if (alreadyDownloaded && !confirmAgain) {
-                        // Second+ click - stop and ask first (warning below).
-                        e.preventDefault();
-                        setConfirmAgain(true);
-                        return;
-                      }
-                      markDownloaded();
-                    }}
-                    className={cn(
-                      buttonClasses({ size: 'lg' }),
-                      'btn-shine h-12 w-full shrink-0 px-6 sm:w-auto',
-                    )}
-                  >
-                    {alreadyDownloaded ? (
-                      <Check className="size-4" aria-hidden="true" />
-                    ) : (
-                      <Download className="size-4" aria-hidden="true" />
-                    )}
-                    {alreadyDownloaded ? 'Downloaded' : 'Download file'}
-                  </motion.a>
+                  <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setPreviewOpen(true)}
+                      aria-label="Play video"
+                      data-testid="play-preview"
+                      className={cn(
+                        buttonClasses({ variant: 'outline', size: 'sm' }),
+                        'h-9 w-9 shrink-0 rounded-full p-0 text-primary',
+                      )}
+                    >
+                      <Play className="size-4 fill-current" aria-hidden="true" />
+                    </motion.button>
+                    <motion.a
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.96 }}
+                      href={result.url}
+                      download={fileName ?? undefined}
+                      data-testid="download-link"
+                      onClick={(e) => {
+                        if (alreadyDownloaded && !confirmAgain) {
+                          // Second+ click - stop and ask first (warning below).
+                          e.preventDefault();
+                          setConfirmAgain(true);
+                          return;
+                        }
+                        markDownloaded();
+                      }}
+                      className={cn(
+                        buttonClasses({ size: 'sm' }),
+                        'btn-shine h-9 flex-1 shrink-0 px-4 sm:w-auto',
+                      )}
+                    >
+                      {alreadyDownloaded ? (
+                        <Check className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Download className="size-4" aria-hidden="true" />
+                      )}
+                      {alreadyDownloaded ? 'Downloaded' : 'Download file'}
+                    </motion.a>
+                  </div>
                 )}
               </div>
               {confirmAgain && (
@@ -593,6 +620,53 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               dabakar support karo.
             </p>
             <DonateModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+            {previewOpen && result && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setPreviewOpen(false);
+                }}
+                className="fixed inset-0 z-[70] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+                data-testid="video-preview"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-black shadow-3"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(false)}
+                    aria-label="Close preview"
+                    data-testid="video-preview-close"
+                    className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                  {/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(fileName ?? '') ? (
+                    <audio
+                      src={result.url}
+                      controls
+                      autoPlay
+                      className="w-full bg-black p-10"
+                      data-testid="audio-preview"
+                    />
+                  ) : (
+                    <video
+                      src={result.url}
+                      controls
+                      autoPlay
+                      playsInline
+                      preload="metadata"
+                      className="max-h-[70vh] w-full bg-black"
+                      data-testid="video-player"
+                    />
+                  )}
+                </motion.div>
+              </motion.div>
+            )}
           </div>
 
           <nav

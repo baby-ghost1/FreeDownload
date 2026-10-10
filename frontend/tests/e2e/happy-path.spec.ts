@@ -32,6 +32,13 @@ test('happy path: paste link, analyze, pick format, watch progress, get download
   const href = await page.getByTestId('download-link').getAttribute('href');
   expect(href).toContain('cdn.test/files/job-1.mp4');
   await expect(page.getByTestId('download-link')).toHaveText(/Download file/);
+
+  // The play button opens the inline preview; the X closes it again.
+  await page.getByTestId('play-preview').click();
+  await expect(page.getByTestId('video-preview')).toBeVisible();
+  await expect(page.getByTestId('video-player')).toBeVisible();
+  await page.getByTestId('video-preview-close').click();
+  await expect(page.getByTestId('video-preview')).toHaveCount(0);
 });
 
 test('my downloads lists finished jobs', async ({ page }) => {
