@@ -28,7 +28,8 @@ import { DonateModal } from '@/components/donate-coffee';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { ApiError } from '@/lib/api/client';
-import { cancelJob } from '@/lib/api/endpoints';
+import { cancelJob, getJobResult, listJobs } from '@/lib/api/endpoints';
+import type { Job, JobResult } from '@/lib/api/types';
 import { formatBytes, isTerminalStatus, stageLabel } from '@/lib/format';
 import { detectPlatform } from '@/lib/platform';
 import { useJob } from '@/lib/use-job';
@@ -128,6 +129,109 @@ function StatTile({
   );
 }
 
+type StackedDownload = { job: Job; result: JobResult };
+
+function isSavedJob(jobId: string): boolean {
+  try {
+    return (
+      typeof localStorage !== 'undefined' && localStorage.getItem(`fd_downloaded_${jobId}`) === '1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function markSavedJob(jobId: string): void {
+  try {
+    localStorage.setItem(`fd_downloaded_${jobId}`, '1');
+  } catch {
+    // Private mode - the card simply comes back on the next visit.
+  }
+}
+
+/** One older finished download, stacked below the current job's card. */
+function StackedResultCard({
+  jobId,
+  result,
+  onPlay,
+  onSaved,
+}: {
+  jobId: string;
+  result: JobResult;
+  onPlay: () => void;
+  onSaved: () => void;
+}) {
+  const fileName = result.fileName;
+  const size = formatBytes(result.sizeBytes);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="glass relative overflow-hidden rounded-2xl border border-border bg-surface/80 p-4 shadow-3"
+      data-testid={`stacked-result-${jobId}`}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-10 -top-12 size-40 rounded-full bg-primary/10 blur-3xl"
+      />
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
+            <FileVideo className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 text-left">
+            <p className="truncate text-sm font-semibold text-foreground">{fileName}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {size && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <HardDrive className="size-3" aria-hidden="true" />
+                  {size}
+                </span>
+              )}
+              <ExpiryCountdown expiresAt={result.expiresAt} />
+            </div>
+          </div>
+        </div>
+        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onPlay}
+            aria-label={`Play ${fileName}`}
+            data-testid={`stacked-play-${jobId}`}
+            className={cn(
+              buttonClasses({ variant: 'outline', size: 'sm' }),
+              'h-9 w-9 shrink-0 rounded-full p-0 text-primary',
+            )}
+          >
+            <Play className="size-4 fill-current" aria-hidden="true" />
+          </motion.button>
+          <motion.a
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            href={result.downloadUrl || result.url}
+            download={fileName}
+            data-testid={`stacked-download-${jobId}`}
+            onClick={() => {
+              markSavedJob(jobId);
+              onSaved();
+            }}
+            className={cn(
+              buttonClasses({ size: 'sm' }),
+              'btn-shine h-9 flex-1 shrink-0 px-4 sm:w-auto',
+            )}
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Download file
+          </motion.a>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { job, result, error, loading, poll } = useJob(id);
@@ -136,6 +240,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [confirmAgain, setConfirmAgain] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Which result the preview modal shows: the current job's, or a stacked one's.
+  const [previewResult, setPreviewResult] = useState<JobResult | null>(null);
   const mediaRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   // Elapsed clock freezes the moment the job completes (100% + button).
@@ -176,6 +282,36 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   });
   const router = useRouter();
   const now = useNow();
+
+  // Older completed downloads, stacked below this job's card until the user
+  // saves them to the device or their signed link expires.
+  const [stack, setStack] = useState<StackedDownload[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const history = await listJobs(10);
+        const candidates = history.data.filter(
+          (old) => old.id !== id && old.status === 'completed',
+        );
+        const resolved = await Promise.all(
+          candidates.map(async (old) => {
+            try {
+              return { job: old, result: await getJobResult(old.id) };
+            } catch {
+              return null; // Expired or purged - simply not stacked.
+            }
+          }),
+        );
+        if (alive) setStack(resolved.filter((entry): entry is StackedDownload => entry !== null));
+      } catch {
+        // History unavailable - the stack stays empty; this job is unaffected.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
 
   // Generic history back (no refresh, no fixed target). Remembers that we
   // stepped back so the Next button can appear - consumed on use, and
@@ -299,6 +435,12 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   // object, signs it into the URL (R2) / Content-Disposition (local), and
   // echoes it here for display + the download attribute.
   const fileName = result?.fileName ?? null;
+  // Recomputed on every render: the useNow tick drops links the moment they
+  // expire, and a save drops the card right away.
+  const visibleStack = stack.filter(
+    ({ job: oldJob, result: oldResult }) =>
+      !isSavedJob(oldJob.id) && new Date(oldResult.expiresAt).getTime() > now,
+  );
 
   const onCancel = async () => {
     setCancelling(true);
@@ -553,6 +695,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setPlaying(false);
+                        setPreviewResult(result);
                         setPreviewOpen(true);
                       }}
                       aria-label="Play video"
@@ -629,6 +772,20 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             </motion.div>
           )}
 
+          {visibleStack.map(({ job: oldJob, result: oldResult }) => (
+            <StackedResultCard
+              key={oldJob.id}
+              jobId={oldJob.id}
+              result={oldResult}
+              onPlay={() => {
+                setPlaying(false);
+                setPreviewResult(oldResult);
+                setPreviewOpen(true);
+              }}
+              onSaved={() => setStack((prev) => prev.filter((entry) => entry.job.id !== oldJob.id))}
+            />
+          ))}
+
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
               FreeDownload is free because people help - enjoying it?{' '}
@@ -645,7 +802,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               dabakar support karo.
             </p>
             <DonateModal open={supportOpen} onClose={() => setSupportOpen(false)} />
-            {previewOpen && result && (
+            {previewOpen && previewResult && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -670,9 +827,9 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   >
                     <X className="size-4" aria-hidden="true" />
                   </button>
-                  {/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(fileName ?? '') ? (
+                  {/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(previewResult.fileName) ? (
                     <audio
-                      src={result.url}
+                      src={previewResult.url}
                       controls
                       autoPlay
                       className="w-full bg-black p-10"
@@ -682,7 +839,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                     <>
                       <video
                         ref={mediaRef}
-                        src={result.url}
+                        src={previewResult.url}
                         controls
                         autoPlay
                         playsInline
