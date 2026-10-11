@@ -29,14 +29,14 @@ describe('SITE_CONFIG', () => {
 describe('firstUrl', () => {
   it('keeps a single valid origin', () => {
     expect(firstUrl('https://freedownloadapp.vercel.app', 'x')).toBe(
-      'https://freedownloadapp.vercel.app/',
+      'https://freedownloadapp.vercel.app',
     );
   });
 
   it('takes the first entry of a comma-joined env paste', () => {
     expect(
       firstUrl('https://freedownloadapp.vercel.app/,https://freedownloadapp.vercel.app', 'x'),
-    ).toBe('https://freedownloadapp.vercel.app/');
+    ).toBe('https://freedownloadapp.vercel.app');
   });
 
   it('falls back when the value is missing or not a url', () => {

@@ -7,12 +7,16 @@
  * Env pastes are hand-maintained and occasionally contain a comma-joined list
  * ("https://a,https://b") - only the first entry is a real origin. A bad value
  * here would leak into canonical/og:url metadata and every absolute link.
+ *
+ * Returns the bare origin (no trailing slash) so callers can safely do
+ * `${SITE_CONFIG.url}/path` without producing a double slash in sitemap,
+ * robots and metadata URLs.
  */
 export function firstUrl(value: string | undefined, fallback: string): string {
   const candidate = value?.split(',')[0]?.trim();
   if (!candidate) return fallback;
   try {
-    return new URL(candidate).toString();
+    return new URL(candidate).origin;
   } catch {
     return fallback;
   }
