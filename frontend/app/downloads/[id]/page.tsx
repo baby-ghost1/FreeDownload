@@ -6,7 +6,6 @@ import { use, useEffect, useRef, useState } from 'react';
 import {
   Check,
   Download,
-  FileVideo,
   HardDrive,
   History,
   Hourglass,
@@ -23,6 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
 import { DonateModal } from '@/components/donate-coffee';
 import { HistoryNav } from '@/components/history-nav';
+import { PlatformLogo } from '@/components/platform-logo';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { ApiError } from '@/lib/api/client';
@@ -129,44 +129,50 @@ function StatTile({
 
 type StackedDownload = { job: Job; result: JobResult };
 
-function isSavedJob(jobId: string): boolean {
-  try {
-    return (
-      typeof localStorage !== 'undefined' && localStorage.getItem(`fd_downloaded_${jobId}`) === '1'
-    );
-  } catch {
-    return false;
-  }
-}
-
-function markSavedJob(jobId: string): void {
-  try {
-    localStorage.setItem(`fd_downloaded_${jobId}`, '1');
-  } catch {
-    // Private mode - the card simply comes back on the next visit.
-  }
-}
-
-/** One older finished download, stacked below the current job's card. */
+/** One older finished download, stacked below the current job's card.
+ *  Scoped with its own data-platform so it keeps that media's theme even when
+ *  the page wrapper is tinted for a different (current) job. After the first
+ *  save it stays until the link expires, mirroring the top card's
+ *  Downloaded/confirm-again behaviour. */
 function StackedResultCard({
   jobId,
+  url,
   result,
   onPlay,
-  onSaved,
 }: {
   jobId: string;
+  url: string | null;
   result: JobResult;
   onPlay: () => void;
-  onSaved: () => void;
 }) {
   const fileName = result.fileName;
   const size = formatBytes(result.sizeBytes);
+  const platform = detectPlatform(url);
+  const storageKey = `fd_downloaded_${jobId}`;
+  const [downloaded, setDownloaded] = useState(() => {
+    try {
+      return typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [confirmAgain, setConfirmAgain] = useState(false);
+  const markDownloaded = () => {
+    try {
+      localStorage.setItem(storageKey, '1');
+    } catch {
+      // Private mode - the confirm step still guards re-downloads this visit.
+    }
+    setDownloaded(true);
+    setConfirmAgain(false);
+  };
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="glass relative overflow-hidden rounded-2xl border border-border bg-surface/80 p-4 shadow-3"
+      data-platform={platform.id}
       data-testid={`stacked-result-${jobId}`}
     >
       <div
@@ -176,7 +182,7 @@ function StackedResultCard({
       <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
-            <FileVideo className="size-5" aria-hidden="true" />
+            <PlatformLogo platform={platform.id} className="size-5" />
           </span>
           <div className="min-w-0 text-left">
             <p className="truncate text-sm font-semibold text-foreground">{fileName}</p>
@@ -191,41 +197,84 @@ function StackedResultCard({
             </div>
           </div>
         </div>
-        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onPlay}
-            aria-label={`Play ${fileName}`}
-            data-testid={`stacked-play-${jobId}`}
-            className={cn(
-              buttonClasses({ variant: 'outline', size: 'sm' }),
-              'h-9 w-9 shrink-0 rounded-full p-0 text-primary',
-            )}
-          >
-            <Play className="size-4 fill-current" aria-hidden="true" />
-          </motion.button>
-          <motion.a
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.96 }}
-            href={result.downloadUrl || result.url}
-            download={fileName}
-            data-testid={`stacked-download-${jobId}`}
-            onClick={() => {
-              markSavedJob(jobId);
-              onSaved();
-            }}
-            className={cn(
-              buttonClasses({ size: 'sm' }),
-              'btn-shine h-9 flex-1 shrink-0 px-4 sm:w-auto',
-            )}
-          >
-            <Download className="size-4" aria-hidden="true" />
-            Download file
-          </motion.a>
-        </div>
+        {!confirmAgain && (
+          <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onPlay}
+              aria-label={`Play ${fileName}`}
+              data-testid={`stacked-play-${jobId}`}
+              className={cn(
+                buttonClasses({ variant: 'outline', size: 'sm' }),
+                'h-9 w-9 shrink-0 rounded-full p-0 text-primary',
+              )}
+            >
+              <Play className="size-4 fill-current" aria-hidden="true" />
+            </motion.button>
+            <motion.a
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              href={result.downloadUrl || result.url}
+              download={fileName}
+              data-testid={`stacked-download-${jobId}`}
+              onClick={(e) => {
+                if (downloaded && !confirmAgain) {
+                  // Second+ click - stop and ask first (warning below).
+                  e.preventDefault();
+                  setConfirmAgain(true);
+                  return;
+                }
+                markDownloaded();
+              }}
+              className={cn(
+                buttonClasses({ size: 'sm' }),
+                'btn-shine h-9 flex-1 shrink-0 px-4 sm:w-auto',
+              )}
+            >
+              {downloaded ? (
+                <Check className="size-4" aria-hidden="true" />
+              ) : (
+                <Download className="size-4" aria-hidden="true" />
+              )}
+              {downloaded ? 'Downloaded' : 'Download file'}
+            </motion.a>
+          </div>
+        )}
       </div>
+      {confirmAgain && (
+        <div
+          role="alert"
+          data-testid={`stacked-redownload-${jobId}`}
+          className="relative mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm"
+        >
+          <span className="min-w-0 flex-1 text-foreground">
+            Already downloaded - download this file again?
+          </span>
+          <span className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmAgain(false)}
+              data-testid={`stacked-redownload-cancel-${jobId}`}
+            >
+              Cancel
+            </Button>
+            <motion.a
+              whileTap={{ scale: 0.96 }}
+              href={result.downloadUrl || result.url}
+              download={fileName}
+              onClick={markDownloaded}
+              data-testid={`stacked-redownload-yes-${jobId}`}
+              className={cn(buttonClasses({ size: 'sm' }), 'btn-shine')}
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Yes, download
+            </motion.a>
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -397,12 +446,11 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   // object, signs it into the URL (R2) / Content-Disposition (local), and
   // echoes it here for display + the download attribute.
   const fileName = result?.fileName ?? null;
-  // Recomputed on every render: the useNow tick drops links the moment they
-  // expire, and a save drops the card right away.
-  const visibleStack = stack.filter(
-    ({ job: oldJob, result: oldResult }) =>
-      !isSavedJob(oldJob.id) && new Date(oldResult.expiresAt).getTime() > now,
-  );
+  // Recomputed on every render: the useNow tick drops a card the moment its
+  // link expires. Saved cards stay until then so they can be re-downloaded.
+  const visibleStack = stack.filter(({ result: oldResult }) => {
+    return new Date(oldResult.expiresAt).getTime() > now;
+  });
 
   const onCancel = async () => {
     setCancelling(true);
@@ -607,7 +655,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-2 ring-1 ring-white/10">
-                    <FileVideo className="size-5" aria-hidden="true" />
+                    <PlatformLogo platform={platform.id} className="size-5" />
                   </span>
                   <div className="min-w-0 text-left">
                     <p className="truncate text-sm font-semibold text-foreground">{fileName}</p>
@@ -711,13 +759,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             <StackedResultCard
               key={oldJob.id}
               jobId={oldJob.id}
+              url={oldJob.url}
               result={oldResult}
               onPlay={() => {
                 setPlaying(false);
                 setPreviewResult(oldResult);
                 setPreviewOpen(true);
               }}
-              onSaved={() => setStack((prev) => prev.filter((entry) => entry.job.id !== oldJob.id))}
             />
           ))}
 
