@@ -3,7 +3,7 @@ import { Activity, BadgeCheck, FileText, Lock, Scale } from 'lucide-react';
 
 import { Enter, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
-import { BackButton } from '@/components/back-button';
+import { HistoryNav } from '@/components/history-nav';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { SITE_CONFIG } from '@/lib/constants/site';
@@ -63,7 +63,7 @@ export default function TermsPage() {
     <div className="relative mx-auto w-full max-w-2xl px-4 pb-12 pt-10 sm:px-6 sm:pt-12">
       <SoftBackdrop />
       <div className="relative mb-5">
-        <BackButton href="/" label="Back to home" />
+        <HistoryNav />
       </div>
       <Enter className="relative text-center">
         <Badge tone="default" className="glass mb-4 shadow-2">

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/constants/site';
+import { HistoryFlags } from '@/components/history-flags';
 import { Providers } from '@/components/providers';
 import { HomeFooter } from '@/components/home-footer';
 import { SiteNavbar } from '@/components/site-navbar';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <HistoryFlags />
         <Providers>
           <div className="flex min-h-dvh flex-col">
             <SiteNavbar />

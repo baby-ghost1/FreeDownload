@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Download, ListX, RotateCw, Search, SearchX } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { BackButton } from '@/components/back-button';
+import { HistoryNav } from '@/components/history-nav';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -148,7 +148,7 @@ export default function MyDownloadsPage() {
       <SoftBackdrop tone="info" />
 
       <div className="relative mb-5">
-        <BackButton href="/" label="Back to home" />
+        <HistoryNav />
       </div>
 
       <Enter className="relative">

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { BackButton } from '@/components/back-button';
+import { HistoryNav } from '@/components/history-nav';
 import { ClipboardToggle } from '@/components/clipboard-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -280,7 +280,7 @@ function DownloadFlow() {
       <SoftBackdrop />
 
       <div className="relative mb-5">
-        <BackButton href="/" label="Back to home" />
+        <HistoryNav />
       </div>
 
       <Enter className="relative text-center">

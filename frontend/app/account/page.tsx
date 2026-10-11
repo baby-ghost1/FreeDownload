@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { BackButton } from '@/components/back-button';
+import { HistoryNav } from '@/components/history-nav';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
 import { SoftBackdrop } from '@/components/soft-backdrop';
@@ -336,7 +336,7 @@ export default function AccountPage() {
     <div className="relative mx-auto w-full max-w-3xl space-y-6 px-4 pb-10 pt-10 sm:px-6 sm:pt-12">
       <SoftBackdrop />
       <div className="relative">
-        <BackButton href="/" label="Back to home" />
+        <HistoryNav />
       </div>
       <Enter className="relative">
         <div className="flex items-center justify-between gap-4">

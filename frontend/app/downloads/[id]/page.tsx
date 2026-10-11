@@ -2,11 +2,8 @@
 
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { use, useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft,
-  ArrowRight,
   Check,
   Download,
   FileVideo,
@@ -25,6 +22,7 @@ import { Button, buttonClasses } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/progress';
 import { DonateModal } from '@/components/donate-coffee';
+import { HistoryNav } from '@/components/history-nav';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
 import { ApiError } from '@/lib/api/client';
@@ -272,15 +270,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       .then(() => setPlaying(true))
       .catch(() => setPlaying(false));
   }, [previewOpen]);
-  const [canGoForward, setCanGoForward] = useState(() => {
-    try {
-      return sessionStorage.getItem('fd_can_forward') === '1';
-    } catch {
-      // Private mode / SSR - Next simply stays hidden.
-      return false;
-    }
-  });
-  const router = useRouter();
   const now = useNow();
 
   // Older completed downloads, stacked below this job's card until the user
@@ -312,33 +301,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       alive = false;
     };
   }, [id]);
-
-  // Generic history back (no refresh, no fixed target). Remembers that we
-  // stepped back so the Next button can appear - consumed on use, and
-  // cleared by every fresh in-app push below so it never goes stale.
-  const goBack = () => {
-    try {
-      sessionStorage.setItem('fd_can_forward', '1');
-    } catch {
-      // ignore
-    }
-    setCanGoForward(true);
-    router.back();
-  };
-
-  const clearForward = () => {
-    try {
-      sessionStorage.removeItem('fd_can_forward');
-    } catch {
-      // ignore
-    }
-    setCanGoForward(false);
-  };
-
-  const goForward = () => {
-    clearForward();
-    router.forward();
-  };
 
   const storageKey = `fd_downloaded_${id}`;
   const alreadyDownloaded = (() => {
@@ -469,32 +431,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       </div>
       <SoftBackdrop />
 
-      <div className="relative mb-6 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={goBack}
-          className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft
-            className="size-4 transition-transform duration-200 group-hover:-translate-x-0.5"
-            aria-hidden="true"
-          />
-          Back
-        </button>
-        {canGoForward && (
-          <button
-            type="button"
-            onClick={goForward}
-            className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Next
-            <ArrowRight
-              className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
-              aria-hidden="true"
-            />
-          </button>
-        )}
-      </div>
+      <HistoryNav className="relative mb-6" />
 
       <span data-testid="job-status" className="sr-only">
         {stageLabel(job.status)}
@@ -636,7 +573,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               {job.errorMessage ?? 'This download failed.'}{' '}
               <Link
                 href="/download"
-                onClick={clearForward}
                 className="link-underline font-medium text-primary underline-offset-2"
               >
                 Try another link →
@@ -649,7 +585,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               This link has expired - start a new download to get a fresh one.{' '}
               <Link
                 href="/download"
-                onClick={clearForward}
                 className="link-underline font-medium text-primary underline-offset-2"
               >
                 New download →
@@ -880,7 +815,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           >
             <Link
               href="/download"
-              onClick={clearForward}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 transition-colors hover:text-foreground"
             >
               <Download className="size-4" aria-hidden="true" />
@@ -889,7 +823,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             <span aria-hidden="true" className="h-4 w-px bg-border" />
             <Link
               href="/downloads"
-              onClick={clearForward}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary"
             >
               <History className="size-4" aria-hidden="true" />
