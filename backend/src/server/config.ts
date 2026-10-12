@@ -361,10 +361,13 @@ export const config = {
     ffprobePath: env.FFPROBE_PATH,
     // With cookies the default yt-dlp clients authenticate fine; without them
     // the tv/mobile clients dodge the "sign in to confirm you're not a bot"
-    // wall that datacenter egress IPs hit. Override via YTDLP_EXTRACTOR_ARGS.
+    // wall that datacenter egress IPs hit. `visionos` goes first because it
+    // is the one client that still resolves real video formats for /shorts
+    // links on a datacenter IP (tv_simply/web/mweb return only a storyboard
+    // there). Override via YTDLP_EXTRACTOR_ARGS.
     extractorArgs:
       env.YTDLP_EXTRACTOR_ARGS ??
-      (env.YTDLP_COOKIES_B64 ? '' : 'youtube:player_client=tv_simply,web_safari,mweb'),
+      (env.YTDLP_COOKIES_B64 ? '' : 'youtube:player_client=visionos,tv_simply,web_safari,mweb'),
     proxy: env.YTDLP_PROXY,
     cookiesB64: env.YTDLP_COOKIES_B64,
     /** Test-only escape hatch; production validation rejects it below. */
