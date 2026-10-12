@@ -145,11 +145,15 @@ const EnvSchema = z.object({
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
   // YouTube bot-check escape hatches (server/datacenter IPs): a player-client
-  // list that dodges the sign-in wall, an optional egress proxy, and an
-  // optional Netscape cookies.txt as base64 (from a throwaway account).
+  // list that dodges the sign-in wall, an optional egress proxy, an optional
+  // Netscape cookies.txt as base64 (from a throwaway account), and optional
+  // TLS/browser impersonation via curl_cffi (`--impersonate`, e.g. "chrome"
+  // or "" for any available target) so requests match a real browser's
+  // fingerprint instead of yt-dlp's default.
   YTDLP_EXTRACTOR_ARGS: z.string().max(512).optional(),
   YTDLP_PROXY: z.string().max(512).optional(),
   YTDLP_COOKIES_B64: z.string().min(16).max(2_000_000).optional(),
+  YTDLP_IMPERSONATE: z.string().max(64).optional(),
   // Tests exercise the full pipeline against a loopback fixture server; this
   // must stay false outside tests (contract security layer 3).
   SSRF_ALLOW_PRIVATE: boolish.default(false),
@@ -370,6 +374,10 @@ export const config = {
       (env.YTDLP_COOKIES_B64 ? '' : 'youtube:player_client=visionos,tv_simply,web_safari,mweb'),
     proxy: env.YTDLP_PROXY,
     cookiesB64: env.YTDLP_COOKIES_B64,
+    // Default ON in production (the Docker image ships curl_cffi): datacenter
+    // IPs get bot-walled on yt-dlp's default TLS fingerprint even with valid
+    // cookies, so impersonate a real browser unless explicitly disabled.
+    impersonate: env.YTDLP_IMPERSONATE ?? (env.NODE_ENV === 'production' ? '' : undefined),
     /** Test-only escape hatch; production validation rejects it below. */
     allowPrivate: env.SSRF_ALLOW_PRIVATE,
   },

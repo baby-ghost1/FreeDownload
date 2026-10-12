@@ -512,6 +512,7 @@ export interface YtdlpCommonOptions {
   extractorArgs?: string | null | undefined;
   proxy?: string | null | undefined;
   cookiesPath?: string | null | undefined;
+  impersonate?: string | null | undefined;
 }
 
 export function buildCommonArgs(opts: YtdlpCommonOptions): string[] {
@@ -519,6 +520,13 @@ export function buildCommonArgs(opts: YtdlpCommonOptions): string[] {
   if (opts.extractorArgs) args.push('--extractor-args', opts.extractorArgs);
   if (opts.proxy) args.push('--proxy', opts.proxy);
   if (opts.cookiesPath) args.push('--cookies', opts.cookiesPath);
+  // `--impersonate` requires curl_cffi; an empty value = "any available
+  // target", which is what we want when the env var is set to blank.
+  if (opts.impersonate != null && opts.impersonate !== '') {
+    args.push('--impersonate', opts.impersonate);
+  } else if (opts.impersonate === '') {
+    args.push('--impersonate', '');
+  }
   return args;
 }
 
@@ -550,6 +558,7 @@ function commonArgs(): string[] {
     extractorArgs: config.source.extractorArgs || null,
     proxy: config.source.proxy || null,
     cookiesPath: ensureCookiesPath(),
+    impersonate: config.source.impersonate,
   });
 }
 
