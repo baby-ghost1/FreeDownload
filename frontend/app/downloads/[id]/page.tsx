@@ -64,6 +64,14 @@ function formatElapsed(ms: number): string {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
 
+/** Live elapsed clock, isolated so its 1s tick re-renders only this tile,
+ * not the whole page. Frozen value (job done) short-circuits the tick. */
+function ElapsedTile({ createdAt, frozen }: { createdAt: string; frozen: string | null }) {
+  const now = useNow();
+  const value = frozen ?? formatElapsed(now - new Date(createdAt).getTime());
+  return <StatTile icon={Hourglass} label="Elapsed" value={value} />;
+}
+
 /** Live "expires in 14:32" chip for the signed download link. */
 function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   const now = useNow();
@@ -319,7 +327,10 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       .then(() => setPlaying(true))
       .catch(() => setPlaying(false));
   }, [previewOpen]);
-  const now = useNow();
+  // Coarse clock (30s) - only feeds the stack-expiry filter. The per-second
+  // elapsed tick lives in <ElapsedTile> so the whole page does not re-render
+  // every second.
+  const now = useNow(30_000);
 
   // Older completed downloads, stacked below this job's card until the user
   // saves them to the device or their signed link expires.
@@ -441,7 +452,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const failed = job.status === 'failed' || job.status === 'dead_letter';
   const blocked = job.status === 'policy_restricted';
   const platform = detectPlatform(job.url);
-  const elapsed = formatElapsed(now - new Date(job.createdAt).getTime());
   // Single source of truth for the saved name: the backend names the stored
   // object, signs it into the URL (R2) / Content-Disposition (local), and
   // echoes it here for display + the download attribute.
@@ -507,7 +517,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
           {(active || done) && (
             <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
-              <StatTile icon={Hourglass} label="Elapsed" value={frozenElapsed ?? elapsed} />
+              <ElapsedTile createdAt={job.createdAt} frozen={frozenElapsed} />
               <StatTile icon={Layers} label="Format" value={job.requestedFormat ?? '…'} />
               <StatTile icon={HardDrive} label="Size" value={size ?? '…'} />
             </div>

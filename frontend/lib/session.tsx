@@ -18,13 +18,26 @@ interface SessionState {
 
 const SessionContext = createContext<SessionState | null>(null);
 
+/** Shallow-equal two flat objects (User has no nested fields). */
+function shallowEqual(a: User | null, b: User | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ka = Object.keys(a) as (keyof User)[];
+  const kb = Object.keys(b) as (keyof User)[];
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => a[k] === b[k]);
+}
+
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      setUser(await me());
+      const next = await me();
+      // Bail out when nothing changed so the 30s heartbeat does not re-render
+      // the whole tree on every tick (setUser with an equal value is a no-op).
+      setUser((prev) => (shallowEqual(prev, next) ? prev : next));
     } catch (err) {
       // 401 = anonymous; anything else keeps the last known state.
       if (err instanceof ApiError && err.status === 401) setUser(null);
