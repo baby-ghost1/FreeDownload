@@ -363,19 +363,20 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   }, [id]);
 
   const storageKey = `fd_downloaded_${id}`;
-  const alreadyDownloaded = (() => {
+  const [downloaded, setDownloaded] = useState(() => {
     try {
       return typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1';
     } catch {
       return false;
     }
-  })();
+  });
   const markDownloaded = () => {
     try {
       localStorage.setItem(storageKey, '1');
     } catch {
       // Private mode - the confirm step still guards re-downloads this visit.
     }
+    setDownloaded(true);
     setConfirmAgain(false);
   };
 
@@ -555,7 +556,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       data-testid={`step-${s.key}`}
                     >
                       <motion.span
-                        layout
                         animate={current ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                         transition={
                           current
@@ -707,7 +707,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                       download={fileName ?? undefined}
                       data-testid="download-link"
                       onClick={(e) => {
-                        if (alreadyDownloaded && !confirmAgain) {
+                        if (downloaded && !confirmAgain) {
                           // Second+ click - stop and ask first (warning below).
                           e.preventDefault();
                           setConfirmAgain(true);
@@ -720,12 +720,12 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                         'btn-shine h-9 flex-1 shrink-0 px-4 sm:w-auto',
                       )}
                     >
-                      {alreadyDownloaded ? (
+                      {downloaded ? (
                         <Check className="size-4" aria-hidden="true" />
                       ) : (
                         <Download className="size-4" aria-hidden="true" />
                       )}
-                      {alreadyDownloaded ? 'Downloaded' : 'Download file'}
+                      {downloaded ? 'Downloaded' : 'Download file'}
                     </motion.a>
                   </div>
                 )}
