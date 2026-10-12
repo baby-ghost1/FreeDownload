@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'motion/react';
 import { useEffect, useSyncExternalStore } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
 
@@ -39,10 +38,8 @@ export function ThemeToggle({ className }: { className?: string }) {
   const next = NEXT_THEME[choice];
 
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={{ scale: 1.06 }}
-      whileTap={{ scale: 0.92, rotate: -8 }}
       onClick={() => {
         storeTheme(next);
         applyTheme(next);
@@ -50,21 +47,17 @@ export function ThemeToggle({ className }: { className?: string }) {
       className={
         className ??
         'inline-flex size-9 items-center justify-center rounded-md border border-border ' +
-          'bg-surface text-muted-foreground transition-colors hover:text-foreground hover:border-border-strong'
+          'bg-surface text-muted-foreground transition-all duration-200 hover:text-foreground hover:border-border-strong ' +
+          'hover:scale-[1.06] active:scale-[0.92] active:-rotate-[8deg]'
       }
       title={`Theme: ${LABELS[next]}`}
       aria-label={`Switch theme (currently ${LABELS[choice]}, ${effectiveTheme(choice)})`}
       data-theme-choice={choice}
     >
-      <motion.span
-        key={choice}
-        initial={{ opacity: 0, rotate: -60, scale: 0.8 }}
-        animate={{ opacity: 1, rotate: 0, scale: 1 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="flex"
-      >
+      {/* key remounts the span on change so the CSS pop animation replays. */}
+      <span key={choice} className="flex animate-icon-pop">
         {ICONS[choice]}
-      </motion.span>
-    </motion.button>
+      </span>
+    </button>
   );
 }

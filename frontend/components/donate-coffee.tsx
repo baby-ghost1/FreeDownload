@@ -1,11 +1,11 @@
 'use client';
 
-import { AnimatePresence, motion } from 'motion/react';
 import { HeartHandshake, X } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { usePresence } from '@/lib/use-presence';
 import { cn } from '@/lib/utils/cn';
 
 /** Payment QR image served from `frontend/public`. */
@@ -96,70 +96,67 @@ export function DonateModal({ open, onClose }: { open: boolean; onClose: () => v
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  const { mounted, leaving } = usePresence(open, 200);
+  if (!mounted) return null;
+
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={onClose}
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-background/60 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Support FreeDownload"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.97 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-surface shadow-3"
-          >
-            <div
-              aria-hidden="true"
-              className="neon-edge bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:220%_100%] animate-gradient-pan"
-            />
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <p className="flex items-center gap-2 text-base font-semibold tracking-tight">
-                  <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2">
-                    <HeartHandshake className="size-4" aria-hidden="true" />
-                  </span>
-                  Help Us
-                </p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              </div>
-              <div className="mt-4 flex justify-center">
-                {DONATE_QR_SRC ? (
-                  <Image
-                    src={DONATE_QR_SRC}
-                    alt="Donation QR code"
-                    width={577}
-                    height={564}
-                    className="h-auto w-[200px] shrink-0 rounded-xl bg-white object-contain p-4"
-                  />
-                ) : (
-                  <DummyQr />
-                )}
-              </div>
-              <div className="mt-4">
-                <DonateMessage />
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
+    <div
+      onClick={onClose}
+      className={cn(
+        'fixed inset-0 z-[70] flex items-center justify-center bg-background/60 p-4 backdrop-blur-md',
+        leaving ? 'animate-fade-out' : 'animate-fade-in',
       )}
-    </AnimatePresence>
+      role="dialog"
+      aria-modal="true"
+      aria-label="Support FreeDownload"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          'relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-surface shadow-3',
+          leaving ? 'animate-rise-out' : 'animate-rise-in',
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className="neon-edge bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:220%_100%] animate-gradient-pan"
+        />
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="flex items-center gap-2 text-base font-semibold tracking-tight">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2">
+                <HeartHandshake className="size-4" aria-hidden="true" />
+              </span>
+              Help Us
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mt-4 flex justify-center">
+            {DONATE_QR_SRC ? (
+              <Image
+                src={DONATE_QR_SRC}
+                alt="Donation QR code"
+                width={577}
+                height={564}
+                className="h-auto w-[200px] shrink-0 rounded-xl bg-white object-contain p-4"
+              />
+            ) : (
+              <DummyQr />
+            )}
+          </div>
+          <div className="mt-4">
+            <DonateMessage />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

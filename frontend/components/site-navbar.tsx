@@ -1,6 +1,5 @@
 'use client';
 
-import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
@@ -24,6 +23,7 @@ import { getCurrentSubscription, getPublicConfig } from '@/lib/api/endpoints';
 import type { PublicConfig } from '@/lib/api/types';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { BrandMark } from '@/components/brand-icons';
+import { usePresence } from '@/lib/use-presence';
 import { cn } from '@/lib/utils/cn';
 
 const DEFAULT_NAVBAR: PublicConfig['navbar'] = {
@@ -111,6 +111,9 @@ export function SiteNavbar() {
   const [navbar, setNavbar] = useState<PublicConfig['navbar']>(DEFAULT_NAVBAR);
   const navRef = useRef<HTMLElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Keep overlay + menu mounted through their CSS exit animation.
+  const overlay = usePresence(open, 200);
+  const menu = usePresence(open, 220);
 
   // Admin-owned visibility (system_settings `navbar_config`, fail-open to
   // fully visible when the row or request is missing). The last known value
@@ -193,25 +196,17 @@ export function SiteNavbar() {
 
   return (
     <>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            aria-hidden="true"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
-          />
-        )}
-      </AnimatePresence>
-      <motion.header
-        initial={false}
-        animate={{ y: '0%', opacity: 1 }}
-        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-        className="pointer-events-none relative z-50 px-4 pt-3 sm:px-8"
-      >
+      {overlay.mounted && (
+        <div
+          aria-hidden="true"
+          onClick={() => setOpen(false)}
+          className={cn(
+            'fixed inset-0 z-40 bg-background/60 backdrop-blur-md',
+            overlay.leaving ? 'animate-fade-out' : 'animate-fade-in',
+          )}
+        />
+      )}
+      <header className="pointer-events-none relative z-50 px-4 pt-3 sm:px-8">
         <nav
           ref={navRef}
           aria-label="Primary"
@@ -239,32 +234,24 @@ export function SiteNavbar() {
             aria-label={open ? 'Close menu' : 'Open menu'}
             className="glass flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface/80 text-foreground shadow-2 transition-colors hover:text-foreground"
           >
-            <motion.span
-              key={open ? 'x' : 'menu'}
-              initial={{ opacity: 0, rotate: -60, scale: 0.8 }}
-              animate={{ opacity: 1, rotate: 0, scale: 1 }}
-              transition={{ duration: 0.25 }}
-              className="flex"
-            >
+            <span key={open ? 'x' : 'menu'} className="flex animate-icon-pop">
               {open ? (
                 <X className="size-5" strokeWidth={2.5} />
               ) : (
                 <Menu className="size-5" strokeWidth={2.5} />
               )}
-            </motion.span>
+            </span>
           </button>
 
-          <AnimatePresence>
-            {open && (
-              <motion.div
-                id="site-nav-menu"
-                role="menu"
-                initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute right-0 top-[calc(100%+8px)] w-64 overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-3 backdrop-blur-xl"
-              >
+          {menu.mounted && (
+            <div
+              id="site-nav-menu"
+              role="menu"
+              className={cn(
+                'absolute right-0 top-[calc(100%+8px)] w-64 overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-3 backdrop-blur-xl',
+                menu.leaving ? 'animate-drop-out' : 'animate-drop-in',
+              )}
+            >
                 <ul className="max-h-[70vh] overflow-y-auto p-1.5">
                   {items.map((l) => {
                     const isActive = l.match(pathname);
@@ -283,10 +270,9 @@ export function SiteNavbar() {
                           )}
                         >
                           {isActive && (
-                            <motion.span
-                              layoutId="site-nav-pill"
+                            <span
+                              aria-hidden="true"
                               className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/25"
-                              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                             />
                           )}
                           <span className="relative flex items-center gap-2.5">
@@ -337,11 +323,10 @@ export function SiteNavbar() {
                   )}
                   <ThemeToggle className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
+          )}
         </nav>
-      </motion.header>
+      </header>
     </>
   );
 }
