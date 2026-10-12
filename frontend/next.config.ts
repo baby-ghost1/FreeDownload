@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   typedRoutes: true,
+  experimental: {
+    // Importing lucide-react/motion from their barrel pulls the whole catalog
+    // into the client bundle; let Next tree-shake to only the icons/variants
+    // each module actually uses.
+    optimizePackageImports: ['lucide-react', 'motion/react'],
+  },
   async headers() {
     return [
       {
