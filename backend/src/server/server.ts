@@ -94,9 +94,7 @@ async function main(): Promise<void> {
       'yt-dlp cookies loaded from YTDLP_COOKIES_B64',
     );
   } else {
-    logger.warn(
-      'YTDLP_COOKIES_B64 unset - YouTube downloads from this IP may hit the bot-wall',
-    );
+    logger.warn('YTDLP_COOKIES_B64 unset - YouTube downloads from this IP may hit the bot-wall');
   }
 
   try {
