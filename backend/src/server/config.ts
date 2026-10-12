@@ -122,9 +122,11 @@ const EnvSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
   QUEUE_RETRY_LIMIT: z.coerce.number().int().min(0).max(10).default(3),
   LEASE_TTL_MS: z.coerce.number().int().min(1_000).default(30_000),
-  // Long 4K videos download for many minutes - 5 minutes killed them
-  // mid-run (dead_letter SOURCE_TIMEOUT after 3 wasted retries).
-  JOB_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(1_800_000),
+  // Whole-pipeline hard deadline (download + transcode + upload). 30 min was
+  // too tight: a 30-minute video sits exactly on the edge, so any slow source
+  // or larger file got killed mid-run (dead_letter SOURCE_TIMEOUT after 3
+  // wasted retries). 2 hours gives long media real headroom.
+  JOB_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(7_200_000),
   CLEANUP_INTERVAL_MIN: z.coerce.number().int().min(1).default(15),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(20_000),
   IDEMPOTENCY_TTL_H: z.coerce.number().int().min(1).default(24),
