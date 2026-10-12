@@ -8,6 +8,7 @@ const HealthSchema = z.object({
   status: z.literal('ok'),
   service: z.string(),
   uptimeSec: z.number(),
+  ytdlpCookiesLoaded: z.boolean(),
 });
 
 const ReadySchema = z.object({
@@ -32,6 +33,7 @@ export async function registerHealthRoutes(app: AppInstance): Promise<void> {
       status: 'ok' as const,
       service: config.serviceName,
       uptimeSec: Math.round(process.uptime()),
+      ytdlpCookiesLoaded: Boolean(config.source.cookiesB64),
     }),
   );
 
