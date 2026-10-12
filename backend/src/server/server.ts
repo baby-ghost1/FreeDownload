@@ -1,5 +1,5 @@
 import { buildApp } from './app.js';
-import { adminMfaRequired, config } from './config.js';
+import { config } from './config.js';
 import { runMigrations } from '../database/migrate.js';
 import { resolveSelfPingUrl, startSelfPing, type SelfPingHandle } from '../keepalive/self-ping.js';
 import { logger } from '../logging/logger.js';
@@ -11,9 +11,13 @@ import { startWorkers, stopWorkers, type WorkerHandles } from '../workers/index.
  * Refuse to boot in production against a guessable admin credential.
  *
  * The env-boot admin password (`ADMIN_PASSWORD`) is the fallback login for the
- * seeded admin. A short/shared value (the .env.example shipped `220128`) with
- * 2FA off turns the admin panel into a brute-force target, and nothing else in
- * the stack rejects these values. Fail loudly at boot instead of shipping it.
+ * seeded admin. A short/shared value (the .env.example shipped `220128`) turns
+ * the admin panel into a brute-force target, and nothing else in the stack
+ * rejects these values. Fail loudly at boot instead of shipping it.
+ *
+ * MFA itself is optional and enforced at request time via `adminMfaRequired()`
+ * (set `ADMIN_MFA_REQUIRED=true` to require a TOTP code on admin routes); it is
+ * no longer a boot blocker.
  */
 function assertProductionAdminHardening(): void {
   if (config.env !== 'production') return;
@@ -23,13 +27,6 @@ function assertProductionAdminHardening(): void {
     logger.fatal(
       { length: envPassword.length },
       'ADMIN_PASSWORD is set but shorter than 16 characters - refusing to start in production',
-    );
-    process.exit(1);
-  }
-
-  if (!adminMfaRequired()) {
-    logger.fatal(
-      'ADMIN_MFA_REQUIRED is not enabled - refusing to start in production (set ADMIN_MFA_REQUIRED=true)',
     );
     process.exit(1);
   }
