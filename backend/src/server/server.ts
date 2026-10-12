@@ -85,6 +85,20 @@ async function main(): Promise<void> {
     logger.warn('turnstile bot-check is DISABLED - anonymous endpoints are abuse-prone');
   }
 
+  // Diagnostic: confirm yt-dlp cookie credentials reached this process (length
+  // only - never the value). Render env vars only apply after a redeploy, so
+  // "unset" here means the var is missing OR the service was not redeployed.
+  if (config.source.cookiesB64) {
+    logger.info(
+      { bytes: config.source.cookiesB64.length },
+      'yt-dlp cookies loaded from YTDLP_COOKIES_B64',
+    );
+  } else {
+    logger.warn(
+      'YTDLP_COOKIES_B64 unset - YouTube downloads from this IP may hit the bot-wall',
+    );
+  }
+
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
     logger.info({ port: config.port, url: `http://localhost:${config.port}` }, 'api listening');
