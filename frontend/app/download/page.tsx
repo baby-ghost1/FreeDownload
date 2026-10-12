@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
 import { Spinner } from '@/components/ui/progress';
 import { Enter } from '@/components/motion/reveal';
 import { SoftBackdrop } from '@/components/soft-backdrop';
@@ -508,20 +509,11 @@ function DownloadFlow() {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           >
             <Card className="mt-6 overflow-hidden">
-              <CardContent className="space-y-4 py-6">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Spinner />
+              <CardContent className="flex flex-col items-center gap-3 py-8">
+                <Loader />
+                <p className="text-sm text-muted-foreground">
                   Fetching available formats - this usually takes a few seconds...
-                </div>
-                <div className="space-y-2.5" aria-hidden="true">
-                  {[82, 64, 74].map((w) => (
-                    <div
-                      key={w}
-                      className="shimmer-line h-12 rounded-xl border border-border bg-surface-sunken/60"
-                      style={{ width: `${w}%` }}
-                    />
-                  ))}
-                </div>
+                </p>
               </CardContent>
             </Card>
           </motion.div>

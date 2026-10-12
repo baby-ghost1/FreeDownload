@@ -383,6 +383,20 @@
   }
 }
 
+/* Minimal three-dot loader: each dot swells and fades in a staggered beat. */
+@keyframes loader-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @layer utilities {
   .animate-float-slow {
     animation: float-slow 9s ease-in-out infinite;

@@ -13,6 +13,12 @@ export interface JobWatch {
   error: ApiError | null;
   /** True while the first load has not settled. */
   loading: boolean;
+  /**
+   * True while a completed job's result is still being fetched. The page must
+   * not treat "completed + result still null" as expired during this window,
+   * or it flashes the expired-error right before the download button renders.
+   */
+  resultLoading: boolean;
   poll: () => Promise<void>;
   cancelWatch: () => void;
 }
@@ -27,6 +33,7 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
   const [result, setResult] = useState<JobResult | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resultLoading, setResultLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopped = useRef(false);
   // The backend re-signs the file URL on every /result call with a fresh
@@ -45,6 +52,7 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
       setJob(next);
       setError(null);
       if (next.status === 'completed' && !resultPinned.current) {
+        setResultLoading(true);
         try {
           const fresh = await getJobResult(id);
           if (stopped.current) return;
@@ -53,6 +61,8 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
         } catch (err) {
           // A 404 here means the file was purged - surfaced via `result===null`.
           if (err instanceof ApiError && err.status !== 404) throw err;
+        } finally {
+          if (!stopped.current) setResultLoading(false);
         }
       }
     } catch (err) {
@@ -100,5 +110,5 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
     timer.current = null;
   }, []);
 
-  return { job, result, error, loading, poll, cancelWatch };
+  return { job, result, error, loading, resultLoading, poll, cancelWatch };
 }

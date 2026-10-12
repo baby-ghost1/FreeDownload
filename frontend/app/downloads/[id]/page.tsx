@@ -289,7 +289,7 @@ function StackedResultCard({
 
 export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { job, result, error, loading, poll } = useJob(id);
+  const { job, result, error, loading, resultLoading, poll } = useJob(id);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
@@ -638,7 +638,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             </Alert>
           )}
 
-          {done && !result && !loading && (
+          {done && !result && !loading && !resultLoading && (
             <Alert tone="error" data-testid="result-expired">
               This link has expired - start a new download to get a fresh one.{' '}
               <Link
