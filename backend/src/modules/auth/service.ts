@@ -87,7 +87,9 @@ export async function registerUser(input: RegisterInput, db: Database = getDb())
     created = rows[0]!;
   } catch (err) {
     if (isUniqueViolation(err)) {
-      throw new AppError('CONFLICT', 'An account with this email already exists.');
+      // Generic message: an explicit "already exists" would let anyone probe
+      // which emails are registered.
+      throw new AppError('CONFLICT', 'Unable to register with this email.');
     }
     throw err;
   }
@@ -119,7 +121,7 @@ export async function loginUser(input: LoginInput, db: Database = getDb()): Prom
   if (!user || user.deletedAt !== null) {
     // Equalise timing with a real verification so login cannot enumerate users.
     await burnPasswordTime(input.password);
-    throw new AppError('UNAUTHORIZED', 'User does not exist.');
+    throw new AppError('UNAUTHORIZED', 'Email or password is incorrect.');
   }
 
   const ok = await verifyPassword(user.passwordHash, input.password);

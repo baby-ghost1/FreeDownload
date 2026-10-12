@@ -33,8 +33,16 @@ describe('loadEnv: schema validation', () => {
   it('coerces numeric and boolean strings', () => {
     const env = loadEnv({ PORT: '8080', TRUST_PROXY: 'true', SSRF_ALLOW_PRIVATE: '0' });
     expect(env.PORT).toBe(8080);
-    expect(env.TRUST_PROXY).toBe(true);
+    // TRUST_PROXY resolves to a hop count: 'true' means one trusted hop.
+    expect(env.TRUST_PROXY).toBe(1);
     expect(env.SSRF_ALLOW_PRIVATE).toBe(false);
+  });
+
+  it('normalizes TRUST_PROXY into a bounded hop count', () => {
+    expect(loadEnv({ TRUST_PROXY: 'false' }).TRUST_PROXY).toBe(false);
+    expect(loadEnv({ TRUST_PROXY: '2' }).TRUST_PROXY).toBe(2);
+    // Out-of-range values clamp to a sane bound instead of trusting everything.
+    expect(loadEnv({ TRUST_PROXY: '99' }).TRUST_PROXY).toBe(10);
   });
 });
 

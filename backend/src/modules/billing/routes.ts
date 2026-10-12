@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { config } from '../../server/config.js';
 import { getDb } from '../../database/client.js';
@@ -352,10 +352,16 @@ export async function registerBillingRoutes(app: AppInstance): Promise<void> {
       if (row.status !== 'pending') {
         throw new AppError('CONFLICT', `That request is already ${row.status}.`);
       }
-      await db
+      // Conditional on status so a concurrent admin approve that lands after our
+      // read cannot be overwritten by this blind cancel.
+      const updated = await db
         .update(upgradeRequests)
         .set({ status: 'canceled', updatedAt: new Date() })
-        .where(eq(upgradeRequests.id, row.id));
+        .where(and(eq(upgradeRequests.id, row.id), eq(upgradeRequests.status, 'pending')))
+        .returning({ id: upgradeRequests.id });
+      if (updated.length === 0) {
+        throw new AppError('CONFLICT', 'That request was just processed by an admin.');
+      }
       return { ok: true as const };
     },
   );

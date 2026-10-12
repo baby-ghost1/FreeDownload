@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { getDb } from '../../database/client.js';
 import type { AppInstance } from '../../types/app.js';
@@ -169,7 +169,9 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
         throw new AppError('CONFLICT', `That request is already ${row.status}.`);
       }
       const now = new Date();
-      await db
+      // Conditional on status so a concurrent approve/cancel that lands after
+      // our read cannot be overwritten by this reject.
+      const updated = await db
         .update(upgradeRequests)
         .set({
           status: 'rejected',
@@ -178,7 +180,11 @@ export async function registerAdminBillingRoutes(app: AppInstance): Promise<void
           reviewedAt: now,
           updatedAt: now,
         })
-        .where(eq(upgradeRequests.id, row.id));
+        .where(and(eq(upgradeRequests.id, row.id), eq(upgradeRequests.status, 'pending')))
+        .returning({ id: upgradeRequests.id });
+      if (updated.length === 0) {
+        throw new AppError('CONFLICT', 'That request was just processed by someone else.');
+      }
       await writeAudit(db, {
         adminId: context.admin.id,
         action: 'billing.upgrade.reject',

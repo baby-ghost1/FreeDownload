@@ -62,10 +62,31 @@ function genReqId(req: IncomingMessage): string {
   return randomUUID();
 }
 
+/**
+ * Peel at most `hops` X-Forwarded-For entries and no more.
+ *
+ * We hand Fastify an explicit predicate instead of a bare number because its
+ * bundled proxy-addr fails closed on numbers (it returns `() => false`), which
+ * would pin `req.ip` to the proxy's own address and collapse every caller into
+ * one rate-limit bucket. Passing `true` is the opposite failure: it peels the
+ * whole chain, so a client that sends its own `X-Forwarded-For` gets to pick
+ * the `req.ip` that keys the rate limiter and the admin IP allowlist.
+ *
+ * With `hops = 1` the chain is `[proxy, client, ...anything the client sent]`:
+ * we read `client` (appended by our own proxy) and stop, so the client's
+ * entries are never consulted. This assumes the container is only reachable
+ * through the platform proxy (true on Render) — there is no direct-to-container
+ * path whose peer we'd also need to validate.
+ */
+function makeHopTrust(hops: number): (address: string, hop: number) => boolean {
+  return (_address, hop) => hop < hops;
+}
+
 export async function buildApp(options: BuildAppOptions = {}): Promise<AppInstance> {
+  const proxyHops = config.trustProxy;
   const app = Fastify({
     loggerInstance: logger,
-    trustProxy: config.trustProxy,
+    trustProxy: proxyHops === false ? false : makeHopTrust(proxyHops),
     genReqId,
     bodyLimit: 1_048_576, // 1 MiB â€” media never posts through the API (Â§9)
     ajv: { customOptions: { allErrors: true } },

@@ -1,5 +1,5 @@
 import { buildApp } from './app.js';
-import { config } from './config.js';
+import { adminMfaRequired, config } from './config.js';
 import { runMigrations } from '../database/migrate.js';
 import { resolveSelfPingUrl, startSelfPing, type SelfPingHandle } from '../keepalive/self-ping.js';
 import { logger } from '../logging/logger.js';
@@ -7,7 +7,37 @@ import { closeQueues } from '../queue/queues.js';
 import { closeRedis } from '../redis/client.js';
 import { startWorkers, stopWorkers, type WorkerHandles } from '../workers/index.js';
 
+/**
+ * Refuse to boot in production against a guessable admin credential.
+ *
+ * The env-boot admin password (`ADMIN_PASSWORD`) is the fallback login for the
+ * seeded admin. A short/shared value (the .env.example shipped `220128`) with
+ * 2FA off turns the admin panel into a brute-force target, and nothing else in
+ * the stack rejects these values. Fail loudly at boot instead of shipping it.
+ */
+function assertProductionAdminHardening(): void {
+  if (config.env !== 'production') return;
+
+  const envPassword = process.env.ADMIN_PASSWORD ?? '';
+  if (envPassword.length > 0 && envPassword.length < 16) {
+    logger.fatal(
+      { length: envPassword.length },
+      'ADMIN_PASSWORD is set but shorter than 16 characters - refusing to start in production',
+    );
+    process.exit(1);
+  }
+
+  if (!adminMfaRequired()) {
+    logger.fatal(
+      'ADMIN_MFA_REQUIRED is not enabled - refusing to start in production (set ADMIN_MFA_REQUIRED=true)',
+    );
+    process.exit(1);
+  }
+}
+
 async function main(): Promise<void> {
+  assertProductionAdminHardening();
+
   // The deploy image never runs `db:seed`, and until now nothing ran
   // migrations either - databases provisioned before a schema/data change
   // stayed stale after a redeploy (e.g. the missing `cobalt` source row).

@@ -55,7 +55,20 @@ const EnvSchema = z.object({
   API_URL: z.url().default('http://localhost:4000'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  TRUST_PROXY: boolish.default(false),
+  // Number of proxy hops to trust for the client IP (Fastify `trustProxy`).
+  // Accepts a count, or true => 1 hop. Never resolves to "trust all": with
+  // trust-all, X-Forwarded-For's leftmost entry is client-controlled, which
+  // would let an attacker spoof req.ip to dodge the rate limiter and the
+  // admin IP allowlist. Render terminates TLS at exactly one hop.
+  TRUST_PROXY: z
+    .union([z.number(), z.string(), z.boolean()])
+    .default(false)
+    .transform((v) => {
+      if (v === true || v === 'true') return 1;
+      if (v === false || v === 'false' || v === '') return false;
+      const n = typeof v === 'number' ? v : Number(v);
+      return Number.isFinite(n) && n > 0 ? Math.min(Math.trunc(n), 10) : false;
+    }),
 
   // --- data ---------------------------------------------------------------
   DATABASE_URL: z.string().min(1).default(localDb),

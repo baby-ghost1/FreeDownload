@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { AppError } from '../../errors/app-error.js';
 import type { Database } from '../../database/client.js';
@@ -94,29 +94,36 @@ export async function createUpgradeRequest(
   const plan = await paidPlan(db, planCode);
   const coupon = await resolveCoupon(db, couponCode);
 
-  const pending = await db
-    .select({ id: upgradeRequests.id })
-    .from(upgradeRequests)
-    .where(and(eq(upgradeRequests.userId, userId), eq(upgradeRequests.status, 'pending')))
-    .limit(1);
-  if (pending.length > 0) {
-    throw new AppError(
-      'CONFLICT',
-      'You already have a pending upgrade request. Cancel it first to file a new one.',
-    );
-  }
+  return db.transaction(async (tx) => {
+    // Serialize concurrent creates for this user so two parallel submits cannot
+    // both pass the "no pending request" check. A per-user advisory lock is
+    // released automatically at commit/rollback.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`upgrade-request:${userId}`})::bigint)`);
 
-  const [row] = await db
-    .insert(upgradeRequests)
-    .values({
-      userId,
-      planCode,
-      amountCents: discountedAmount(plan.priceCents, coupon),
-      currency: plan.currency,
-      couponCode: coupon?.code ?? null,
-    })
-    .returning();
-  return row!;
+    const pending = await tx
+      .select({ id: upgradeRequests.id })
+      .from(upgradeRequests)
+      .where(and(eq(upgradeRequests.userId, userId), eq(upgradeRequests.status, 'pending')))
+      .limit(1);
+    if (pending.length > 0) {
+      throw new AppError(
+        'CONFLICT',
+        'You already have a pending upgrade request. Cancel it first to file a new one.',
+      );
+    }
+
+    const [row] = await tx
+      .insert(upgradeRequests)
+      .values({
+        userId,
+        planCode,
+        amountCents: discountedAmount(plan.priceCents, coupon),
+        currency: plan.currency,
+        couponCode: coupon?.code ?? null,
+      })
+      .returning();
+    return row!;
+  });
 }
 
 /** Switch (or create) the user's subscription row to a plan, manually. */
@@ -172,54 +179,75 @@ export async function setUserPlan(
 
 /** Admin side: approve a pending request (activates the plan). */
 export async function approveUpgradeRequest(db: Database, requestId: string, adminId: string) {
-  const rows = await db
-    .select()
-    .from(upgradeRequests)
-    .where(eq(upgradeRequests.id, requestId))
-    .limit(1);
-  const request = rows[0];
-  if (!request) throw new AppError('NOT_FOUND', 'Upgrade request not found.');
-  if (request.status !== 'pending') {
-    throw new AppError('CONFLICT', `That request is already ${request.status}.`);
-  }
-
-  // Re-resolve the coupon at approval time so exhausted codes cannot slip in.
-  const coupon = request.couponCode
-    ? await resolveCoupon(db, request.couponCode).catch(() => null)
-    : null;
-  if (request.couponCode && !coupon) {
-    throw new AppError('CONFLICT', 'The attached coupon is no longer usable.');
-  }
-
-  await setUserPlan(db, request.userId, request.planCode, 'manual');
-
-  if (coupon) {
-    const crow = (await db.select().from(coupons).where(eq(coupons.code, coupon.code)).limit(1))[0];
-    if (crow) {
-      const usedCount = crow.usedCount + 1;
-      // Redemption cap reached -> auto-deactivate so the list (and every
-      // future resolve) shows it as spent; "Reactivate" extends the cap.
-      const exhausted = crow.maxUses !== null && usedCount >= crow.maxUses;
-      await db
-        .update(coupons)
-        .set(exhausted ? { usedCount, active: false } : { usedCount })
-        .where(eq(coupons.id, crow.id));
+  return db.transaction(async (tx) => {
+    // Lock the request row so a concurrent cancel/approve serialises behind us
+    // instead of racing the status flip below.
+    const rows = await tx
+      .select()
+      .from(upgradeRequests)
+      .where(eq(upgradeRequests.id, requestId))
+      .for('update')
+      .limit(1);
+    const request = rows[0];
+    if (!request) throw new AppError('NOT_FOUND', 'Upgrade request not found.');
+    if (request.status !== 'pending') {
+      throw new AppError('CONFLICT', `That request is already ${request.status}.`);
     }
-  }
 
-  const now = new Date();
-  await db
-    .update(upgradeRequests)
-    .set({ status: 'approved', reviewedBy: adminId, reviewedAt: now, updatedAt: now })
-    .where(eq(upgradeRequests.id, request.id));
+    // Re-resolve the coupon at approval time so exhausted codes cannot slip in.
+    const coupon = request.couponCode
+      ? await resolveCoupon(tx, request.couponCode).catch(() => null)
+      : null;
+    if (request.couponCode && !coupon) {
+      throw new AppError('CONFLICT', 'The attached coupon is no longer usable.');
+    }
 
-  // Anything else this user had pending is now moot.
-  await db
-    .update(upgradeRequests)
-    .set({ status: 'canceled', reviewedBy: adminId, reviewedAt: now, updatedAt: now })
-    .where(and(eq(upgradeRequests.userId, request.userId), eq(upgradeRequests.status, 'pending')));
+    await setUserPlan(tx, request.userId, request.planCode, 'manual');
 
-  return request;
+    if (coupon) {
+      // Single conditional UPDATE: bumps used_count only while under the cap
+      // and deactivates in the same statement. Zero rows back means a concurrent
+      // approval already spent the last use - abort so the plan rolls back too.
+      const bumped = await tx
+        .update(coupons)
+        .set({
+          usedCount: sql`${coupons.usedCount} + 1`,
+          active: sql`CASE WHEN ${coupons.maxUses} IS NOT NULL AND ${coupons.usedCount} + 1 >= ${coupons.maxUses} THEN false ELSE ${coupons.active} END`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(coupons.code, coupon.code),
+            sql`(${coupons.maxUses} IS NULL OR ${coupons.usedCount} < ${coupons.maxUses})`,
+          ),
+        )
+        .returning({ id: coupons.id });
+      if (bumped.length === 0) {
+        throw new AppError('CONFLICT', 'That coupon has already been fully used.');
+      }
+    }
+
+    const now = new Date();
+    // Guarded flip: only succeeds while still pending, so a cancel that landed
+    // after our read cannot be overwritten after the fact.
+    const flipped = await tx
+      .update(upgradeRequests)
+      .set({ status: 'approved', reviewedBy: adminId, reviewedAt: now, updatedAt: now })
+      .where(and(eq(upgradeRequests.id, request.id), eq(upgradeRequests.status, 'pending')))
+      .returning({ id: upgradeRequests.id });
+    if (flipped.length === 0) {
+      throw new AppError('CONFLICT', 'That request was just processed by someone else.');
+    }
+
+    // Anything else this user had pending is now moot (the one we just approved
+    // is no longer 'pending', so it is excluded automatically).
+    await tx
+      .update(upgradeRequests)
+      .set({ status: 'canceled', reviewedBy: adminId, reviewedAt: now, updatedAt: now })
+      .where(and(eq(upgradeRequests.userId, request.userId), eq(upgradeRequests.status, 'pending')));
+
+    return request;
+  });
 }
 
 /** Delete a user outright (cascades sessions, keys, subscriptions; jobs go anonymous). */
