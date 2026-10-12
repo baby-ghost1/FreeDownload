@@ -98,7 +98,9 @@ export async function createUpgradeRequest(
     // Serialize concurrent creates for this user so two parallel submits cannot
     // both pass the "no pending request" check. A per-user advisory lock is
     // released automatically at commit/rollback.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`upgrade-request:${userId}`})::bigint)`);
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`upgrade-request:${userId}`})::bigint)`,
+    );
 
     const pending = await tx
       .select({ id: upgradeRequests.id })
@@ -244,7 +246,9 @@ export async function approveUpgradeRequest(db: Database, requestId: string, adm
     await tx
       .update(upgradeRequests)
       .set({ status: 'canceled', reviewedBy: adminId, reviewedAt: now, updatedAt: now })
-      .where(and(eq(upgradeRequests.userId, request.userId), eq(upgradeRequests.status, 'pending')));
+      .where(
+        and(eq(upgradeRequests.userId, request.userId), eq(upgradeRequests.status, 'pending')),
+      );
 
     return request;
   });

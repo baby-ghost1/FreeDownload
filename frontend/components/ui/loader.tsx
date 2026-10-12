@@ -5,13 +5,7 @@ import { cn } from '@/lib/utils/cn';
  * - a quiet swell-and-fade beat instead of a spinning arc, for button and
  * inline loading states where a ring reads as too busy.
  */
-export function Loader({
-  className,
-  label = 'Loading',
-}: {
-  className?: string;
-  label?: string;
-}) {
+export function Loader({ className, label = 'Loading' }: { className?: string; label?: string }) {
   return (
     <span
       role="status"

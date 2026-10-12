@@ -252,77 +252,77 @@ export function SiteNavbar() {
                 menu.leaving ? 'animate-drop-out' : 'animate-drop-in',
               )}
             >
-                <ul className="max-h-[70vh] overflow-y-auto p-1.5">
-                  {items.map((l) => {
-                    const isActive = l.match(pathname);
-                    return (
-                      <li key={l.href}>
-                        <Link
-                          href={l.href}
-                          role="menuitem"
-                          aria-current={isActive ? 'page' : undefined}
-                          onClick={() => setOpen(false)}
-                          className={cn(
-                            'relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150',
-                            isActive
-                              ? 'text-foreground'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                          )}
-                        >
-                          {isActive && (
-                            <span
-                              aria-hidden="true"
-                              className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/25"
-                            />
-                          )}
-                          <span className="relative flex items-center gap-2.5">
-                            {l.icon}
-                            {l.label}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-                  {showAuth ? (
-                    <>
-                      {loading ? (
-                        <span
-                          className="h-8 flex-1 animate-pulse rounded-xl bg-muted"
-                          aria-hidden="true"
-                        />
-                      ) : user ? (
-                        <Link
-                          href="/account"
-                          onClick={() => setOpen(false)}
-                          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-sm"
-                          title={user.email}
-                        >
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
-                            {user.email.slice(0, 1).toUpperCase()}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate font-medium">{user.email}</span>
-                          <PlanBadge />
-                        </Link>
-                      ) : (
-                        <Link
-                          href="/login"
-                          onClick={() => setOpen(false)}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-info px-3 py-2 text-sm font-semibold text-white shadow-2 transition-all duration-200 hover:brightness-110 active:scale-95"
-                        >
-                          <User className="size-4" />
-                          Sign in
-                        </Link>
-                      )}
-                    </>
-                  ) : (
-                    <span className="min-w-0 flex-1 truncate px-1 text-xs text-muted-foreground">
-                      {SITE_CONFIG.name}
-                    </span>
-                  )}
-                  <ThemeToggle className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
-                </div>
+              <ul className="max-h-[70vh] overflow-y-auto p-1.5">
+                {items.map((l) => {
+                  const isActive = l.match(pathname);
+                  return (
+                    <li key={l.href}>
+                      <Link
+                        href={l.href}
+                        role="menuitem"
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          'relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150',
+                          isActive
+                            ? 'text-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        {isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/25"
+                          />
+                        )}
+                        <span className="relative flex items-center gap-2.5">
+                          {l.icon}
+                          {l.label}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+                {showAuth ? (
+                  <>
+                    {loading ? (
+                      <span
+                        className="h-8 flex-1 animate-pulse rounded-xl bg-muted"
+                        aria-hidden="true"
+                      />
+                    ) : user ? (
+                      <Link
+                        href="/account"
+                        onClick={() => setOpen(false)}
+                        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-sm"
+                        title={user.email}
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-info/15 text-xs font-bold text-primary ring-1 ring-primary/25">
+                          {user.email.slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-medium">{user.email}</span>
+                        <PlanBadge />
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/login"
+                        onClick={() => setOpen(false)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-info px-3 py-2 text-sm font-semibold text-white shadow-2 transition-all duration-200 hover:brightness-110 active:scale-95"
+                      >
+                        <User className="size-4" />
+                        Sign in
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate px-1 text-xs text-muted-foreground">
+                    {SITE_CONFIG.name}
+                  </span>
+                )}
+                <ThemeToggle className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
+              </div>
             </div>
           )}
         </nav>
