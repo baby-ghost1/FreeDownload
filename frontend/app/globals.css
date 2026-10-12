@@ -155,7 +155,6 @@
 
   html {
     -webkit-text-size-adjust: 100%;
-    text-rendering: optimizeLegibility;
     /* Orbs stay unclipped (no cut blur) - sideways scroll dies here
        instead, at the viewport, on every device. */
     overflow-x: hidden;
@@ -199,7 +198,6 @@
       'Helvetica Neue',
       Arial,
       sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

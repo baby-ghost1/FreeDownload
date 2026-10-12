@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/constants/site';
+import { THEME_SCRIPT } from '@/lib/theme';
 import { HistoryFlags } from '@/components/history-flags';
 import { Providers } from '@/components/providers';
 import { HomeFooter } from '@/components/home-footer';
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HistoryFlags />
         <Providers>
           <div className="flex min-h-dvh flex-col">

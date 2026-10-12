@@ -7,6 +7,25 @@ import { getJob, getJobResult } from '@/lib/api/endpoints';
 import type { Job, JobResult } from '@/lib/api/types';
 import { isTerminalStatus } from '@/lib/format';
 
+/** True when every user-visible Job field matches - lets the poll skip a
+ *  re-render while the job sits idle (all fields are primitives/strings). */
+function jobUnchanged(a: Job, b: Job): boolean {
+  return (
+    a.status === b.status &&
+    a.progress === b.progress &&
+    a.url === b.url &&
+    a.title === b.title &&
+    a.requestedFormat === b.requestedFormat &&
+    a.targetContainer === b.targetContainer &&
+    a.errorCode === b.errorCode &&
+    a.errorMessage === b.errorMessage &&
+    a.retryCount === b.retryCount &&
+    a.updatedAt === b.updatedAt &&
+    a.expiresAt === b.expiresAt &&
+    a.completedAt === b.completedAt
+  );
+}
+
 export interface JobWatch {
   job: Job | null;
   result: JobResult | null;
@@ -49,7 +68,9 @@ export function useJob(id: string, intervalMs = 1_500): JobWatch {
     try {
       const next = await getJob(id);
       if (stopped.current) return;
-      setJob(next);
+      // Bail out when nothing user-visible changed so the 1.5s poll does not
+      // re-render the whole page while a job sits idle at the same progress.
+      setJob((prev) => (prev && jobUnchanged(prev, next) ? prev : next));
       setError(null);
       if (next.status === 'completed' && !resultPinned.current) {
         setResultLoading(true);

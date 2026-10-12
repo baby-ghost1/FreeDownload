@@ -56,6 +56,24 @@ function matches(job: Job, filter: Filter): boolean {
 const PAGE_SIZE = 50;
 const POLL_MS = 5000;
 
+/** True when the two job lists are identical in every user-visible field -
+ *  lets the quiet poll skip a re-render when nothing moved. */
+function jobListUnchanged(a: Job[], b: Job[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((job, i) => {
+    const o = b[i];
+    if (!o) return false;
+    return (
+      job.id === o.id &&
+      job.status === o.status &&
+      job.progress === o.progress &&
+      job.title === o.title &&
+      job.updatedAt === o.updatedAt &&
+      job.errorMessage === o.errorMessage
+    );
+  });
+}
+
 export default function MyDownloadsPage() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -84,6 +102,8 @@ export default function MyDownloadsPage() {
         const r = await listJobs(limit, cursor);
         if (mode === 'more') {
           setJobs((prev) => [...(prev ?? []), ...r.data]);
+        } else if (mode === 'quiet') {
+          setJobs((prev) => (prev && jobListUnchanged(prev, r.data) ? prev : r.data));
         } else {
           setJobs(r.data);
         }

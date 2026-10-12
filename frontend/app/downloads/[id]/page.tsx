@@ -157,13 +157,17 @@ function StackedResultCard({
   const size = formatBytes(result.sizeBytes);
   const platform = detectPlatform(url);
   const storageKey = `fd_downloaded_${jobId}`;
-  const [downloaded, setDownloaded] = useState(() => {
+  // Start false so server and first client render match; read the flag after
+  // mount (localStorage is unavailable during SSR).
+  const [downloaded, setDownloaded] = useState(false);
+  useEffect(() => {
     try {
-      return typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1';
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-mount read of an external store (localStorage) to avoid a server/client hydration mismatch; guarded to a single false->true transition
+      if (localStorage.getItem(storageKey) === '1') setDownloaded(true);
     } catch {
-      return false;
+      // Private mode - treat as not downloaded.
     }
-  });
+  }, [storageKey]);
   const [confirmAgain, setConfirmAgain] = useState(false);
   const markDownloaded = () => {
     try {
@@ -363,13 +367,17 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   }, [id]);
 
   const storageKey = `fd_downloaded_${id}`;
-  const [downloaded, setDownloaded] = useState(() => {
+  // Start false so server and first client render match; read the flag after
+  // mount (localStorage is unavailable during SSR).
+  const [downloaded, setDownloaded] = useState(false);
+  useEffect(() => {
     try {
-      return typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1';
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-mount read of an external store (localStorage) to avoid a server/client hydration mismatch; guarded to a single false->true transition
+      if (localStorage.getItem(storageKey) === '1') setDownloaded(true);
     } catch {
-      return false;
+      // Private mode - treat as not downloaded.
     }
-  });
+  }, [storageKey]);
   const markDownloaded = () => {
     try {
       localStorage.setItem(storageKey, '1');
