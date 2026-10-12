@@ -376,8 +376,9 @@ export const config = {
     cookiesB64: env.YTDLP_COOKIES_B64,
     // Default ON in production (the Docker image ships curl_cffi): datacenter
     // IPs get bot-walled on yt-dlp's default TLS fingerprint even with valid
-    // cookies, so impersonate a real browser unless explicitly disabled.
-    impersonate: env.YTDLP_IMPERSONATE ?? (env.NODE_ENV === 'production' ? '' : undefined),
+    // cookies, so impersonate a real browser unless explicitly overridden.
+    // A concrete client (not "") - empty argv values are unreliable through spawn.
+    impersonate: env.YTDLP_IMPERSONATE ?? (env.NODE_ENV === 'production' ? 'chrome' : undefined),
     /** Test-only escape hatch; production validation rejects it below. */
     allowPrivate: env.SSRF_ALLOW_PRIVATE,
   },
