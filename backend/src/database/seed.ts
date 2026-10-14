@@ -84,6 +84,160 @@ export async function seed(): Promise<void> {
       priority: 200,
       policyVersion: 1,
     },
+    // YouTube - works with yt-dlp (needs player_client args in .env)
+    {
+      slug: 'youtube',
+      name: 'YouTube',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 95,
+    },
+    // X (Twitter) - works with yt-dlp
+    {
+      slug: 'x',
+      name: 'X (Twitter)',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 90,
+    },
+    // TikTok - works with yt-dlp
+    {
+      slug: 'tiktok',
+      name: 'TikTok',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 92,
+    },
+    // Reddit - works with yt-dlp (v.redd.it)
+    {
+      slug: 'reddit',
+      name: 'Reddit',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 88,
+    },
+    // BitChute - works with yt-dlp
+    {
+      slug: 'bitchute',
+      name: 'BitChute',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 85,
+    },
+    // Zedge - handled by direct-media scan in yt-dlp
+    {
+      slug: 'zedge',
+      name: 'Zedge',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 80,
+    },
+    // Instagram - may need cookies / impersonation
+    {
+      slug: 'instagram',
+      name: 'Instagram',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 87,
+    },
+    // Facebook - may need login / cookies
+    {
+      slug: 'facebook',
+      name: 'Facebook',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 86,
+    },
+    // Dailymotion - may need cookies
+    {
+      slug: 'dailymotion',
+      name: 'Dailymotion',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 89,
+    },
+    // Twitch - may need account for VODs
+    {
+      slug: 'twitch',
+      name: 'Twitch',
+      adapterKey: 'ytdlp',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 91,
+    },
+    // Vimeo - needs Cobalt (no yt-dlp extractor)
+    {
+      slug: 'vimeo',
+      name: 'Vimeo',
+      adapterKey: 'cobalt',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 70,
+    },
+    // Odysee - needs Cobalt (no yt-dlp extractor)
+    {
+      slug: 'odysee',
+      name: 'Odysee',
+      adapterKey: 'cobalt',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 65,
+    },
+    // Snapchat - needs Cobalt (no yt-dlp extractor)
+    {
+      slug: 'snapchat',
+      name: 'Snapchat',
+      adapterKey: 'cobalt',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 60,
+    },
+    // Rumble - needs Cobalt (no yt-dlp extractor)
+    {
+      slug: 'rumble',
+      name: 'Rumble',
+      adapterKey: 'cobalt',
+      enabled: true,
+      mode: 'active' as const,
+      allowedFormats: ['video', 'audio', 'mp4', 'webm', 'mp3', 'm4a'],
+      maxFileSizeMb: 4096,
+      priority: 55,
+    },
   ];
   for (const sourceRow of sourceRows) {
     await db
