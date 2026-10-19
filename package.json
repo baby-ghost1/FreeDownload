@@ -33,8 +33,8 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
-    "prettier": "3.9.9",
-    "turbo": "2.11.6"
+    "prettier": "3.9.10",
+    "turbo": "2.11.8"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {
